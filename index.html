@@ -240,8 +240,31 @@
     }
     function escapeAttr(str){ return String(str ?? "").replace(/"/g,"&quot;"); }
 
-    const map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
+    window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+<script>
+  // ===== Leaflet 지도 리사이즈/전체화면/레이아웃 변경 시 깨짐 방지 =====
+  function __fixLeafletSize(){
+    try{
+      if (window.map && typeof window.map.invalidateSize === "function") {
+        window.map.invalidateSize(true);
+      }
+    }catch(e){}
+  }
+</script>
+// 화면 크기 바뀔 때(전체화면/창 이동/분할 등) 강제 갱신
+window.addEventListener("resize", () => setTimeout(__fixLeafletSize, 250));
+window.addEventListener("orientationchange", () => setTimeout(__fixLeafletSize, 250));
+
+// 탭 전환/미리보기 전환 등으로 숨겼다 다시 보일 때 강제 갱신
+document.addEventListener("visibilitychange", () => {
+  if(!document.hidden) setTimeout(__fixLeafletSize, 300);
+});
+
+// 최초 로딩 후에도 2~3번 더 강제 갱신(아임웹/iframe에서 특히 중요)
+setTimeout(__fixLeafletSize, 600);
+setTimeout(__fixLeafletSize, 1400);
+setTimeout(__fixLeafletSize, 2600);
 
     const markers = L.markerClusterGroup({ showCoverageOnHover:false, chunkedLoading:true, spiderfyOnMaxZoom:true });
     map.addLayer(markers);
