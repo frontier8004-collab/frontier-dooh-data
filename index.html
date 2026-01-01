@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Frontier DOOH Map MVP (v13)</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
@@ -88,10 +86,10 @@
     .badge.warn{border-color:rgba(255,209,102,.25); background:rgba(255,209,102,.10); color:var(--warn)}
     .badge.bad{border-color:rgba(255,107,107,.25); background:rgba(255,107,107,.10); color:var(--bad)}
 
-    .mapWrap{position:relative; height:100%; min-height:420px;}
-    #map{height:100%; width:100%; background:#0b0c0d;} /* 타일 없을 때도 배경은 유지 */
+    .mapWrap{position:relative; height:100%; min-height:520px;}
+    #map{height:100%; width:100%; background:#0b0c0d;}
     .mapTopbar{position:absolute; left:16px; top:16px; right:16px; z-index:500; pointer-events:none; display:flex; justify-content:flex-end}
-    .toast{pointer-events:auto; max-width:560px; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
+    .toast{pointer-events:auto; max-width:620px; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
       background:rgba(0,0,0,.55); backdrop-filter:blur(10px); box-shadow:var(--shadow); color:var(--muted); font-size:12px; line-height:1.35;
     }
     .toast b{color:var(--mint)}
@@ -188,8 +186,8 @@
       <div id="map"></div>
       <div class="mapTopbar">
         <div class="toast" id="toast">
-          <b>데이터</b>: <span id="metaLine">data_v13_med_high.json</span><br/>
-          <b>안내</b>: 창 분할/이동 시 타일 공백 방지 자동 보정 적용
+          <b>상태</b>: <span id="toastLine">초기화 대기…</span><br/>
+          <b>데이터</b>: <span id="metaLine">data_v13_med_high.json</span>
         </div>
       </div>
     </main>
@@ -221,7 +219,6 @@
     </div>
   </div>
 
-  <!-- Libraries -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
@@ -230,9 +227,13 @@
     // ========================
     // Config
     // ========================
-    const DATA_URL = "./data_v13_med_high.json"; // JSON 파일이 index.html과 같은 위치(루트)에 있어야 함
+    const DATA_URL = "./data_v13_med_high.json";
     const DEFAULT_CENTER = [36.5, 127.9];
     const DEFAULT_ZOOM = 7;
+
+    // OSM (기본) + CARTO(대체)
+    const TILE_OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    const TILE_CARTO = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
     // ========================
     // Utils
@@ -282,7 +283,7 @@
     const elCount = $("listCount");
     const elList = $("list");
     const elMetaLine = $("metaLine");
-    const elToast = $("toast");
+    const elToastLine = $("toastLine");
 
     const elQ = $("q");
     const elFGroup = $("fGroup");
@@ -303,62 +304,119 @@
     const elMCopy  = $("mCopy");
 
     function setPill(t){ elPill.textContent = t; }
+    function setToast(s){ elToastLine.textContent = s; }
 
     // ========================
-    // Map init
+    // Map (지연 초기화)
     // ========================
-    const map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
-    const baseLayer = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { maxZoom: 19, attribution:"&copy; OpenStreetMap contributors" }
-    ).addTo(map);
+    let map = null;
+    let baseLayer = null;
+    let usingFallback = false;
 
     const markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       chunkedLoading:true,
       spiderfyOnMaxZoom:true
     });
-    map.addLayer(markers);
 
-    // ========================
-    // FIX: Resize/Move/Tab/Imweb iframe 대응 (한 번만, 제대로)
-    // ========================
-    (function setupLeafletAutoResize(){
+    function createBaseLayer(url){
+      return L.tileLayer(url, { maxZoom: 19, attribution:"&copy; OpenStreetMap contributors" });
+    }
+
+    // “검은 화면” 확실 복구용: 타일 URL에 캐시버스터 붙여 강제 재요청
+    function hardRefreshTiles(){
+      if(!map || !baseLayer) return;
+
+      const url = (usingFallback ? TILE_CARTO : TILE_OSM);
+      const busted = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+
+      try{
+        baseLayer.setUrl(busted, true);
+        baseLayer.redraw();
+      }catch(e){}
+
+      try{
+        map.invalidateSize(true);
+        map.panBy([0,0], { animate:false });
+      }catch(e){}
+    }
+
+    // 반복 에러 시 타일 공급자 변경(OSM이 순간 막히는 케이스)
+    function switchToFallbackTiles(){
+      if(!map) return;
+      usingFallback = true;
+
+      try{
+        if(baseLayer) map.removeLayer(baseLayer);
+      }catch(e){}
+
+      baseLayer = createBaseLayer(TILE_CARTO);
+      baseLayer.addTo(map);
+
+      bindTileEvents(); // 이벤트 다시 연결
+      hardRefreshTiles();
+      setToast("타일 공급자 변경(Carto)로 복구 시도");
+    }
+
+    // 타일 이벤트로 상태/복구 트리거
+    let tileOkCount = 0;
+    let tileErrCount = 0;
+
+    function bindTileEvents(){
+      if(!baseLayer) return;
+
+      baseLayer.off();
+      tileOkCount = 0;
+      tileErrCount = 0;
+
+      baseLayer.on("tileload", () => {
+        tileOkCount++;
+        if(tileOkCount === 1) setToast("타일 로드 정상");
+      });
+
+      baseLayer.on("tileerror", () => {
+        tileErrCount++;
+        setToast("타일 로드 오류 감지 (" + tileErrCount + ")");
+        // 오류가 여러 번 반복되면 공급자 스위치
+        if(tileErrCount >= 6 && !usingFallback){
+          switchToFallbackTiles();
+        }else{
+          // 오류가 나도 한 번은 강제 리프레시
+          setTimeout(hardRefreshTiles, 120);
+        }
+      });
+    }
+
+    // Resize/iframe/분할 이동 대응: invalidate + (필요시) hard refresh
+    function setupAutoResize(){
       const mapEl = document.getElementById("map");
       if(!mapEl) return;
 
-      let scheduled = false;
+      let queued = false;
       const kick = () => {
-        if(scheduled) return;
-        scheduled = true;
+        if(!map) return;
+        if(queued) return;
+        queued = true;
 
-        // 1) 다음 프레임에서
         requestAnimationFrame(() => {
-          scheduled = false;
-          try{
-            map.invalidateSize(true);
-            baseLayer.redraw();
-            map.panBy([0,0], { animate:false }); // 타일 갱신 트리거
-          }catch(e){}
+          queued = false;
+          try{ map.invalidateSize(true); }catch(e){}
+          try{ baseLayer && baseLayer.redraw(); }catch(e){}
+          try{ map.panBy([0,0], {animate:false}); }catch(e){}
         });
 
-        // 2) 약간 뒤에 한 번 더 (iframe/분할에서 결정타)
+        // iframe/창 이동은 “조금 뒤”가 결정타
         setTimeout(() => {
-          try{
-            map.invalidateSize(true);
-            baseLayer.redraw();
-            map.panBy([0,0], { animate:false });
-          }catch(e){}
-        }, 180);
+          try{ map.invalidateSize(true); }catch(e){}
+          // 만약 이 시점에도 타일이 하나도 안 잡히면 강제 갱신
+          if(tileOkCount === 0) hardRefreshTiles();
+        }, 220);
       };
 
       window.addEventListener("resize", kick);
       window.addEventListener("orientationchange", kick);
       window.addEventListener("focus", kick);
-
-      document.addEventListener("visibilitychange", () => {
-        if(!document.hidden) kick();
-      });
+      document.addEventListener("visibilitychange", () => { if(!document.hidden) kick(); });
 
       if("ResizeObserver" in window){
         const ro = new ResizeObserver(() => kick());
@@ -367,12 +425,11 @@
         if(wrap) ro.observe(wrap);
       }
 
-      // 최초 로딩 이후에도 2번 보정
-      map.whenReady(() => {
-        kick();
-        setTimeout(kick, 450);
-      });
-    })();
+      // 최초 보정
+      setTimeout(kick, 80);
+      setTimeout(kick, 420);
+      setTimeout(kick, 1200);
+    }
 
     // ========================
     // Data + UI
@@ -433,10 +490,13 @@
     }
 
     function fitToFiltered(){
+      if(!map) return;
       const arr = filtered.length ? filtered : items;
       if(!arr.length) return;
       const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
       map.fitBounds(bounds.pad(0.15));
+      // fit 직후 타일 공백 방지
+      setTimeout(hardRefreshTiles, 120);
     }
 
     function renderMarkers(data){
@@ -511,6 +571,7 @@
     }
 
     function flyTo(id){
+      if(!map) return;
       const it = items.find(x=>x.id===id);
       if(!it) return;
 
@@ -522,9 +583,11 @@
         markers.zoomToShowLayer(m, ()=> {
           map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
           try{ m.openTooltip(); }catch(_){}
+          setTimeout(hardRefreshTiles, 120);
         });
       } else {
         map.setView(ll, 15, {animate:true});
+        setTimeout(hardRefreshTiles, 120);
       }
     }
 
@@ -596,6 +659,7 @@
     async function loadData(){
       try{
         setPill("LOADING…");
+        setToast("데이터 로딩 중…");
         elMetaLine.textContent = DATA_URL;
 
         const res = await fetch(DATA_URL, { cache:"no-store" });
@@ -631,27 +695,44 @@
         });
 
         setPill("READY");
-        elTotal.textContent = String(items.length);
+        setToast("준비 완료 (" + items.length + "건)");
 
+        elTotal.textContent = String(items.length);
         filtered = [...items];
         applyAll();
         fitToFiltered();
 
-        // 데이터 로드 후 타일도 한 번 더 보정
-        setTimeout(() => {
-          try{ map.invalidateSize(true); baseLayer.redraw(); map.panBy([0,0], {animate:false}); }catch(e){}
-        }, 250);
-
       }catch(err){
         console.error(err);
         setPill("ERROR");
-        elToast.innerHTML = `<b>로딩 실패</b>: data_v13_med_high.json을 불러오지 못했습니다.<br/>
-        1) JSON 파일명이 정확한지<br/>
-        2) index.html과 같은 위치(루트)에 있는지 확인하세요.`;
+        setToast("데이터 로드 실패");
       }
     }
 
-    loadData();
+    // ========================
+    // BOOT (중요: load 이후 지도 생성)
+    // ========================
+    window.addEventListener("load", () => {
+      // 레이아웃이 확정된 뒤에 지도를 만들어야 iframe/분할에서 덜 깨짐
+      setToast("지도 초기화 중…");
+
+      map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
+
+      baseLayer = createBaseLayer(TILE_OSM);
+      baseLayer.addTo(map);
+      bindTileEvents();
+
+      map.addLayer(markers);
+
+      setupAutoResize();
+
+      // 데이터 로드
+      loadData();
+
+      // 첫 로딩 안정화 보정(검은 화면 방지)
+      setTimeout(hardRefreshTiles, 350);
+      setTimeout(hardRefreshTiles, 1200);
+    });
   </script>
 </body>
 </html>
