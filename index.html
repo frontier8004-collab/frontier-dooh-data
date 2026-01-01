@@ -84,13 +84,16 @@
     .badge.good{border-color:rgba(76,212,164,.25); background:rgba(76,212,164,.10); color:var(--good)}
     .badge.warn{border-color:rgba(255,209,102,.25); background:rgba(255,209,102,.10); color:var(--warn)}
     .badge.bad{border-color:rgba(255,107,107,.25); background:rgba(255,107,107,.10); color:var(--bad)}
-    #map{height:100%; width:100%}
+
     .mapWrap{position:relative; height:100%}
+    #map{height:100%; width:100%; display:block; background:#111;} /* 회색/공백 체감 방지 */
+
     .mapTopbar{position:absolute; left:16px; top:16px; right:16px; z-index:500; pointer-events:none; display:flex; justify-content:flex-end}
     .toast{pointer-events:auto; max-width:560px; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
       background:rgba(0,0,0,.55); backdrop-filter:blur(10px); box-shadow:var(--shadow); color:var(--muted); font-size:12px; line-height:1.35;
     }
     .toast b{color:var(--mint)}
+
     .modal{position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px}
     .modal.open{display:flex}
     .modalCard{width:min(920px,96vw); max-height:86vh; overflow:hidden; border-radius:22px; border:1px solid rgba(255,255,255,.12);
@@ -108,9 +111,16 @@
     .raw{margin-top:14px; border:1px solid rgba(255,255,255,.10); border-radius:16px; overflow:hidden}
     .raw .rawHead{padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; color:var(--muted); font-size:12px}
     pre{margin:0; padding:12px; background:rgba(0,0,0,.22); color:#cfd8e3; font-size:12px; overflow:auto; max-height:260px}
-    @media (max-width:980px){body{overflow:auto} .app{grid-template-columns:1fr; grid-template-rows:520px 1fr;} .sidebar{height:auto} .mapWrap{height:calc(100vh - 12px)}}
+
+    @media (max-width:980px){
+      body{overflow:auto}
+      .app{grid-template-columns:1fr; grid-template-rows:520px 1fr;}
+      .sidebar{height:auto}
+      .mapWrap{height:calc(100vh - 12px)}
+    }
   </style>
 </head>
+
 <body>
   <div class="app">
     <aside class="sidebar">
@@ -177,7 +187,7 @@
       <div class="mapTopbar">
         <div class="toast" id="toast">
           <b>데이터</b>: <span id="metaLine">data_v13_med_high.json</span><br/>
-          <b>주의</b>: 로컬에서 열면 일부 브라우저는 JSON 로드를 막을 수 있습니다. (그럴 땐 아임웹 업로드가 가장 쉽습니다)
+          <b>주의</b>: 로컬에서 열면 일부 브라우저는 JSON 로드를 막을 수 있습니다.
         </div>
       </div>
     </main>
@@ -214,25 +224,25 @@
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
   <script>
-    const DATA_URL = "./data_v13_med_high.json"; // 아임웹에 올린 뒤 "직접 URL"로 바꿔서 쓰면 됩니다.
+    // =======================
+    // CONFIG
+    // =======================
+    const DATA_URL = "./data_v13_med_high.json"; // 같은 폴더면 이대로 OK
     const DEFAULT_CENTER = [37.5665, 126.9780];
     const DEFAULT_ZOOM = 11;
 
+    // =======================
+    // UTILS
+    // =======================
     const $ = (id) => document.getElementById(id);
     const safe = (v) => (v===null||v===undefined) ? "" : String(v).trim();
-    const uniq = (arr) => Array.from(new Set(arr.map(safe).filter(Boolean))).sort((a,b)=> String(a).localeCompare(String(b), "ko"));
+    const toNum = (v) => {
+      const n = Number(String(v ?? "").replace(/,/g,"").trim());
+      return Number.isFinite(n) ? n : null;
+    };
+    const uniq = (arr) => Array.from(new Set(arr.map(safe).filter(Boolean)))
+      .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
 
-    const badgeClass = (k, v) => {
-      const val = safe(v).toUpperCase();
-      if(k === "confidence_tier"){ if(val==="HIGH") return "good"; if(val==="MED") return "warn"; if(val==="LOW") return "bad"; }
-      if(k === "verified_status"){ if(val==="VERIFIED") return "good"; if(val.includes("LOWCONF")) return "warn"; }
-      return "mint";
-    };
-    const makeBadge = (k, v) => {
-      const cls = badgeClass(k, v);
-      const c = cls==="good" ? "badge good" : cls==="warn" ? "badge warn" : cls==="bad" ? "badge bad" : "badge mint";
-      return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
-    };
     function escapeHtml(str){
       return String(str ?? "")
         .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
@@ -240,127 +250,35 @@
     }
     function escapeAttr(str){ return String(str ?? "").replace(/"/g,"&quot;"); }
 
-    window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
-    // ====== FIX: Imweb/브라우저 분할/리사이즈 시 Leaflet 타일 공백 방지 ======
-(function setupLeafletAutoResize(){
-  const map = window.map;
-  const mapEl = document.getElementById("map");
-  if(!map || !mapEl) return;
-
-  // 리사이즈는 타이밍 이슈가 많아서 "여러 번" invalidateSize를 시도 (가장 확실)
-  const kick = () => {
-    // 1) 즉시
-    try { map.invalidateSize(true); } catch(e) {}
-
-    // 2) 다음 프레임
-    requestAnimationFrame(() => {
-      try { map.invalidateSize(true); } catch(e) {}
-    });
-
-    // 3) 조금 뒤 (폰/분할/iframe에서 이 타이밍이 결정타인 경우 많음)
-    setTimeout(() => {
-      try { map.invalidateSize(true); } catch(e) {}
-    }, 120);
-
-    // 4) 한 번 더
-    setTimeout(() => {
-      try { map.invalidateSize(true); } catch(e) {}
-    }, 420);
-  };
-
-  // A) 창 리사이즈
-  window.addEventListener("resize", kick);
-
-  // B) 탭 전환/복귀 (visibility change)
-  document.addEventListener("visibilitychange", () => {
-    if(!document.hidden) kick();
-  });
-
-  // C) map div 자체 크기 변화 감지 (iframe/레이아웃 변경 대응)
-  if("ResizeObserver" in window){
-    const ro = new ResizeObserver(() => kick());
-    ro.observe(mapEl);
-  }
-
-  // D) 최초 1회
-  kick();
-})();
-// ====== /FIX ======
-
-    // ====== (추가) iframe/스냅/레이아웃 변경에서 타일이 회색으로 남는 현상 방지 ======
-(function(){
-  const map = window.map;
-  if(!map) return;
-
-  const elMap = document.getElementById("map");
-  if(!elMap) return;
-
-  let t = null;
-  const fix = (delay=0) => {
-    clearTimeout(t);
-    t = setTimeout(() => {
-      try{ map.invalidateSize(true); }catch(e){}
-    }, delay);
-  };
-
-  // 1) 기본 이벤트
-  window.addEventListener("resize", () => fix(200));
-  window.addEventListener("orientationchange", () => fix(200));
-  window.addEventListener("focus", () => fix(200));
-  document.addEventListener("visibilitychange", () => { if(!document.hidden) fix(250); });
-
-  // 2) 핵심: 컨테이너 크기 변화를 직접 감지
-  try{
-    const ro = new ResizeObserver(() => fix(50));
-    ro.observe(elMap);
-    const app = document.querySelector(".app") || document.body;
-    if(app) ro.observe(app);
-  }catch(e){}
-
-  // 3) 마지막 보험: 로딩 후 몇 번 더 강제 갱신
-  fix(300); fix(900); fix(1800); fix(3200);
-})();
-
-<script>
-  // ===== Leaflet 지도 리사이즈/전체화면/레이아웃 변경 시 깨짐 방지 =====
-  function __fixLeafletSize(){
-    try{
-      if (window.map && typeof window.map.invalidateSize === "function") {
-        window.map.invalidateSize(true);
+    const badgeClass = (k, v) => {
+      const val = safe(v).toUpperCase();
+      if(k === "confidence_tier"){
+        if(val==="HIGH") return "good";
+        if(val==="MED") return "warn";
+        if(val==="LOW") return "bad";
       }
-    }catch(e){}
-  }
-</script>
-// 화면 크기 바뀔 때(전체화면/창 이동/분할 등) 강제 갱신
-window.addEventListener("resize", () => setTimeout(__fixLeafletSize, 250));
-window.addEventListener("orientationchange", () => setTimeout(__fixLeafletSize, 250));
+      if(k === "verified_status"){
+        if(val==="VERIFIED") return "good";
+        if(val.includes("LOWCONF")) return "warn";
+      }
+      return "mint";
+    };
+    const makeBadge = (k, v) => {
+      const cls = badgeClass(k, v);
+      const c = cls==="good" ? "badge good" : cls==="warn" ? "badge warn" : cls==="bad" ? "badge bad" : "badge mint";
+      return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
+    };
 
-// 탭 전환/미리보기 전환 등으로 숨겼다 다시 보일 때 강제 갱신
-document.addEventListener("visibilitychange", () => {
-  if(!document.hidden) setTimeout(__fixLeafletSize, 300);
-});
-
-// 최초 로딩 후에도 2~3번 더 강제 갱신(아임웹/iframe에서 특히 중요)
-setTimeout(__fixLeafletSize, 600);
-setTimeout(__fixLeafletSize, 1400);
-setTimeout(__fixLeafletSize, 2600);
-
-    const markers = L.markerClusterGroup({ showCoverageOnHover:false, chunkedLoading:true, spiderfyOnMaxZoom:true });
-    map.addLayer(markers);
-
-    let items = [];
-    let filtered = [];
-    let fuse = null;
-    let markerById = new Map();
-    let selectedId = null;
-
+    // =======================
+    // DOM refs
+    // =======================
     const elPill = $("pillState");
     const elTotal = $("statTotal");
     const elShown = $("statShown");
     const elCount = $("listCount");
     const elList = $("list");
     const elMetaLine = $("metaLine");
+    const elToast = $("toast");
 
     const elQ = $("q");
     const elFGroup = $("fGroup");
@@ -380,57 +298,91 @@ setTimeout(__fixLeafletSize, 2600);
     const elMCenter= $("mCenter");
     const elMCopy  = $("mCopy");
 
-    function setPill(t){ elPill.textContent = t; }
+    const setPill = (t) => { elPill.textContent = t; };
 
-    async function loadData(){
-      try{
-        setPill("LOADING…");
-        elMetaLine.textContent = DATA_URL;
+    // =======================
+    // MAP init (중요: map 변수를 '둘 다' 살려둔다)
+    // =======================
+    const map = window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
 
-        const res = await fetch(DATA_URL, {cache:"no-store"});
-        if(!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }
+    ).addTo(map);
 
-        const arr = (data && data.items) ? data.items : [];
-        items = arr.filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
-        elTotal.textContent = String(items.length);
+    const markers = L.markerClusterGroup({
+      showCoverageOnHover:false,
+      chunkedLoading:true,
+      spiderfyOnMaxZoom:true
+    });
+    map.addLayer(markers);
 
-        fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
-        fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
-        fillSelect(elFTier,  uniq(items.map(x=>x.confidence_tier)));
-        fillSelect(elFVer,   uniq(items.map(x=>x.verified_status)));
+    // =======================
+    // FIX: Imweb/창분할/레이아웃 변경 시 Leaflet 빈 화면 방지 (단일·확실 버전)
+    // =======================
+    (function setupLeafletAutoResize(){
+      const mapEl = document.getElementById("map");
+      if(!mapEl) return;
 
-        fuse = new Fuse(items, {
-          includeScore:true,
-          threshold:0.35,
-          ignoreLocation:true,
-          keys:[
-            {name:"title", weight:0.50},
-            {name:"subtitle", weight:0.25},
-            {name:"media_group", weight:0.15},
-            {name:"sido", weight:0.10},
-            {name:"address", weight:0.08}
-          ]
-        });
+      const hard = () => {
+        try { map.invalidateSize(true); } catch(e) {}
+        // 타일이 회색으로 남는 케이스에서 "한 번 더" 그리기 유도
+        try { map.setView(map.getCenter(), map.getZoom(), { animate:false }); } catch(e) {}
+      };
 
-        setPill("READY");
-        resetControls(false);
-        applyAll();
-        fitToFiltered();
-      } catch(err) {
-        console.error(err);
-        setPill("ERROR");
-        $("toast").innerHTML = `<b>로딩 실패</b>: data.json을 불러오지 못했습니다.<br/>
-        1) DATA_URL이 맞는지 확인<br/>
-        2) 아임웹에 JSON을 올리고 같은 도메인 URL로 불러오면 해결됩니다.`;
+      const kick = () => {
+        hard();
+        requestAnimationFrame(hard);
+        setTimeout(hard, 120);
+        setTimeout(hard, 420);
+      };
+
+      window.addEventListener("resize", () => kick());
+      window.addEventListener("orientationchange", () => kick());
+      window.addEventListener("focus", () => kick());
+      document.addEventListener("visibilitychange", () => { if(!document.hidden) kick(); });
+      window.addEventListener("pageshow", () => kick());
+
+      // 컨테이너 자체 크기 변화 감지(아임웹/iframe/분할에서 핵심)
+      if("ResizeObserver" in window){
+        const ro = new ResizeObserver(() => kick());
+        ro.observe(mapEl);
+        const app = document.querySelector(".app");
+        if(app) ro.observe(app);
       }
-    }
 
+      // 워치독: 처음 몇 초간 주기적으로 갱신(레이아웃 타이밍 이슈 대응)
+      let n = 0;
+      const timer = setInterval(() => {
+        n++;
+        kick();
+        if(n >= 20) clearInterval(timer); // 약 5초
+      }, 250);
+
+      // 최초
+      kick();
+      setTimeout(kick, 800);
+      setTimeout(kick, 1600);
+      setTimeout(kick, 2800);
+    })();
+
+    // =======================
+    // DATA / STATE
+    // =======================
+    let items = [];
+    let filtered = [];
+    let fuse = null;
+    let markerById = new Map();
+    let selectedId = null;
+
+    // =======================
+    // UI helpers
+    // =======================
     function fillSelect(el, values){
       el.innerHTML = `<option value="">전체</option>`;
       values.forEach(v => {
         const opt = document.createElement("option");
-        opt.value=v; opt.textContent=v;
+        opt.value = v; opt.textContent = v;
         el.appendChild(opt);
       });
     }
@@ -445,8 +397,21 @@ setTimeout(__fixLeafletSize, 2600);
       };
     }
 
+    function resetControls(reapply=true){
+      elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
+      selectedId = null;
+      if(reapply) applyAll();
+    }
+
+    function fitTo(arr){
+      if(!arr.length) return;
+      const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
+      map.fitBounds(bounds.pad(0.15));
+    }
+
     function applyAll(){
       const f = getFilters();
+
       let out = items.filter(it => {
         if(f.group && it.media_group !== f.group) return false;
         if(f.sido  && it.sido !== f.sido) return false;
@@ -455,7 +420,7 @@ setTimeout(__fixLeafletSize, 2600);
         return true;
       });
 
-      if(f.q) {
+      if(f.q){
         const results = fuse.search(f.q).map(r => r.item);
         const keyset = new Set(out.map(x => x.id));
         out = results.filter(x => keyset.has(x.id));
@@ -469,19 +434,6 @@ setTimeout(__fixLeafletSize, 2600);
       renderList(filtered);
     }
 
-    function resetControls(reapply=true){
-      elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
-      selectedId = null;
-      if(reapply) applyAll();
-    }
-
-    function fitToFiltered(){
-      const arr = filtered.length ? filtered : items;
-      if(!arr.length) return;
-      const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
-      map.fitBounds(bounds.pad(0.15));
-    }
-
     function renderMarkers(data){
       markers.clearLayers();
       markerById.clear();
@@ -489,7 +441,12 @@ setTimeout(__fixLeafletSize, 2600);
       data.forEach(it => {
         const tier = safe(it.confidence_tier).toUpperCase();
         const cls = (tier==="HIGH") ? "good" : (tier==="MED") ? "warn" : (tier==="LOW") ? "bad" : "mint";
-        const color = cls==="good" ? "rgba(76,212,164,.95)" : cls==="warn" ? "rgba(255,209,102,.95)" : cls==="bad" ? "rgba(255,107,107,.95)" : "rgba(162,222,204,.95)";
+        const color =
+          cls==="good" ? "rgba(76,212,164,.95)" :
+          cls==="warn" ? "rgba(255,209,102,.95)" :
+          cls==="bad"  ? "rgba(255,107,107,.95)" :
+          "rgba(162,222,204,.95)";
+
         const icon = L.divIcon({
           className: "",
           html: `<div style="width:14px;height:14px;border-radius:999px;border:2px solid rgba(255,255,255,.75);
@@ -500,9 +457,12 @@ setTimeout(__fixLeafletSize, 2600);
 
         const m = L.marker([it.lat, it.lng], {icon});
         m.on("click", ()=> openDetail(it.id));
-        m.bindTooltip(`<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title)}</div>
-                       <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
-                       {direction:"top", opacity:0.96, sticky:true});
+        m.bindTooltip(
+          `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title)}</div>
+           <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
+          {direction:"top", opacity:0.96, sticky:true}
+        );
+
         markers.addLayer(m);
         markerById.set(it.id, m);
       });
@@ -514,6 +474,7 @@ setTimeout(__fixLeafletSize, 2600);
         elList.innerHTML = `<div style="padding:14px 12px;color:var(--muted);font-size:13px;line-height:1.4">결과가 없습니다. 검색/필터를 조정하세요.</div>`;
         return;
       }
+
       const rank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
       const sorted = [...data].sort((a,b)=>{
         const tr = rank(a.confidence_tier) - rank(b.confidence_tier);
@@ -544,9 +505,28 @@ setTimeout(__fixLeafletSize, 2600);
       });
     }
 
+    function flyTo(id){
+      const it = items.find(x=>x.id===id);
+      if(!it) return;
+
+      selectedId = id;
+      const ll = L.latLng(it.lat, it.lng);
+      const m = markerById.get(id);
+
+      if(m){
+        markers.zoomToShowLayer(m, ()=> {
+          map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
+          try{ m.openTooltip(); }catch(_){}
+        });
+      } else {
+        map.setView(ll, 15, {animate:true});
+      }
+    }
+
     function openDetail(id){
       const it = items.find(x=>x.id===id);
       if(!it) return;
+
       selectedId = id;
 
       elMTitle.textContent = it.title || "(Untitled)";
@@ -575,8 +555,13 @@ setTimeout(__fixLeafletSize, 2600);
       elMGrid.innerHTML = "";
       kvs.forEach(([k,v])=>{
         const isUrl = safe(v).startsWith("http://") || safe(v).startsWith("https://");
-        const vv = isUrl ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>` : escapeHtml(v);
-        elMGrid.insertAdjacentHTML("beforeend", `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`);
+        const vv = isUrl
+          ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>`
+          : escapeHtml(v);
+
+        elMGrid.insertAdjacentHTML("beforeend",
+          `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`
+        );
       });
 
       elMRaw.textContent = JSON.stringify(it, null, 2);
@@ -585,21 +570,9 @@ setTimeout(__fixLeafletSize, 2600);
 
     function closeModal(){ elModal.classList.remove("open"); }
 
-    function flyTo(id){
-      const it = items.find(x=>x.id===id);
-      if(!it) return;
-      const ll = L.latLng(it.lat, it.lng);
-      const m = markerById.get(id);
-      if(m){
-        markers.zoomToShowLayer(m, ()=> {
-          map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
-          try{ m.openTooltip(); }catch(_){}
-        });
-      } else {
-        map.setView(ll, 15, {animate:true});
-      }
-    }
-
+    // =======================
+    // EVENTS
+    // =======================
     ["input","change"].forEach(evt => {
       elQ.addEventListener(evt, applyAll);
       elFGroup.addEventListener(evt, applyAll);
@@ -607,13 +580,18 @@ setTimeout(__fixLeafletSize, 2600);
       elFTier.addEventListener(evt, applyAll);
       elFVer.addEventListener(evt, applyAll);
     });
+
     elReset.addEventListener("click", ()=> resetControls(true));
-    elFit.addEventListener("click", ()=> fitToFiltered());
+    elFit.addEventListener("click", ()=> {
+      const arr = filtered.length ? filtered : items;
+      fitTo(arr);
+    });
 
     elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
     document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
     elMClose.addEventListener("click", closeModal);
     elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
+
     elMCopy.addEventListener("click", async ()=>{
       try {
         await navigator.clipboard.writeText(elMRaw.textContent || "");
@@ -624,6 +602,67 @@ setTimeout(__fixLeafletSize, 2600);
         alert("클립보드 복사 실패 (브라우저 권한 확인)");
       }
     });
+
+    // =======================
+    // BOOT
+    // =======================
+    async function loadData(){
+      try{
+        setPill("LOADING…");
+        elMetaLine.textContent = DATA_URL;
+
+        const res = await fetch(DATA_URL, { cache:"no-store" });
+        if(!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+        const arr = (data && Array.isArray(data.items)) ? data.items : [];
+
+        // lat/lng가 문자열인 경우가 많아서 숫자 변환 후 필터
+        items = arr.map(x => ({
+          ...x,
+          lat: toNum(x.lat),
+          lng: toNum(x.lng),
+          confidence_score: toNum(x.confidence_score)
+        })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+
+        fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
+        fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
+        fillSelect(elFTier,  uniq(items.map(x=>x.confidence_tier)));
+        fillSelect(elFVer,   uniq(items.map(x=>x.verified_status)));
+
+        fuse = new Fuse(items, {
+          includeScore:true,
+          threshold:0.35,
+          ignoreLocation:true,
+          keys:[
+            {name:"title", weight:0.50},
+            {name:"subtitle", weight:0.25},
+            {name:"media_group", weight:0.15},
+            {name:"sido", weight:0.10},
+            {name:"address", weight:0.08}
+          ]
+        });
+
+        elTotal.textContent = String(items.length);
+        setPill("READY");
+
+        resetControls(false);
+        applyAll();
+
+        // 최초 fit + 리사이즈 킥
+        const arrFit = filtered.length ? filtered : items;
+        fitTo(arrFit);
+        setTimeout(()=>{ try{ map.invalidateSize(true); }catch(e){} }, 250);
+
+      }catch(err){
+        console.error(err);
+        setPill("ERROR");
+        elToast.innerHTML = `<b>로딩 실패</b>: JSON을 불러오지 못했습니다.<br/>
+          1) 파일명이 정확한지 확인 (data_v13_med_high.json)<br/>
+          2) index.html과 같은 폴더인지 확인<br/>
+          3) GitHub Pages URL에서 직접 열어 확인`;
+      }
+    }
 
     loadData();
   </script>
