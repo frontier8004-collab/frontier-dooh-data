@@ -242,6 +242,52 @@
 
     window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+    // ====== FIX: Imweb/브라우저 분할/리사이즈 시 Leaflet 타일 공백 방지 ======
+(function setupLeafletAutoResize(){
+  const map = window.map;
+  const mapEl = document.getElementById("map");
+  if(!map || !mapEl) return;
+
+  // 리사이즈는 타이밍 이슈가 많아서 "여러 번" invalidateSize를 시도 (가장 확실)
+  const kick = () => {
+    // 1) 즉시
+    try { map.invalidateSize(true); } catch(e) {}
+
+    // 2) 다음 프레임
+    requestAnimationFrame(() => {
+      try { map.invalidateSize(true); } catch(e) {}
+    });
+
+    // 3) 조금 뒤 (폰/분할/iframe에서 이 타이밍이 결정타인 경우 많음)
+    setTimeout(() => {
+      try { map.invalidateSize(true); } catch(e) {}
+    }, 120);
+
+    // 4) 한 번 더
+    setTimeout(() => {
+      try { map.invalidateSize(true); } catch(e) {}
+    }, 420);
+  };
+
+  // A) 창 리사이즈
+  window.addEventListener("resize", kick);
+
+  // B) 탭 전환/복귀 (visibility change)
+  document.addEventListener("visibilitychange", () => {
+    if(!document.hidden) kick();
+  });
+
+  // C) map div 자체 크기 변화 감지 (iframe/레이아웃 변경 대응)
+  if("ResizeObserver" in window){
+    const ro = new ResizeObserver(() => kick());
+    ro.observe(mapEl);
+  }
+
+  // D) 최초 1회
+  kick();
+})();
+// ====== /FIX ======
+
     // ====== (추가) iframe/스냅/레이아웃 변경에서 타일이 회색으로 남는 현상 방지 ======
 (function(){
   const map = window.map;
