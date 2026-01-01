@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Frontier DOOH Map MVP (v13)</title>
 
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
@@ -19,9 +21,10 @@
     *{box-sizing:border-box} html,body{height:100%}
     body{
       margin:0; overflow:hidden; color:var(--text);
-      background:radial-gradient(1200px 700px at 60% -10%, rgba(162,222,204,.12), transparent 60%),
-                 radial-gradient(900px 600px at 5% 10%, rgba(162,222,204,.08), transparent 55%),
-                 var(--bg);
+      background:
+        radial-gradient(1200px 700px at 60% -10%, rgba(162,222,204,.12), transparent 60%),
+        radial-gradient(900px 600px at 5% 10%, rgba(162,222,204,.08), transparent 55%),
+        var(--bg);
       font-family: ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",Arial,sans-serif;
     }
     .app{height:100%; display:grid; grid-template-columns:420px 1fr;}
@@ -85,9 +88,8 @@
     .badge.warn{border-color:rgba(255,209,102,.25); background:rgba(255,209,102,.10); color:var(--warn)}
     .badge.bad{border-color:rgba(255,107,107,.25); background:rgba(255,107,107,.10); color:var(--bad)}
 
-    .mapWrap{position:relative; height:100%}
-    #map{height:100%; width:100%; display:block; background:#111;} /* 회색/공백 체감 방지 */
-
+    .mapWrap{position:relative; height:100%; min-height:420px;}
+    #map{height:100%; width:100%; background:#0b0c0d;} /* 타일 없을 때도 배경은 유지 */
     .mapTopbar{position:absolute; left:16px; top:16px; right:16px; z-index:500; pointer-events:none; display:flex; justify-content:flex-end}
     .toast{pointer-events:auto; max-width:560px; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
       background:rgba(0,0,0,.55); backdrop-filter:blur(10px); box-shadow:var(--shadow); color:var(--muted); font-size:12px; line-height:1.35;
@@ -187,7 +189,7 @@
       <div class="mapTopbar">
         <div class="toast" id="toast">
           <b>데이터</b>: <span id="metaLine">data_v13_med_high.json</span><br/>
-          <b>주의</b>: 로컬에서 열면 일부 브라우저는 JSON 로드를 막을 수 있습니다.
+          <b>안내</b>: 창 분할/이동 시 타일 공백 방지 자동 보정 적용
         </div>
       </div>
     </main>
@@ -219,29 +221,31 @@
     </div>
   </div>
 
+  <!-- Libraries -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
   <script>
-    // =======================
-    // CONFIG
-    // =======================
-    const DATA_URL = "./data_v13_med_high.json"; // 같은 폴더면 이대로 OK
-    const DEFAULT_CENTER = [37.5665, 126.9780];
-    const DEFAULT_ZOOM = 11;
+    // ========================
+    // Config
+    // ========================
+    const DATA_URL = "./data_v13_med_high.json"; // JSON 파일이 index.html과 같은 위치(루트)에 있어야 함
+    const DEFAULT_CENTER = [36.5, 127.9];
+    const DEFAULT_ZOOM = 7;
 
-    // =======================
-    // UTILS
-    // =======================
+    // ========================
+    // Utils
+    // ========================
     const $ = (id) => document.getElementById(id);
     const safe = (v) => (v===null||v===undefined) ? "" : String(v).trim();
     const toNum = (v) => {
       const n = Number(String(v ?? "").replace(/,/g,"").trim());
       return Number.isFinite(n) ? n : null;
     };
-    const uniq = (arr) => Array.from(new Set(arr.map(safe).filter(Boolean)))
-      .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
+    const uniq = (arr) =>
+      Array.from(new Set(arr.map(safe).filter(Boolean)))
+        .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
 
     function escapeHtml(str){
       return String(str ?? "")
@@ -269,9 +273,9 @@
       return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
     };
 
-    // =======================
-    // DOM refs
-    // =======================
+    // ========================
+    // Elements
+    // ========================
     const elPill = $("pillState");
     const elTotal = $("statTotal");
     const elShown = $("statShown");
@@ -298,16 +302,15 @@
     const elMCenter= $("mCenter");
     const elMCopy  = $("mCopy");
 
-    const setPill = (t) => { elPill.textContent = t; };
+    function setPill(t){ elPill.textContent = t; }
 
-    // =======================
-    // MAP init (중요: map 변수를 '둘 다' 살려둔다)
-    // =======================
-    const map = window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
-
-    L.tileLayer(
+    // ========================
+    // Map init
+    // ========================
+    const map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
+    const baseLayer = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }
+      { maxZoom: 19, attribution:"&copy; OpenStreetMap contributors" }
     ).addTo(map);
 
     const markers = L.markerClusterGroup({
@@ -317,79 +320,81 @@
     });
     map.addLayer(markers);
 
-    // =======================
-    // FIX: Imweb/창분할/레이아웃 변경 시 Leaflet 빈 화면 방지 (단일·확실 버전)
-    // =======================
+    // ========================
+    // FIX: Resize/Move/Tab/Imweb iframe 대응 (한 번만, 제대로)
+    // ========================
     (function setupLeafletAutoResize(){
       const mapEl = document.getElementById("map");
       if(!mapEl) return;
 
-      const hard = () => {
-        try { map.invalidateSize(true); } catch(e) {}
-        // 타일이 회색으로 남는 케이스에서 "한 번 더" 그리기 유도
-        try { map.setView(map.getCenter(), map.getZoom(), { animate:false }); } catch(e) {}
-      };
-
+      let scheduled = false;
       const kick = () => {
-        hard();
-        requestAnimationFrame(hard);
-        setTimeout(hard, 120);
-        setTimeout(hard, 420);
+        if(scheduled) return;
+        scheduled = true;
+
+        // 1) 다음 프레임에서
+        requestAnimationFrame(() => {
+          scheduled = false;
+          try{
+            map.invalidateSize(true);
+            baseLayer.redraw();
+            map.panBy([0,0], { animate:false }); // 타일 갱신 트리거
+          }catch(e){}
+        });
+
+        // 2) 약간 뒤에 한 번 더 (iframe/분할에서 결정타)
+        setTimeout(() => {
+          try{
+            map.invalidateSize(true);
+            baseLayer.redraw();
+            map.panBy([0,0], { animate:false });
+          }catch(e){}
+        }, 180);
       };
 
-      window.addEventListener("resize", () => kick());
-      window.addEventListener("orientationchange", () => kick());
-      window.addEventListener("focus", () => kick());
-      document.addEventListener("visibilitychange", () => { if(!document.hidden) kick(); });
-      window.addEventListener("pageshow", () => kick());
+      window.addEventListener("resize", kick);
+      window.addEventListener("orientationchange", kick);
+      window.addEventListener("focus", kick);
 
-      // 컨테이너 자체 크기 변화 감지(아임웹/iframe/분할에서 핵심)
+      document.addEventListener("visibilitychange", () => {
+        if(!document.hidden) kick();
+      });
+
       if("ResizeObserver" in window){
         const ro = new ResizeObserver(() => kick());
         ro.observe(mapEl);
-        const app = document.querySelector(".app");
-        if(app) ro.observe(app);
+        const wrap = document.querySelector(".mapWrap");
+        if(wrap) ro.observe(wrap);
       }
 
-      // 워치독: 처음 몇 초간 주기적으로 갱신(레이아웃 타이밍 이슈 대응)
-      let n = 0;
-      const timer = setInterval(() => {
-        n++;
+      // 최초 로딩 이후에도 2번 보정
+      map.whenReady(() => {
         kick();
-        if(n >= 20) clearInterval(timer); // 약 5초
-      }, 250);
-
-      // 최초
-      kick();
-      setTimeout(kick, 800);
-      setTimeout(kick, 1600);
-      setTimeout(kick, 2800);
+        setTimeout(kick, 450);
+      });
     })();
 
-    // =======================
-    // DATA / STATE
-    // =======================
+    // ========================
+    // Data + UI
+    // ========================
     let items = [];
     let filtered = [];
     let fuse = null;
     let markerById = new Map();
     let selectedId = null;
 
-    // =======================
-    // UI helpers
-    // =======================
     function fillSelect(el, values){
       el.innerHTML = `<option value="">전체</option>`;
       values.forEach(v => {
         const opt = document.createElement("option");
-        opt.value = v; opt.textContent = v;
+        opt.value=v; opt.textContent=v;
         el.appendChild(opt);
       });
     }
 
     function getFilters(){
       return {
-        q: safe(elQ.value),
+        q: safe(elQ.value).toLowerCase(),
         group: safe(elFGroup.value),
         sido: safe(elFSido.value),
         tier: safe(elFTier.value),
@@ -397,21 +402,8 @@
       };
     }
 
-    function resetControls(reapply=true){
-      elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
-      selectedId = null;
-      if(reapply) applyAll();
-    }
-
-    function fitTo(arr){
-      if(!arr.length) return;
-      const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
-      map.fitBounds(bounds.pad(0.15));
-    }
-
     function applyAll(){
       const f = getFilters();
-
       let out = items.filter(it => {
         if(f.group && it.media_group !== f.group) return false;
         if(f.sido  && it.sido !== f.sido) return false;
@@ -421,9 +413,9 @@
       });
 
       if(f.q){
-        const results = fuse.search(f.q).map(r => r.item);
-        const keyset = new Set(out.map(x => x.id));
-        out = results.filter(x => keyset.has(x.id));
+        const results = fuse.search(f.q).map(r=>r.item);
+        const idset = new Set(out.map(x=>x.id));
+        out = results.filter(x=>idset.has(x.id));
       }
 
       filtered = out;
@@ -432,6 +424,19 @@
 
       renderMarkers(filtered);
       renderList(filtered);
+    }
+
+    function resetControls(reapply=true){
+      elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
+      selectedId = null;
+      if(reapply) applyAll();
+    }
+
+    function fitToFiltered(){
+      const arr = filtered.length ? filtered : items;
+      if(!arr.length) return;
+      const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
+      map.fitBounds(bounds.pad(0.15));
     }
 
     function renderMarkers(data){
@@ -458,7 +463,7 @@
         const m = L.marker([it.lat, it.lng], {icon});
         m.on("click", ()=> openDetail(it.id));
         m.bindTooltip(
-          `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title)}</div>
+          `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title||"")}</div>
            <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
           {direction:"top", opacity:0.96, sticky:true}
         );
@@ -475,9 +480,9 @@
         return;
       }
 
-      const rank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
+      const tierRank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
       const sorted = [...data].sort((a,b)=>{
-        const tr = rank(a.confidence_tier) - rank(b.confidence_tier);
+        const tr = tierRank(a.confidence_tier) - tierRank(b.confidence_tier);
         if(tr!==0) return tr;
         const as = (a.confidence_score ?? -1), bs = (b.confidence_score ?? -1);
         if(bs!==as) return bs-as;
@@ -490,7 +495,7 @@
         div.innerHTML = `
           <div class="h">
             <div>${escapeHtml(it.title||"(Untitled)")}</div>
-            <div style="font-size:11px;color:var(--muted);font-weight:900;white-space:nowrap">${escapeHtml(it.id)}</div>
+            <div style="font-size:11px;color:var(--muted);font-weight:900;white-space:nowrap">${escapeHtml(it.id||"")}</div>
           </div>
           <div class="m">${escapeHtml([it.media_group, it.sido].filter(Boolean).join(" · "))}</div>
           <div class="m" style="margin-top:6px">${escapeHtml(it.address||"")}</div>
@@ -526,19 +531,18 @@
     function openDetail(id){
       const it = items.find(x=>x.id===id);
       if(!it) return;
-
       selectedId = id;
 
       elMTitle.textContent = it.title || "(Untitled)";
-      elMSub.textContent = it.subtitle || "";
+      elMSub.textContent = [it.sido, it.media_group, it.address].filter(Boolean).join(" · ");
 
       elMBadges.innerHTML = "";
-      ["confidence_tier","confidence_score","verified_status","media_group","sido","status"].forEach(k=>{
+      ["confidence_tier","confidence_score","verified_status","status","entity_type"].forEach(k=>{
         if(safe(it[k])!=="") elMBadges.insertAdjacentHTML("beforeend", makeBadge(k, it[k]));
       });
 
       const kvs = [
-        ["ID", it.id],
+        ["id", it.id],
         ["national_id", it.national_id],
         ["media_group", it.media_group],
         ["sido", it.sido],
@@ -555,13 +559,8 @@
       elMGrid.innerHTML = "";
       kvs.forEach(([k,v])=>{
         const isUrl = safe(v).startsWith("http://") || safe(v).startsWith("https://");
-        const vv = isUrl
-          ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>`
-          : escapeHtml(v);
-
-        elMGrid.insertAdjacentHTML("beforeend",
-          `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`
-        );
+        const vv = isUrl ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>` : escapeHtml(v);
+        elMGrid.insertAdjacentHTML("beforeend", `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`);
       });
 
       elMRaw.textContent = JSON.stringify(it, null, 2);
@@ -570,9 +569,20 @@
 
     function closeModal(){ elModal.classList.remove("open"); }
 
-    // =======================
-    // EVENTS
-    // =======================
+    elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
+    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+    elMClose.addEventListener("click", closeModal);
+    elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
+    elMCopy.addEventListener("click", async ()=>{
+      try{
+        await navigator.clipboard.writeText(elMRaw.textContent || "");
+        elMCopy.textContent="복사됨";
+        setTimeout(()=> elMCopy.textContent="JSON 복사", 900);
+      }catch(e){
+        alert("클립보드 복사 실패 (브라우저 권한 확인)");
+      }
+    });
+
     ["input","change"].forEach(evt => {
       elQ.addEventListener(evt, applyAll);
       elFGroup.addEventListener(evt, applyAll);
@@ -580,32 +590,9 @@
       elFTier.addEventListener(evt, applyAll);
       elFVer.addEventListener(evt, applyAll);
     });
-
     elReset.addEventListener("click", ()=> resetControls(true));
-    elFit.addEventListener("click", ()=> {
-      const arr = filtered.length ? filtered : items;
-      fitTo(arr);
-    });
+    elFit.addEventListener("click", ()=> fitToFiltered());
 
-    elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
-    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
-    elMClose.addEventListener("click", closeModal);
-    elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
-
-    elMCopy.addEventListener("click", async ()=>{
-      try {
-        await navigator.clipboard.writeText(elMRaw.textContent || "");
-        elMCopy.textContent="복사됨";
-        setTimeout(()=> elMCopy.textContent="JSON 복사", 900);
-      } catch(err) {
-        console.error(err);
-        alert("클립보드 복사 실패 (브라우저 권한 확인)");
-      }
-    });
-
-    // =======================
-    // BOOT
-    // =======================
     async function loadData(){
       try{
         setPill("LOADING…");
@@ -613,17 +600,17 @@
 
         const res = await fetch(DATA_URL, { cache:"no-store" });
         if(!res.ok) throw new Error("HTTP " + res.status);
-
         const data = await res.json();
-        const arr = (data && Array.isArray(data.items)) ? data.items : [];
 
-        // lat/lng가 문자열인 경우가 많아서 숫자 변환 후 필터
-        items = arr.map(x => ({
-          ...x,
-          lat: toNum(x.lat),
-          lng: toNum(x.lng),
-          confidence_score: toNum(x.confidence_score)
-        })).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+        const arr = Array.isArray(data?.items) ? data.items : [];
+        items = arr
+          .map(x => ({
+            ...x,
+            lat: toNum(x.lat),
+            lng: toNum(x.lng),
+            confidence_score: toNum(x.confidence_score),
+          }))
+          .filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
 
         fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
         fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
@@ -636,31 +623,31 @@
           ignoreLocation:true,
           keys:[
             {name:"title", weight:0.50},
-            {name:"subtitle", weight:0.25},
+            {name:"subtitle", weight:0.20},
             {name:"media_group", weight:0.15},
             {name:"sido", weight:0.10},
-            {name:"address", weight:0.08}
+            {name:"address", weight:0.05}
           ]
         });
 
-        elTotal.textContent = String(items.length);
         setPill("READY");
+        elTotal.textContent = String(items.length);
 
-        resetControls(false);
+        filtered = [...items];
         applyAll();
+        fitToFiltered();
 
-        // 최초 fit + 리사이즈 킥
-        const arrFit = filtered.length ? filtered : items;
-        fitTo(arrFit);
-        setTimeout(()=>{ try{ map.invalidateSize(true); }catch(e){} }, 250);
+        // 데이터 로드 후 타일도 한 번 더 보정
+        setTimeout(() => {
+          try{ map.invalidateSize(true); baseLayer.redraw(); map.panBy([0,0], {animate:false}); }catch(e){}
+        }, 250);
 
       }catch(err){
         console.error(err);
         setPill("ERROR");
-        elToast.innerHTML = `<b>로딩 실패</b>: JSON을 불러오지 못했습니다.<br/>
-          1) 파일명이 정확한지 확인 (data_v13_med_high.json)<br/>
-          2) index.html과 같은 폴더인지 확인<br/>
-          3) GitHub Pages URL에서 직접 열어 확인`;
+        elToast.innerHTML = `<b>로딩 실패</b>: data_v13_med_high.json을 불러오지 못했습니다.<br/>
+        1) JSON 파일명이 정확한지<br/>
+        2) index.html과 같은 위치(루트)에 있는지 확인하세요.`;
       }
     }
 
