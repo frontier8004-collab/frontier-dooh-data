@@ -1,738 +1,489 @@
-<!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH Map MVP (v13)</title>
+<script>
+  // ========================
+  // Config
+  // ========================
+  const DATA_URL = "./data_v13_med_high.json";
+  const DEFAULT_CENTER = [36.5, 127.9];
+  const DEFAULT_ZOOM = 7;
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  // 타일: CARTO(기본, 안정적) / OSM(대체)
+  const TILE_PRIMARY = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const TILE_FALLBACK = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-  <style>
-    :root{
-      --bg:#0b0c0d; --panel:#0f1011; --panel2:#121416;
-      --line:rgba(255,255,255,.10); --text:#dbe3ef; --muted:#9fb0c8;
-      --mint:#a2decc; --shadow:0 18px 50px rgba(0,0,0,.55); --radius:18px;
-      --bad:#ff6b6b; --warn:#ffd166; --good:#4cd4a4;
-    }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{
-      margin:0; overflow:hidden; color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 60% -10%, rgba(162,222,204,.12), transparent 60%),
-        radial-gradient(900px 600px at 5% 10%, rgba(162,222,204,.08), transparent 55%),
-        var(--bg);
-      font-family: ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",Arial,sans-serif;
-    }
-    .app{height:100%; display:grid; grid-template-columns:420px 1fr;}
-    .sidebar{
-      height:100%; border-right:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(18,20,22,.96), rgba(15,16,17,.92));
-      padding:16px 14px 12px; display:flex; flex-direction:column; gap:12px;
-    }
-    .brand{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius);
-      background:rgba(0,0,0,.18); box-shadow:0 0 0 1px rgba(162,222,204,.06) inset;
-    }
-    .title{font-weight:900; font-size:14px; line-height:1.2}
-    .title b{color:var(--mint)}
-    .sub{margin-top:4px; font-size:12px; color:var(--muted)}
-    .pill{font-size:11px; padding:6px 10px; border-radius:999px; white-space:nowrap;
-      border:1px solid rgba(162,222,204,.25); color:var(--mint); background:rgba(162,222,204,.08);
-    }
-    .controls{
-      border:1px solid var(--line); border-radius:var(--radius); padding:12px;
-      background:rgba(0,0,0,.16); box-shadow:0 0 0 1px rgba(162,222,204,.05) inset;
-      display:flex; flex-direction:column; gap:10px;
-    }
-    label{font-size:12px; color:var(--muted); display:block; margin:0 0 6px 2px}
-    input[type="text"], select, button{
-      width:100%; border-radius:14px; border:1px solid var(--line);
-      background:rgba(10,11,12,.75); color:var(--text); padding:10px 12px;
-      outline:none; font-size:13px;
-    }
-    button{
-      cursor:pointer; border-color:rgba(162,222,204,.22);
-      background:linear-gradient(180deg, rgba(162,222,204,.14), rgba(162,222,204,.07));
-      font-weight:800;
-    }
-    button:hover{box-shadow:0 0 0 3px rgba(162,222,204,.12)}
-    .btn-secondary{border-color:var(--line); background:rgba(0,0,0,.18); color:var(--muted)}
-    .row{display:flex; gap:10px; align-items:center} .row>*{flex:1}
-    .stats{display:grid; grid-template-columns:1fr 1fr; gap:10px}
-    .stat{border:1px solid var(--line); border-radius:16px; padding:10px 12px; background:rgba(0,0,0,.14)}
-    .stat .k{font-size:11px; color:var(--muted)} .stat .v{font-size:16px; font-weight:900; margin-top:4px}
-    .stat .v b{color:var(--mint)}
-    .listWrap{flex:1; min-height:0; border:1px solid var(--line); border-radius:var(--radius);
-      background:rgba(0,0,0,.12); overflow:hidden; display:flex; flex-direction:column;
-    }
-    .listHeader{padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; gap:10px}
-    .listHeader .small{font-size:12px; color:var(--muted)}
-    .list{overflow:auto; padding:8px}
-    .item{border:1px solid rgba(255,255,255,.08); background:rgba(15,16,17,.55); border-radius:16px;
-      padding:10px; margin-bottom:8px; cursor:pointer; transition:transform .12s ease, border-color .12s ease, background .12s ease;
-    }
-    .item:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.25); background:rgba(18,20,22,.78)}
-    .item .h{display:flex; justify-content:space-between; gap:10px; font-weight:900; font-size:13px; line-height:1.25}
-    .item .m{margin-top:6px; font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; line-height:1.35}
-    .badges{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
-    .badge{font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.03); color:var(--muted); white-space:nowrap;
-    }
-    .badge.mint{border-color:rgba(162,222,204,.25); background:rgba(162,222,204,.10); color:var(--mint)}
-    .badge.good{border-color:rgba(76,212,164,.25); background:rgba(76,212,164,.10); color:var(--good)}
-    .badge.warn{border-color:rgba(255,209,102,.25); background:rgba(255,209,102,.10); color:var(--warn)}
-    .badge.bad{border-color:rgba(255,107,107,.25); background:rgba(255,107,107,.10); color:var(--bad)}
+  // "한국 좌표"로 인정할 대략 범위 (MVP용)
+  const KOREA_BBOX = {
+    minLat: 32.0,
+    maxLat: 40.5,
+    minLng: 123.0,
+    maxLng: 132.8
+  };
 
-    .mapWrap{position:relative; height:100%; min-height:520px;}
-    #map{height:100%; width:100%; background:#0b0c0d;}
-    .mapTopbar{position:absolute; left:16px; top:16px; right:16px; z-index:500; pointer-events:none; display:flex; justify-content:flex-end}
-    .toast{pointer-events:auto; max-width:620px; padding:10px 12px; border-radius:16px; border:1px solid var(--line);
-      background:rgba(0,0,0,.55); backdrop-filter:blur(10px); box-shadow:var(--shadow); color:var(--muted); font-size:12px; line-height:1.35;
-    }
-    .toast b{color:var(--mint)}
+  // ========================
+  // Utils
+  // ========================
+  const $ = (id) => document.getElementById(id);
+  const safe = (v) => (v===null||v===undefined) ? "" : String(v).trim();
+  const toNum = (v) => {
+    const n = Number(String(v ?? "").replace(/,/g,"").trim());
+    return Number.isFinite(n) ? n : null;
+  };
+  const uniq = (arr) =>
+    Array.from(new Set(arr.map(safe).filter(Boolean)))
+      .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
 
-    .modal{position:fixed; inset:0; background:rgba(0,0,0,.62); display:none; align-items:center; justify-content:center; z-index:2000; padding:18px}
-    .modal.open{display:flex}
-    .modalCard{width:min(920px,96vw); max-height:86vh; overflow:hidden; border-radius:22px; border:1px solid rgba(255,255,255,.12);
-      background:rgba(15,16,17,.92); box-shadow:var(--shadow); display:flex; flex-direction:column;
-    }
-    .modalHeader{padding:14px 16px; border-bottom:1px solid var(--line); display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
-    .modalHeader .t{font-weight:900; font-size:16px; line-height:1.25}
-    .modalHeader .s{margin-top:6px; color:var(--muted); font-size:12px; line-height:1.35}
-    .iconBtn{width:auto; padding:8px 10px; border-radius:12px; border:1px solid var(--line); background:rgba(0,0,0,.25); color:var(--text); cursor:pointer; font-weight:900}
-    .modalBody{overflow:auto; padding:14px 16px 18px}
-    .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px}
-    .kv{border:1px solid rgba(255,255,255,.10); background:rgba(0,0,0,.16); border-radius:16px; padding:10px 12px}
-    .kv .k{font-size:11px; color:var(--muted)} .kv .v{margin-top:6px; font-size:13px; font-weight:800; line-height:1.35}
-    .kv .v a{color:var(--mint); text-decoration:none} .kv .v a:hover{text-decoration:underline}
-    .raw{margin-top:14px; border:1px solid rgba(255,255,255,.10); border-radius:16px; overflow:hidden}
-    .raw .rawHead{padding:10px 12px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; color:var(--muted); font-size:12px}
-    pre{margin:0; padding:12px; background:rgba(0,0,0,.22); color:#cfd8e3; font-size:12px; overflow:auto; max-height:260px}
+  function escapeHtml(str){
+    return String(str ?? "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  }
+  function escapeAttr(str){ return String(str ?? "").replace(/"/g,"&quot;"); }
 
-    @media (max-width:980px){
-      body{overflow:auto}
-      .app{grid-template-columns:1fr; grid-template-rows:520px 1fr;}
-      .sidebar{height:auto}
-      .mapWrap{height:calc(100vh - 12px)}
-    }
-  </style>
-</head>
+  function inKorea(lat, lng){
+    return (
+      lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat &&
+      lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng
+    );
+  }
 
-<body>
-  <div class="app">
-    <aside class="sidebar">
-      <div class="brand">
-        <div>
-          <div class="title">Frontier <b>DOOH</b> • Map MVP (v13)</div>
-          <div class="sub">정적(JSON) 로드 • 지도 + 검색 + 필터 + 리스트 + 상세</div>
-        </div>
-        <div class="pill" id="pillState">LOADING…</div>
-      </div>
+  // 핵심: 좌표 정규화 (뒤집힘/비정상 자동 교정)
+  function normalizeLatLng(latRaw, lngRaw){
+    let lat = toNum(latRaw);
+    let lng = toNum(lngRaw);
+    if(lat===null || lng===null) return null;
 
-      <div class="controls">
-        <div class="row">
-          <div>
-            <label>검색 (제목/그룹/시도/주소)</label>
-            <input id="q" type="text" placeholder="예: 서울 전광판 / 강남 / 세종대로" />
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label>media_group</label>
-            <select id="fGroup"><option value="">전체</option></select>
-          </div>
-          <div>
-            <label>sido</label>
-            <select id="fSido"><option value="">전체</option></select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label>confidence_tier</label>
-            <select id="fTier"><option value="">전체</option></select>
-          </div>
-          <div>
-            <label>verified_status</label>
-            <select id="fVer"><option value="">전체</option></select>
-          </div>
-        </div>
-
-        <div class="row">
-          <button id="btnReset" class="btn-secondary">필터/검색 초기화</button>
-          <button id="btnFit">전체 화면 맞춤</button>
-        </div>
-
-        <div class="stats">
-          <div class="stat"><div class="k">전체 로드</div><div class="v"><b id="statTotal">-</b></div></div>
-          <div class="stat"><div class="k">현재 표시</div><div class="v"><b id="statShown">-</b></div></div>
-        </div>
-      </div>
-
-      <div class="listWrap">
-        <div class="listHeader">
-          <div class="small">리스트 (클릭 → 지도 이동/상세)</div>
-          <div class="small"><span id="listCount">0</span>건</div>
-        </div>
-        <div class="list" id="list"></div>
-      </div>
-    </aside>
-
-    <main class="mapWrap">
-      <div id="map"></div>
-      <div class="mapTopbar">
-        <div class="toast" id="toast">
-          <b>상태</b>: <span id="toastLine">초기화 대기…</span><br/>
-          <b>데이터</b>: <span id="metaLine">data_v13_med_high.json</span>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <div class="modal" id="modal" role="dialog" aria-modal="true">
-    <div class="modalCard">
-      <div class="modalHeader">
-        <div>
-          <div class="t" id="mTitle">-</div>
-          <div class="s" id="mSub">-</div>
-          <div class="badges" id="mBadges" style="margin-top:10px"></div>
-        </div>
-        <div style="display:flex; gap:8px; align-items:flex-start">
-          <button class="iconBtn" id="mCenter">지도 중심</button>
-          <button class="iconBtn" id="mClose">닫기</button>
-        </div>
-      </div>
-      <div class="modalBody">
-        <div class="grid" id="mGrid"></div>
-        <div class="raw">
-          <div class="rawHead">
-            <div>Row JSON</div>
-            <button class="iconBtn" id="mCopy">JSON 복사</button>
-          </div>
-          <pre id="mRaw">{}</pre>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
-
-  <script>
-    // ========================
-    // Config
-    // ========================
-    const DATA_URL = "./data_v13_med_high.json";
-    const DEFAULT_CENTER = [36.5, 127.9];
-    const DEFAULT_ZOOM = 7;
-
-    // OSM (기본) + CARTO(대체)
-    const TILE_OSM = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-    const TILE_CARTO = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-
-    // ========================
-    // Utils
-    // ========================
-    const $ = (id) => document.getElementById(id);
-    const safe = (v) => (v===null||v===undefined) ? "" : String(v).trim();
-    const toNum = (v) => {
-      const n = Number(String(v ?? "").replace(/,/g,"").trim());
-      return Number.isFinite(n) ? n : null;
-    };
-    const uniq = (arr) =>
-      Array.from(new Set(arr.map(safe).filter(Boolean)))
-        .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
-
-    function escapeHtml(str){
-      return String(str ?? "")
-        .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-        .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-    }
-    function escapeAttr(str){ return String(str ?? "").replace(/"/g,"&quot;"); }
-
-    const badgeClass = (k, v) => {
-      const val = safe(v).toUpperCase();
-      if(k === "confidence_tier"){
-        if(val==="HIGH") return "good";
-        if(val==="MED") return "warn";
-        if(val==="LOW") return "bad";
+    // 1) 범위상 불가능하면(위도 90 초과 / 경도 180 초과) 스왑 시도
+    if(Math.abs(lat) > 90 || Math.abs(lng) > 180){
+      const a = lng, b = lat;
+      if(Math.abs(a) <= 90 && Math.abs(b) <= 180){
+        lat = a; lng = b;
+      }else{
+        return null;
       }
-      if(k === "verified_status"){
-        if(val==="VERIFIED") return "good";
-        if(val.includes("LOWCONF")) return "warn";
-      }
-      return "mint";
+    }
+
+    // 2) "한국 범위"가 아니면 스왑했을 때 한국 범위면 스왑
+    if(!inKorea(lat, lng) && inKorea(lng, lat)){
+      const t = lat; lat = lng; lng = t;
+    }
+
+    return { lat, lng, isKorea: inKorea(lat, lng) };
+  }
+
+  const badgeClass = (k, v) => {
+    const val = safe(v).toUpperCase();
+    if(k === "confidence_tier"){
+      if(val==="HIGH") return "good";
+      if(val==="MED") return "warn";
+      if(val==="LOW") return "bad";
+    }
+    if(k === "verified_status"){
+      if(val==="VERIFIED") return "good";
+      if(val.includes("LOWCONF")) return "warn";
+    }
+    return "mint";
+  };
+  const makeBadge = (k, v) => {
+    const cls = badgeClass(k, v);
+    const c = cls==="good" ? "badge good" : cls==="warn" ? "badge warn" : cls==="bad" ? "badge bad" : "badge mint";
+    return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
+  };
+
+  // ========================
+  // Elements
+  // ========================
+  const elPill = $("pillState");
+  const elTotal = $("statTotal");
+  const elShown = $("statShown");
+  const elCount = $("listCount");
+  const elList = $("list");
+  const elMetaLine = $("metaLine");
+  const elToast = $("toast");
+
+  const elQ = $("q");
+  const elFGroup = $("fGroup");
+  const elFSido  = $("fSido");
+  const elFTier  = $("fTier");
+  const elFVer   = $("fVer");
+  const elReset  = $("btnReset");
+  const elFit    = $("btnFit");
+
+  const elModal  = $("modal");
+  const elMTitle = $("mTitle");
+  const elMSub   = $("mSub");
+  const elMBadges= $("mBadges");
+  const elMGrid  = $("mGrid");
+  const elMRaw   = $("mRaw");
+  const elMClose = $("mClose");
+  const elMCenter= $("mCenter");
+  const elMCopy  = $("mCopy");
+
+  function setPill(t){ elPill.textContent = t; }
+  function setToast(html){ elToast.innerHTML = html; }
+
+  // ========================
+  // Map
+  // ========================
+  const map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
+
+  let baseLayer = L.tileLayer(TILE_PRIMARY, {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+  }).addTo(map);
+
+  // 타일 에러가 계속 나면 OSM으로 스위치
+  let tileErr = 0;
+  baseLayer.on("tileerror", () => {
+    tileErr++;
+    if(tileErr >= 10 && baseLayer && baseLayer._url !== TILE_FALLBACK){
+      try{ map.removeLayer(baseLayer); }catch(e){}
+      baseLayer = L.tileLayer(TILE_FALLBACK, { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+      setToast(`<b>주의</b>: 타일 오류가 반복되어 OSM으로 전환했습니다.`);
+    }
+  });
+
+  // 클러스터
+  const markers = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+    spiderfyOnMaxZoom:true
+  });
+  map.addLayer(markers);
+
+  // ========================
+  // Resize / Zoom 안정화 (과하지 않게)
+  // ========================
+  let refreshTimer = null;
+  function scheduleRefresh(delay=120){
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => {
+      try{ map.invalidateSize(true); }catch(e){}
+      try{ baseLayer && baseLayer.redraw(); }catch(e){}
+    }, delay);
+  }
+
+  // 창/iframe 크기 변화 대응
+  window.addEventListener("resize", () => scheduleRefresh(200));
+  window.addEventListener("orientationchange", () => scheduleRefresh(200));
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) scheduleRefresh(250); });
+  window.addEventListener("focus", () => scheduleRefresh(250));
+
+  if("ResizeObserver" in window){
+    const ro = new ResizeObserver(() => scheduleRefresh(120));
+    ro.observe(document.getElementById("map"));
+    const wrap = document.querySelector(".mapWrap");
+    if(wrap) ro.observe(wrap);
+  }
+
+  // 휠 줌/이동 후 타일이 검게 남는 경우 방지
+  map.on("zoomend", () => scheduleRefresh(80));
+  map.on("moveend", () => scheduleRefresh(80));
+
+  // ========================
+  // Data + UI
+  // ========================
+  let items = [];
+  let filtered = [];
+  let fuse = null;
+  let markerById = new Map();
+  let selectedId = null;
+
+  function fillSelect(el, values){
+    el.innerHTML = `<option value="">전체</option>`;
+    values.forEach(v => {
+      const opt = document.createElement("option");
+      opt.value=v; opt.textContent=v;
+      el.appendChild(opt);
+    });
+  }
+
+  function getFilters(){
+    return {
+      q: safe(elQ.value).toLowerCase(),
+      group: safe(elFGroup.value),
+      sido: safe(elFSido.value),
+      tier: safe(elFTier.value),
+      ver: safe(elFVer.value),
     };
-    const makeBadge = (k, v) => {
-      const cls = badgeClass(k, v);
-      const c = cls==="good" ? "badge good" : cls==="warn" ? "badge warn" : cls==="bad" ? "badge bad" : "badge mint";
-      return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
-    };
+  }
 
-    // ========================
-    // Elements
-    // ========================
-    const elPill = $("pillState");
-    const elTotal = $("statTotal");
-    const elShown = $("statShown");
-    const elCount = $("listCount");
-    const elList = $("list");
-    const elMetaLine = $("metaLine");
-    const elToastLine = $("toastLine");
+  function applyAll(){
+    const f = getFilters();
 
-    const elQ = $("q");
-    const elFGroup = $("fGroup");
-    const elFSido  = $("fSido");
-    const elFTier  = $("fTier");
-    const elFVer   = $("fVer");
-    const elReset  = $("btnReset");
-    const elFit    = $("btnFit");
-
-    const elModal  = $("modal");
-    const elMTitle = $("mTitle");
-    const elMSub   = $("mSub");
-    const elMBadges= $("mBadges");
-    const elMGrid  = $("mGrid");
-    const elMRaw   = $("mRaw");
-    const elMClose = $("mClose");
-    const elMCenter= $("mCenter");
-    const elMCopy  = $("mCopy");
-
-    function setPill(t){ elPill.textContent = t; }
-    function setToast(s){ elToastLine.textContent = s; }
-
-    // ========================
-    // Map (지연 초기화)
-    // ========================
-    let map = null;
-    let baseLayer = null;
-    let usingFallback = false;
-
-    const markers = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      chunkedLoading:true,
-      spiderfyOnMaxZoom:true
+    let out = items.filter(it => {
+      if(f.group && it.media_group !== f.group) return false;
+      if(f.sido  && it.sido !== f.sido) return false;
+      if(f.tier  && it.confidence_tier !== f.tier) return false;
+      if(f.ver   && it.verified_status !== f.ver) return false;
+      return true;
     });
 
-    function createBaseLayer(url){
-      return L.tileLayer(url, { maxZoom: 19, attribution:"&copy; OpenStreetMap contributors" });
+    if(f.q){
+      const results = fuse.search(f.q).map(r=>r.item);
+      const idset = new Set(out.map(x=>x.id));
+      out = results.filter(x=>idset.has(x.id));
     }
 
-    // “검은 화면” 확실 복구용: 타일 URL에 캐시버스터 붙여 강제 재요청
-    function hardRefreshTiles(){
-      if(!map || !baseLayer) return;
+    filtered = out;
+    elShown.textContent = String(filtered.length);
+    elCount.textContent = String(filtered.length);
 
-      const url = (usingFallback ? TILE_CARTO : TILE_OSM);
-      const busted = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+    renderMarkers(filtered);
+    renderList(filtered);
+  }
 
-      try{
-        baseLayer.setUrl(busted, true);
-        baseLayer.redraw();
-      }catch(e){}
+  function fitToFiltered(){
+    const arr = filtered.length ? filtered : items;
+    if(!arr.length) return;
 
-      try{
-        map.invalidateSize(true);
-        map.panBy([0,0], { animate:false });
-      }catch(e){}
-    }
+    // 핵심: "한국 좌표만"으로 화면 맞춤(튀는 해외좌표가 있어도 화면이 망가지지 않게)
+    const koreaArr = arr.filter(x => x._isKorea);
+    const target = koreaArr.length ? koreaArr : arr;
 
-    // 반복 에러 시 타일 공급자 변경(OSM이 순간 막히는 케이스)
-    function switchToFallbackTiles(){
-      if(!map) return;
-      usingFallback = true;
+    const bounds = L.latLngBounds(target.map(d => [d.lat, d.lng]));
+    map.fitBounds(bounds.pad(0.15));
+    scheduleRefresh(120);
+  }
 
-      try{
-        if(baseLayer) map.removeLayer(baseLayer);
-      }catch(e){}
+  function renderMarkers(data){
+    markers.clearLayers();
+    markerById.clear();
 
-      baseLayer = createBaseLayer(TILE_CARTO);
-      baseLayer.addTo(map);
+    data.forEach(it => {
+      const tier = safe(it.confidence_tier).toUpperCase();
+      const cls = (tier==="HIGH") ? "good" : (tier==="MED") ? "warn" : (tier==="LOW") ? "bad" : "mint";
+      const color =
+        cls==="good" ? "rgba(76,212,164,.95)" :
+        cls==="warn" ? "rgba(255,209,102,.95)" :
+        cls==="bad"  ? "rgba(255,107,107,.95)" :
+        "rgba(162,222,204,.95)";
 
-      bindTileEvents(); // 이벤트 다시 연결
-      hardRefreshTiles();
-      setToast("타일 공급자 변경(Carto)로 복구 시도");
-    }
-
-    // 타일 이벤트로 상태/복구 트리거
-    let tileOkCount = 0;
-    let tileErrCount = 0;
-
-    function bindTileEvents(){
-      if(!baseLayer) return;
-
-      baseLayer.off();
-      tileOkCount = 0;
-      tileErrCount = 0;
-
-      baseLayer.on("tileload", () => {
-        tileOkCount++;
-        if(tileOkCount === 1) setToast("타일 로드 정상");
+      const icon = L.divIcon({
+        className: "",
+        html: `<div style="width:14px;height:14px;border-radius:999px;border:2px solid rgba(255,255,255,.75);
+              background:${color}; box-shadow:0 0 0 3px rgba(0,0,0,.35), 0 0 18px rgba(162,222,204,.18);"></div>`,
+        iconSize:[14,14],
+        iconAnchor:[7,7]
       });
 
-      baseLayer.on("tileerror", () => {
-        tileErrCount++;
-        setToast("타일 로드 오류 감지 (" + tileErrCount + ")");
-        // 오류가 여러 번 반복되면 공급자 스위치
-        if(tileErrCount >= 6 && !usingFallback){
-          switchToFallbackTiles();
-        }else{
-          // 오류가 나도 한 번은 강제 리프레시
-          setTimeout(hardRefreshTiles, 120);
-        }
-      });
-    }
+      const m = L.marker([it.lat, it.lng], {icon});
+      m.on("click", ()=> openDetail(it.id));
+      m.bindTooltip(
+        `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title||"")}</div>
+         <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
+        {direction:"top", opacity:0.96, sticky:true}
+      );
 
-    // Resize/iframe/분할 이동 대응: invalidate + (필요시) hard refresh
-    function setupAutoResize(){
-      const mapEl = document.getElementById("map");
-      if(!mapEl) return;
-
-      let queued = false;
-      const kick = () => {
-        if(!map) return;
-        if(queued) return;
-        queued = true;
-
-        requestAnimationFrame(() => {
-          queued = false;
-          try{ map.invalidateSize(true); }catch(e){}
-          try{ baseLayer && baseLayer.redraw(); }catch(e){}
-          try{ map.panBy([0,0], {animate:false}); }catch(e){}
-        });
-
-        // iframe/창 이동은 “조금 뒤”가 결정타
-        setTimeout(() => {
-          try{ map.invalidateSize(true); }catch(e){}
-          // 만약 이 시점에도 타일이 하나도 안 잡히면 강제 갱신
-          if(tileOkCount === 0) hardRefreshTiles();
-        }, 220);
-      };
-
-      window.addEventListener("resize", kick);
-      window.addEventListener("orientationchange", kick);
-      window.addEventListener("focus", kick);
-      document.addEventListener("visibilitychange", () => { if(!document.hidden) kick(); });
-
-      if("ResizeObserver" in window){
-        const ro = new ResizeObserver(() => kick());
-        ro.observe(mapEl);
-        const wrap = document.querySelector(".mapWrap");
-        if(wrap) ro.observe(wrap);
-      }
-
-      // 최초 보정
-      setTimeout(kick, 80);
-      setTimeout(kick, 420);
-      setTimeout(kick, 1200);
-    }
-
-    // ========================
-    // Data + UI
-    // ========================
-    let items = [];
-    let filtered = [];
-    let fuse = null;
-    let markerById = new Map();
-    let selectedId = null;
-
-    function fillSelect(el, values){
-      el.innerHTML = `<option value="">전체</option>`;
-      values.forEach(v => {
-        const opt = document.createElement("option");
-        opt.value=v; opt.textContent=v;
-        el.appendChild(opt);
-      });
-    }
-
-    function getFilters(){
-      return {
-        q: safe(elQ.value).toLowerCase(),
-        group: safe(elFGroup.value),
-        sido: safe(elFSido.value),
-        tier: safe(elFTier.value),
-        ver: safe(elFVer.value),
-      };
-    }
-
-    function applyAll(){
-      const f = getFilters();
-      let out = items.filter(it => {
-        if(f.group && it.media_group !== f.group) return false;
-        if(f.sido  && it.sido !== f.sido) return false;
-        if(f.tier  && it.confidence_tier !== f.tier) return false;
-        if(f.ver   && it.verified_status !== f.ver) return false;
-        return true;
-      });
-
-      if(f.q){
-        const results = fuse.search(f.q).map(r=>r.item);
-        const idset = new Set(out.map(x=>x.id));
-        out = results.filter(x=>idset.has(x.id));
-      }
-
-      filtered = out;
-      elShown.textContent = String(filtered.length);
-      elCount.textContent = String(filtered.length);
-
-      renderMarkers(filtered);
-      renderList(filtered);
-    }
-
-    function resetControls(reapply=true){
-      elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
-      selectedId = null;
-      if(reapply) applyAll();
-    }
-
-    function fitToFiltered(){
-      if(!map) return;
-      const arr = filtered.length ? filtered : items;
-      if(!arr.length) return;
-      const bounds = L.latLngBounds(arr.map(d => [d.lat, d.lng]));
-      map.fitBounds(bounds.pad(0.15));
-      // fit 직후 타일 공백 방지
-      setTimeout(hardRefreshTiles, 120);
-    }
-
-    function renderMarkers(data){
-      markers.clearLayers();
-      markerById.clear();
-
-      data.forEach(it => {
-        const tier = safe(it.confidence_tier).toUpperCase();
-        const cls = (tier==="HIGH") ? "good" : (tier==="MED") ? "warn" : (tier==="LOW") ? "bad" : "mint";
-        const color =
-          cls==="good" ? "rgba(76,212,164,.95)" :
-          cls==="warn" ? "rgba(255,209,102,.95)" :
-          cls==="bad"  ? "rgba(255,107,107,.95)" :
-          "rgba(162,222,204,.95)";
-
-        const icon = L.divIcon({
-          className: "",
-          html: `<div style="width:14px;height:14px;border-radius:999px;border:2px solid rgba(255,255,255,.75);
-                background:${color}; box-shadow:0 0 0 3px rgba(0,0,0,.35), 0 0 18px rgba(162,222,204,.18);"></div>`,
-          iconSize:[14,14],
-          iconAnchor:[7,7]
-        });
-
-        const m = L.marker([it.lat, it.lng], {icon});
-        m.on("click", ()=> openDetail(it.id));
-        m.bindTooltip(
-          `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title||"")}</div>
-           <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
-          {direction:"top", opacity:0.96, sticky:true}
-        );
-
-        markers.addLayer(m);
-        markerById.set(it.id, m);
-      });
-    }
-
-    function renderList(data){
-      elList.innerHTML="";
-      if(!data.length){
-        elList.innerHTML = `<div style="padding:14px 12px;color:var(--muted);font-size:13px;line-height:1.4">결과가 없습니다. 검색/필터를 조정하세요.</div>`;
-        return;
-      }
-
-      const tierRank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
-      const sorted = [...data].sort((a,b)=>{
-        const tr = tierRank(a.confidence_tier) - tierRank(b.confidence_tier);
-        if(tr!==0) return tr;
-        const as = (a.confidence_score ?? -1), bs = (b.confidence_score ?? -1);
-        if(bs!==as) return bs-as;
-        return String(a.title).localeCompare(String(b.title), "ko");
-      });
-
-      sorted.forEach(it => {
-        const div = document.createElement("div");
-        div.className="item";
-        div.innerHTML = `
-          <div class="h">
-            <div>${escapeHtml(it.title||"(Untitled)")}</div>
-            <div style="font-size:11px;color:var(--muted);font-weight:900;white-space:nowrap">${escapeHtml(it.id||"")}</div>
-          </div>
-          <div class="m">${escapeHtml([it.media_group, it.sido].filter(Boolean).join(" · "))}</div>
-          <div class="m" style="margin-top:6px">${escapeHtml(it.address||"")}</div>
-          <div class="badges">
-            ${makeBadge("confidence_tier", it.confidence_tier)}
-            ${it.verified_status ? makeBadge("verified_status", it.verified_status) : ""}
-            ${(it.confidence_score!==null && it.confidence_score!==undefined) ? makeBadge("confidence_score", it.confidence_score) : ""}
-          </div>
-        `;
-        div.addEventListener("click", ()=>{ flyTo(it.id); openDetail(it.id); });
-        elList.appendChild(div);
-      });
-    }
-
-    function flyTo(id){
-      if(!map) return;
-      const it = items.find(x=>x.id===id);
-      if(!it) return;
-
-      selectedId = id;
-      const ll = L.latLng(it.lat, it.lng);
-      const m = markerById.get(id);
-
-      if(m){
-        markers.zoomToShowLayer(m, ()=> {
-          map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
-          try{ m.openTooltip(); }catch(_){}
-          setTimeout(hardRefreshTiles, 120);
-        });
-      } else {
-        map.setView(ll, 15, {animate:true});
-        setTimeout(hardRefreshTiles, 120);
-      }
-    }
-
-    function openDetail(id){
-      const it = items.find(x=>x.id===id);
-      if(!it) return;
-      selectedId = id;
-
-      elMTitle.textContent = it.title || "(Untitled)";
-      elMSub.textContent = [it.sido, it.media_group, it.address].filter(Boolean).join(" · ");
-
-      elMBadges.innerHTML = "";
-      ["confidence_tier","confidence_score","verified_status","status","entity_type"].forEach(k=>{
-        if(safe(it[k])!=="") elMBadges.insertAdjacentHTML("beforeend", makeBadge(k, it[k]));
-      });
-
-      const kvs = [
-        ["id", it.id],
-        ["national_id", it.national_id],
-        ["media_group", it.media_group],
-        ["sido", it.sido],
-        ["address", it.address],
-        ["lat", it.lat],
-        ["lng", it.lng],
-        ["confidence_tier", it.confidence_tier],
-        ["confidence_score", it.confidence_score],
-        ["verified_status", it.verified_status],
-        ["status", it.status],
-        ["source_url", it.source_url],
-      ].filter(([k,v])=> safe(v)!=="");
-
-      elMGrid.innerHTML = "";
-      kvs.forEach(([k,v])=>{
-        const isUrl = safe(v).startsWith("http://") || safe(v).startsWith("https://");
-        const vv = isUrl ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>` : escapeHtml(v);
-        elMGrid.insertAdjacentHTML("beforeend", `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`);
-      });
-
-      elMRaw.textContent = JSON.stringify(it, null, 2);
-      elModal.classList.add("open");
-    }
-
-    function closeModal(){ elModal.classList.remove("open"); }
-
-    elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
-    document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
-    elMClose.addEventListener("click", closeModal);
-    elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
-    elMCopy.addEventListener("click", async ()=>{
-      try{
-        await navigator.clipboard.writeText(elMRaw.textContent || "");
-        elMCopy.textContent="복사됨";
-        setTimeout(()=> elMCopy.textContent="JSON 복사", 900);
-      }catch(e){
-        alert("클립보드 복사 실패 (브라우저 권한 확인)");
-      }
+      markers.addLayer(m);
+      markerById.set(it.id, m);
     });
 
-    ["input","change"].forEach(evt => {
-      elQ.addEventListener(evt, applyAll);
-      elFGroup.addEventListener(evt, applyAll);
-      elFSido.addEventListener(evt, applyAll);
-      elFTier.addEventListener(evt, applyAll);
-      elFVer.addEventListener(evt, applyAll);
+    scheduleRefresh(80);
+  }
+
+  function renderList(data){
+    elList.innerHTML="";
+    if(!data.length){
+      elList.innerHTML = `<div style="padding:14px 12px;color:var(--muted);font-size:13px;line-height:1.4">결과가 없습니다. 검색/필터를 조정하세요.</div>`;
+      return;
+    }
+
+    // 한국좌표 우선 정렬 + tier 정렬
+    const tierRank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
+    const sorted = [...data].sort((a,b)=>{
+      const ka = a._isKorea ? 0 : 1;
+      const kb = b._isKorea ? 0 : 1;
+      if(ka!==kb) return ka-kb;
+
+      const tr = tierRank(a.confidence_tier) - tierRank(b.confidence_tier);
+      if(tr!==0) return tr;
+
+      const as = (a.confidence_score ?? -1), bs = (b.confidence_score ?? -1);
+      if(bs!==as) return bs-as;
+
+      return String(a.title).localeCompare(String(b.title), "ko");
     });
-    elReset.addEventListener("click", ()=> resetControls(true));
-    elFit.addEventListener("click", ()=> fitToFiltered());
 
-    async function loadData(){
-      try{
-        setPill("LOADING…");
-        setToast("데이터 로딩 중…");
-        elMetaLine.textContent = DATA_URL;
+    sorted.forEach(it => {
+      const div = document.createElement("div");
+      div.className="item";
+      div.innerHTML = `
+        <div class="h">
+          <div>${escapeHtml(it.title||"(Untitled)")}</div>
+          <div style="font-size:11px;color:var(--muted);font-weight:900;white-space:nowrap">${escapeHtml(it.id||"")}</div>
+        </div>
+        <div class="m">${escapeHtml([it.media_group, it.sido].filter(Boolean).join(" · "))}</div>
+        <div class="m" style="margin-top:6px">${escapeHtml(it.address||"")}</div>
+        <div class="badges">
+          ${makeBadge("confidence_tier", it.confidence_tier)}
+          ${it.verified_status ? makeBadge("verified_status", it.verified_status) : ""}
+          ${(it._isKorea ? `<span class="badge good">KOREA</span>` : `<span class="badge warn">OUTLIER</span>`)}
+        </div>
+      `;
+      div.addEventListener("click", ()=>{ flyTo(it.id); openDetail(it.id); });
+      elList.appendChild(div);
+    });
+  }
 
-        const res = await fetch(DATA_URL, { cache:"no-store" });
-        if(!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
+  function flyTo(id){
+    const it = items.find(x=>x.id===id);
+    if(!it) return;
 
-        const arr = Array.isArray(data?.items) ? data.items : [];
-        items = arr
-          .map(x => ({
+    selectedId = id;
+    const ll = L.latLng(it.lat, it.lng);
+    const m = markerById.get(id);
+
+    if(m){
+      markers.zoomToShowLayer(m, ()=> {
+        map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
+        try{ m.openTooltip(); }catch(_){}
+        scheduleRefresh(120);
+      });
+    } else {
+      map.setView(ll, 15, {animate:true});
+      scheduleRefresh(120);
+    }
+  }
+
+  function openDetail(id){
+    const it = items.find(x=>x.id===id);
+    if(!it) return;
+    selectedId = id;
+
+    elMTitle.textContent = it.title || "(Untitled)";
+    elMSub.textContent = [it.sido, it.media_group, it.address].filter(Boolean).join(" · ");
+
+    elMBadges.innerHTML = "";
+    ["confidence_tier","confidence_score","verified_status","status","entity_type"].forEach(k=>{
+      if(safe(it[k])!=="") elMBadges.insertAdjacentHTML("beforeend", makeBadge(k, it[k]));
+    });
+    elMBadges.insertAdjacentHTML("beforeend", it._isKorea ? `<span class="badge good">KOREA</span>` : `<span class="badge warn">OUTLIER</span>`);
+
+    const kvs = [
+      ["id", it.id],
+      ["national_id", it.national_id],
+      ["media_group", it.media_group],
+      ["sido", it.sido],
+      ["address", it.address],
+      ["lat", it.lat],
+      ["lng", it.lng],
+      ["confidence_tier", it.confidence_tier],
+      ["confidence_score", it.confidence_score],
+      ["verified_status", it.verified_status],
+      ["status", it.status],
+      ["source_url", it.source_url],
+    ].filter(([k,v])=> safe(v)!=="");
+
+    elMGrid.innerHTML = "";
+    kvs.forEach(([k,v])=>{
+      const isUrl = safe(v).startsWith("http://") || safe(v).startsWith("https://");
+      const vv = isUrl ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>` : escapeHtml(v);
+      elMGrid.insertAdjacentHTML("beforeend", `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`);
+    });
+
+    elMRaw.textContent = JSON.stringify(it, null, 2);
+    elModal.classList.add("open");
+  }
+
+  function closeModal(){ elModal.classList.remove("open"); }
+
+  elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
+  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
+  elMClose.addEventListener("click", closeModal);
+  elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
+  elMCopy.addEventListener("click", async ()=>{
+    try{
+      await navigator.clipboard.writeText(elMRaw.textContent || "");
+      elMCopy.textContent="복사됨";
+      setTimeout(()=> elMCopy.textContent="JSON 복사", 900);
+    }catch(e){
+      alert("클립보드 복사 실패 (브라우저 권한 확인)");
+    }
+  });
+
+  ["input","change"].forEach(evt => {
+    elQ.addEventListener(evt, applyAll);
+    elFGroup.addEventListener(evt, applyAll);
+    elFSido.addEventListener(evt, applyAll);
+    elFTier.addEventListener(evt, applyAll);
+    elFVer.addEventListener(evt, applyAll);
+  });
+  elReset.addEventListener("click", ()=> {
+    elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
+    selectedId = null;
+    applyAll();
+    fitToFiltered();
+  });
+  elFit.addEventListener("click", ()=> fitToFiltered());
+
+  async function loadData(){
+    try{
+      setPill("LOADING…");
+      elMetaLine.textContent = DATA_URL;
+
+      const res = await fetch(DATA_URL, { cache:"no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      const arr = Array.isArray(data?.items) ? data.items : [];
+
+      // 좌표 정규화 적용
+      items = arr
+        .map(x => {
+          const norm = normalizeLatLng(x.lat, x.lng);
+          if(!norm) return null;
+          return {
             ...x,
-            lat: toNum(x.lat),
-            lng: toNum(x.lng),
+            lat: norm.lat,
+            lng: norm.lng,
             confidence_score: toNum(x.confidence_score),
-          }))
-          .filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+            _isKorea: norm.isKorea
+          };
+        })
+        .filter(Boolean);
 
-        fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
-        fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
-        fillSelect(elFTier,  uniq(items.map(x=>x.confidence_tier)));
-        fillSelect(elFVer,   uniq(items.map(x=>x.verified_status)));
+      // 통계
+      const koreaCount = items.filter(x=>x._isKorea).length;
+      const outCount = items.length - koreaCount;
 
-        fuse = new Fuse(items, {
-          includeScore:true,
-          threshold:0.35,
-          ignoreLocation:true,
-          keys:[
-            {name:"title", weight:0.50},
-            {name:"subtitle", weight:0.20},
-            {name:"media_group", weight:0.15},
-            {name:"sido", weight:0.10},
-            {name:"address", weight:0.05}
-          ]
-        });
+      elTotal.textContent = String(items.length);
 
-        setPill("READY");
-        setToast("준비 완료 (" + items.length + "건)");
+      fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
+      fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
+      fillSelect(elFTier,  uniq(items.map(x=>x.confidence_tier)));
+      fillSelect(elFVer,   uniq(items.map(x=>x.verified_status)));
 
-        elTotal.textContent = String(items.length);
-        filtered = [...items];
-        applyAll();
-        fitToFiltered();
+      fuse = new Fuse(items, {
+        includeScore:true,
+        threshold:0.35,
+        ignoreLocation:true,
+        keys:[
+          {name:"title", weight:0.50},
+          {name:"subtitle", weight:0.20},
+          {name:"media_group", weight:0.15},
+          {name:"sido", weight:0.10},
+          {name:"address", weight:0.05}
+        ]
+      });
 
-      }catch(err){
-        console.error(err);
-        setPill("ERROR");
-        setToast("데이터 로드 실패");
-      }
+      setPill("READY");
+      setToast(`<b>준비 완료</b>: 총 <b>${items.length}</b>건 • 한국좌표 <b>${koreaCount}</b> • 튀는좌표 <b>${outCount}</b><br/>
+                <span style="color:rgba(159,176,200,.9)">튀는좌표는 표시되지만 “화면맞춤”에서는 제외됩니다.</span>`);
+
+      filtered = [...items];
+      applyAll();
+      fitToFiltered();
+      scheduleRefresh(180);
+
+    }catch(err){
+      console.error(err);
+      setPill("ERROR");
+      setToast(`<b>로딩 실패</b>: JSON 경로/형식을 확인하세요. (DATA_URL=${escapeHtml(DATA_URL)})`);
     }
+  }
 
-    // ========================
-    // BOOT (중요: load 이후 지도 생성)
-    // ========================
-    window.addEventListener("load", () => {
-      // 레이아웃이 확정된 뒤에 지도를 만들어야 iframe/분할에서 덜 깨짐
-      setToast("지도 초기화 중…");
+  // 최초 보정
+  scheduleRefresh(200);
+  scheduleRefresh(900);
 
-      map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
-
-      baseLayer = createBaseLayer(TILE_OSM);
-      baseLayer.addTo(map);
-      bindTileEvents();
-
-      map.addLayer(markers);
-
-      setupAutoResize();
-
-      // 데이터 로드
-      loadData();
-
-      // 첫 로딩 안정화 보정(검은 화면 방지)
-      setTimeout(hardRefreshTiles, 350);
-      setTimeout(hardRefreshTiles, 1200);
-    });
-  </script>
-</body>
-</html>
+  loadData();
+</script>
