@@ -1,489 +1,958 @@
-<script>
-  // ========================
-  // Config
-  // ========================
-  const DATA_URL = "./data_v13_med_high.json";
-  const DEFAULT_CENTER = [36.5, 127.9];
-  const DEFAULT_ZOOM = 7;
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Frontier DOOH Map (v13 Stable)</title>
 
-  // 타일: CARTO(기본, 안정적) / OSM(대체)
-  const TILE_PRIMARY = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
-  const TILE_FALLBACK = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  // "한국 좌표"로 인정할 대략 범위 (MVP용)
-  const KOREA_BBOX = {
-    minLat: 32.0,
-    maxLat: 40.5,
-    minLng: 123.0,
-    maxLng: 132.8
-  };
+  <!-- MarkerCluster -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
+  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-  // ========================
-  // Utils
-  // ========================
-  const $ = (id) => document.getElementById(id);
-  const safe = (v) => (v===null||v===undefined) ? "" : String(v).trim();
-  const toNum = (v) => {
-    const n = Number(String(v ?? "").replace(/,/g,"").trim());
-    return Number.isFinite(n) ? n : null;
-  };
-  const uniq = (arr) =>
-    Array.from(new Set(arr.map(safe).filter(Boolean)))
-      .sort((a,b)=> String(a).localeCompare(String(b), "ko"));
+  <style>
+    :root{
+      --bg:#0b0d10;
+      --panel:#0f1318;
+      --line:rgba(162,222,204,.22);
+      --mint:#a2decc;
+      --text:#cfd8e3;
+      --muted:rgba(207,216,227,.70);
+      --danger:#ff6b6b;
+      --shadow:0 14px 40px rgba(0,0,0,.45);
+      --radius:14px;
+      --radius2:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,NanumGothic,sans-serif}
+    a{color:inherit}
+    .app{
+      height:100vh;
+      width:100%;
+      display:grid;
+      grid-template-columns: 380px 1fr;
+      gap:0;
+      overflow:hidden;
+      background:radial-gradient(900px 500px at 20% 10%, rgba(162,222,204,.10), transparent 60%),
+                 radial-gradient(900px 600px at 90% 30%, rgba(162,222,204,.08), transparent 65%),
+                 var(--bg);
+    }
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr; grid-template-rows: 420px 1fr;}
+    }
 
-  function escapeHtml(str){
-    return String(str ?? "")
-      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
-  }
-  function escapeAttr(str){ return String(str ?? "").replace(/"/g,"&quot;"); }
+    .panel{
+      position:relative;
+      background:linear-gradient(180deg, rgba(255,255,255,.02), transparent 60%),
+                 var(--panel);
+      border-right:1px solid rgba(255,255,255,.06);
+      padding:18px 16px;
+      overflow:auto;
+    }
+    @media (max-width: 980px){
+      .panel{border-right:none;border-bottom:1px solid rgba(255,255,255,.06)}
+    }
 
-  function inKorea(lat, lng){
-    return (
-      lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat &&
-      lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng
-    );
-  }
+    .brand{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .brand h1{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+      font-weight:800;
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(162,222,204,.35);
+      color:rgba(162,222,204,.92);
+      background:rgba(162,222,204,.06);
+      white-space:nowrap;
+    }
 
-  // 핵심: 좌표 정규화 (뒤집힘/비정상 자동 교정)
-  function normalizeLatLng(latRaw, lngRaw){
-    let lat = toNum(latRaw);
-    let lng = toNum(lngRaw);
-    if(lat===null || lng===null) return null;
+    .controls{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+    .row2{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .row2 .field{min-width:0;}
+    .field label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px 2px;
+    }
+    input[type="text"], select{
+      width:100%;
+      padding:11px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      outline:none;
+    }
+    input[type="text"]::placeholder{color:rgba(207,216,227,.45)}
+    input[type="text"]:focus, select:focus{
+      border-color: rgba(162,222,204,.45);
+      box-shadow: 0 0 0 3px rgba(162,222,204,.10);
+    }
 
-    // 1) 범위상 불가능하면(위도 90 초과 / 경도 180 초과) 스왑 시도
-    if(Math.abs(lat) > 90 || Math.abs(lng) > 180){
-      const a = lng, b = lat;
-      if(Math.abs(a) <= 90 && Math.abs(b) <= 180){
-        lat = a; lng = b;
-      }else{
-        return null;
+    .toggles{
+      display:flex; gap:10px; flex-wrap:wrap;
+      margin-top:6px;
+    }
+    .chk{
+      display:flex; align-items:center; gap:8px;
+      padding:9px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.02);
+      cursor:pointer;
+      user-select:none;
+      font-size:12.5px;
+      color:rgba(207,216,227,.88);
+    }
+    .chk input{accent-color: var(--mint); cursor:pointer;}
+
+    .actions{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+    }
+    .btn{
+      flex:1;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      cursor:pointer;
+      font-weight:700;
+    }
+    .btn.primary{
+      border-color: rgba(162,222,204,.38);
+      background: linear-gradient(180deg, rgba(162,222,204,.14), rgba(162,222,204,.06));
+      box-shadow: 0 10px 26px rgba(162,222,204,.08);
+    }
+    .btn:active{transform:translateY(1px)}
+
+    .meta{
+      margin-top:12px;
+      padding:12px 12px;
+      border-radius:var(--radius);
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+    }
+    .meta .line{
+      display:flex; justify-content:space-between; gap:10px;
+      font-size:12.5px;
+      color:rgba(207,216,227,.85);
+      margin:4px 0;
+    }
+    .meta b{color:rgba(162,222,204,.95)}
+
+    .list{
+      margin-top:12px;
+      border-top:1px solid rgba(255,255,255,.08);
+      padding-top:12px;
+    }
+    .list h2{
+      margin:0 0 10px;
+      font-size:13px;
+      color:rgba(207,216,227,.90);
+      letter-spacing:.2px;
+    }
+    .item{
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.02);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:10px;
+      cursor:pointer;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+    }
+    .item:hover{
+      transform: translateY(-1px);
+      border-color: rgba(162,222,204,.30);
+      background:rgba(162,222,204,.05);
+    }
+    .item .t{font-weight:800;font-size:13.5px;line-height:1.25}
+    .item .s{color:rgba(207,216,227,.70);font-size:12.5px;margin-top:6px;line-height:1.25}
+    .item .k{
+      margin-top:8px;
+      display:flex; gap:6px; flex-wrap:wrap;
+    }
+    .tag{
+      font-size:11.5px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(207,216,227,.78);
+      background:rgba(0,0,0,.18);
+    }
+    .tag.mint{
+      border-color: rgba(162,222,204,.30);
+      color: rgba(162,222,204,.92);
+      background: rgba(162,222,204,.06);
+    }
+
+    .map-wrap{
+      position:relative;
+      min-height:0;
+      overflow:hidden;
+    }
+    #map{
+      height:100%;
+      width:100%;
+      background:#050607;
+    }
+    .loading{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.35);
+      backdrop-filter: blur(3px);
+      z-index:999;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .18s ease;
+    }
+    .loading.show{opacity:1; pointer-events:auto;}
+    .loading .box{
+      padding:14px 16px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(15,19,24,.72);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      color:rgba(207,216,227,.9);
+    }
+    .loading .box b{color:rgba(162,222,204,.95)}
+
+    .toast{
+      position:fixed;
+      left:16px; bottom:16px;
+      max-width:min(520px, calc(100% - 32px));
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(10,12,14,.88);
+      color:rgba(207,216,227,.92);
+      box-shadow: var(--shadow);
+      z-index:2000;
+      display:none;
+      line-height:1.35;
+      font-size:12.8px;
+    }
+    .toast.show{display:block;}
+    .toast .bad{color:var(--danger); font-weight:800}
+
+    /* Modal */
+    .modal{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:3000;
+      padding:18px;
+    }
+    .modal.show{display:flex;}
+    .modal .card{
+      width:min(720px, 100%);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.10);
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.22)),
+                 rgba(15,19,24,.92);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal .head{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+    }
+    .modal .head .title{
+      font-size:15px; font-weight:900; margin:0;
+      line-height:1.25;
+    }
+    .modal .head .sub{
+      margin-top:6px;
+      color:rgba(207,216,227,.70);
+      font-size:12.5px;
+      line-height:1.25;
+    }
+    .modal .close{
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.04);
+      color:rgba(207,216,227,.9);
+      border-radius:12px;
+      padding:8px 10px;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .modal .body{
+      padding:14px 16px 16px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+    @media (max-width: 720px){
+      .modal .body{grid-template-columns:1fr}
+    }
+    .kv{
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+      border-radius:14px;
+      padding:12px;
+    }
+    .kv .k{font-size:12px;color:rgba(207,216,227,.65);margin-bottom:6px}
+    .kv .v{font-size:13px;color:rgba(207,216,227,.92);line-height:1.35;word-break:break-word}
+    .modal .foot{
+      padding:12px 16px 16px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .modal .foot a{
+      text-decoration:none;
+      border:1px solid rgba(162,222,204,.30);
+      background:rgba(162,222,204,.07);
+      color:rgba(162,222,204,.95);
+      padding:10px 12px;
+      border-radius:12px;
+      font-weight:800;
+      font-size:12.5px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="panel">
+      <div class="brand">
+        <h1>Frontier DOOH 전국 DB</h1>
+        <div class="pill" id="pillStatus">Loading…</div>
+      </div>
+
+      <div class="controls">
+        <div class="field">
+          <label>검색 (title / subtitle / address / id)</label>
+          <input id="q" type="text" placeholder="예: 강남, 삼성역, CGV, 10023…" />
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>media_group</label>
+            <select id="mediaGroup">
+              <option value="">전체</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>sido</label>
+            <select id="sido">
+              <option value="">전체</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toggles">
+          <label class="chk" title="대한민국(대략 bbox) 밖 좌표를 기본 제외합니다.">
+            <input id="onlyKorea" type="checkbox" checked />
+            이상치 제외(한국 밖)
+          </label>
+          <label class="chk" title="상태값(예: REVIEW 필요) 항목만 보고 싶을 때 사용하세요.">
+            <input id="needsReview" type="checkbox" />
+            REVIEW 필요만
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="btn primary" id="apply">적용</button>
+          <button class="btn" id="reset">초기화</button>
+        </div>
+
+        <div class="meta">
+          <div class="line"><span>DATA_URL</span><span><b id="dataUrlLabel">—</b></span></div>
+          <div class="line"><span>전체 로드</span><span><b id="totalCount">—</b></span></div>
+          <div class="line"><span>현재 표시</span><span><b id="shownCount">—</b></span></div>
+        </div>
+      </div>
+
+      <div class="list">
+        <h2>리스트 (최대 120개 표시)</h2>
+        <div id="list"></div>
+      </div>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map"></div>
+      <div class="loading" id="loading">
+        <div class="box">데이터 로딩 중… <b id="loadingNote"></b></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal" id="modal">
+    <div class="card" role="dialog" aria-modal="true">
+      <div class="head">
+        <div>
+          <div class="title" id="mTitle">—</div>
+          <div class="sub" id="mSub">—</div>
+        </div>
+        <button class="close" id="mClose">닫기</button>
+      </div>
+      <div class="body" id="mBody"></div>
+      <div class="foot" id="mFoot"></div>
+    </div>
+  </div>
+
+  <script>
+    // ==============================
+    // Stable Single-File Map App
+    // - avoids duplicate observers/events
+    // - invalidateSize ONLY after map created + container sized
+    // - resilient in iframes / preview / resize
+    // ==============================
+
+    // 1) DATA URL (상대경로 기본, 필요 시 절대경로로 교체 가능)
+    const DATA_URL = "./data_v13_med_high.json";
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("dataUrlLabel").textContent = DATA_URL;
+    });
+
+    // 2) Korea bbox (대략)
+    const KOREA_BBOX = { minLat: 33.0, maxLat: 39.8, minLng: 124.0, maxLng: 132.0 };
+
+    // 3) State
+    let raw = [];
+    let filtered = [];
+    let map = null;
+    let tileLayer = null;
+    let cluster = null;
+
+    // UI refs
+    const $ = (id) => document.getElementById(id);
+    const ui = {
+      pillStatus: $("pillStatus"),
+      q: $("q"),
+      mediaGroup: $("mediaGroup"),
+      sido: $("sido"),
+      onlyKorea: $("onlyKorea"),
+      needsReview: $("needsReview"),
+      apply: $("apply"),
+      reset: $("reset"),
+      totalCount: $("totalCount"),
+      shownCount: $("shownCount"),
+      list: $("list"),
+      loading: $("loading"),
+      loadingNote: $("loadingNote"),
+      toast: $("toast"),
+      modal: $("modal"),
+      mTitle: $("mTitle"),
+      mSub: $("mSub"),
+      mBody: $("mBody"),
+      mFoot: $("mFoot"),
+      mClose: $("mClose"),
+    };
+
+    function showLoading(note=""){
+      ui.loadingNote.textContent = note ? `(${note})` : "";
+      ui.loading.classList.add("show");
+    }
+    function hideLoading(){
+      ui.loading.classList.remove("show");
+      ui.loadingNote.textContent = "";
+    }
+
+    let toastTimer = null;
+    function toast(html, ms=5200){
+      ui.toast.innerHTML = html;
+      ui.toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => ui.toast.classList.remove("show"), ms);
+    }
+
+    function safeText(v){
+      if (v === null || v === undefined) return "";
+      return String(v);
+    }
+
+    // 좌표 검증 + 흔한 오류(위경도 뒤집힘) 최소 보정
+    function normalizeLatLng(lat, lng){
+      let la = Number(lat);
+      let ln = Number(lng);
+      if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
+
+      // 만약 lat가 100대(경도처럼)이고 lng가 30~40대(위도처럼)면 swap 시도
+      if (Math.abs(la) > 90 && Math.abs(ln) <= 90){
+        const tmp = la; la = ln; ln = tmp;
+      }
+      if (la < -90 || la > 90 || ln < -180 || ln > 180) return null;
+      return { lat: la, lng: ln };
+    }
+
+    function inKorea(lat, lng){
+      return lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat &&
+             lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng;
+    }
+
+    function buildOptions(selectEl, values){
+      const current = selectEl.value;
+      selectEl.innerHTML = '<option value="">전체</option>';
+      values.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v;
+        opt.textContent = v;
+        selectEl.appendChild(opt);
+      });
+      // 가능한 경우 기존 선택 유지
+      if ([...selectEl.options].some(o => o.value === current)) selectEl.value = current;
+    }
+
+    // 지도 컨테이너가 iframe/미리보기에서 0px로 시작하는 경우를 대비
+    function waitForNonZeroSize(el, maxFrames = 90){
+      return new Promise((resolve) => {
+        let frames = 0;
+        function tick(){
+          const r = el.getBoundingClientRect();
+          if (r.width > 10 && r.height > 10) return resolve(true);
+          frames++;
+          if (frames >= maxFrames) return resolve(false);
+          requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }
+
+    // invalidateSize 최소/정확 호출 (디바운스)
+    let resizeRAF = 0;
+    function safeInvalidate(reason){
+      if (!map) return;
+      cancelAnimationFrame(resizeRAF);
+      resizeRAF = requestAnimationFrame(() => {
+        try {
+          map.invalidateSize({ animate: false });
+        } catch (e) {}
+      });
+      // 타일이 검게 남는 일부 케이스 대비(필요 최소 1회 보조)
+      setTimeout(() => {
+        if (!map) return;
+        try { map.invalidateSize({ animate: false }); } catch (e) {}
+      }, 180);
+    }
+
+    async function initMap(){
+      // 라이브러리 로딩 대기 (defer 로드이므로 DOMContentLoaded 이후에도 준비가 늦을 수 있음)
+      const start = Date.now();
+      while (!(window.L && window.L.map && window.L.markerClusterGroup)) {
+        await new Promise(r => setTimeout(r, 20));
+        if (Date.now() - start > 6000) {
+          toast(`<span class="bad">Leaflet 로딩 실패</span><br/>CDN 차단/네트워크 문제일 수 있습니다.`);
+          break;
+        }
+      }
+
+      const mapEl = $("map");
+      await waitForNonZeroSize(mapEl, 120); // iframe/미리보기에서 최초 0px 방지
+
+      map = L.map("map", {
+        zoomControl: true,
+        preferCanvas: true,
+        worldCopyJump: true,
+        inertia: true,
+      });
+
+      tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+        updateWhenIdle: true,
+        keepBuffer: 4
+      }).addTo(map);
+
+      cluster = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        chunkedLoading: true,
+        chunkInterval: 120,
+      });
+      map.addLayer(cluster);
+
+      // 기본 위치: 대한민국 중심
+      map.setView([36.5, 127.8], 7);
+
+      // 지도 ready 이후 1회만 사이즈 안정화
+      map.whenReady(() => {
+        safeInvalidate("whenReady");
+      });
+
+      // ResizeObserver: 단 1개만, map-wrap 크기 변화에 반응
+      const wrap = document.querySelector(".map-wrap");
+      if (window.ResizeObserver && wrap){
+        const ro = new ResizeObserver(() => safeInvalidate("resizeObserver"));
+        ro.observe(wrap);
+      } else {
+        window.addEventListener("resize", () => safeInvalidate("windowResize"), { passive:true });
+      }
+
+      // 탭 전환/미리보기 전환에서 렌더 깨짐 보완 (필요 최소)
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) safeInvalidate("visibility");
+      });
+      window.addEventListener("focus", () => safeInvalidate("focus"));
+    }
+
+    function markerPopupHTML(it){
+      const title = safeText(it.title || it.name || "");
+      const sub = safeText(it.subtitle || "");
+      const addr = safeText(it.address || "");
+      const mg = safeText(it.media_group || "");
+      const si = safeText(it.sido || "");
+      const tier = safeText(it.confidence_tier || it.confidence || "");
+      return `
+        <div style="min-width:220px;line-height:1.35">
+          <div style="font-weight:900;margin-bottom:6px">${escapeHTML(title)}</div>
+          ${sub ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(sub)}</div>` : ""}
+          ${addr ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(addr)}</div>` : ""}
+          <div style="font-size:12px;opacity:.85">
+            ${mg ? `<span>그룹: <b>${escapeHTML(mg)}</b></span><br/>` : ""}
+            ${si ? `<span>시도: <b>${escapeHTML(si)}</b></span><br/>` : ""}
+            ${tier ? `<span>티어: <b>${escapeHTML(tier)}</b></span>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHTML(s){
+      return String(s)
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function buildMarker(it){
+      const ll = normalizeLatLng(it.lat, it.lng);
+      if (!ll) return null;
+
+      it.__lat = ll.lat;
+      it.__lng = ll.lng;
+      it.__inKorea = inKorea(ll.lat, ll.lng);
+
+      const m = L.marker([ll.lat, ll.lng], { title: safeText(it.title || it.name || "") });
+      m.bindPopup(markerPopupHTML(it), { maxWidth: 360 });
+      m.on("click", () => openModal(it));
+      return m;
+    }
+
+    function openModal(it){
+      ui.mTitle.textContent = safeText(it.title || it.name || "—");
+      ui.mSub.textContent = safeText(it.subtitle || "");
+
+      const rows = [
+        ["id", it.id],
+        ["national_id", it.national_id],
+        ["media_group", it.media_group],
+        ["sido", it.sido],
+        ["address", it.address],
+        ["lat", it.__lat ?? it.lat],
+        ["lng", it.__lng ?? it.lng],
+        ["confidence_score", it.confidence_score],
+        ["confidence_tier", it.confidence_tier],
+        ["verified_status", it.verified_status],
+        ["status", it.status],
+        ["source_url", it.source_url],
+      ];
+
+      ui.mBody.innerHTML = rows.map(([k,v]) => {
+        const val = (v === null || v === undefined || v === "") ? "—" : escapeHTML(String(v));
+        return `
+          <div class="kv">
+            <div class="k">${escapeHTML(k)}</div>
+            <div class="v">${val}</div>
+          </div>
+        `;
+      }).join("");
+
+      const lat = it.__lat ?? Number(it.lat);
+      const lng = it.__lng ?? Number(it.lng);
+      const q = encodeURIComponent(safeText(it.title || it.name || "Frontier DOOH"));
+
+      // 외부 지도 링크(선택)
+      const kakao = (Number.isFinite(lat) && Number.isFinite(lng))
+        ? `https://map.kakao.com/link/map/${q},${lat},${lng}`
+        : null;
+
+      const google = (Number.isFinite(lat) && Number.isFinite(lng))
+        ? `https://www.google.com/maps?q=${lat},${lng}`
+        : null;
+
+      const srcUrl = it.source_url ? String(it.source_url) : null;
+
+      const links = [];
+      if (kakao) links.push(`<a href="${kakao}" target="_blank" rel="noopener">카카오맵 열기</a>`);
+      if (google) links.push(`<a href="${google}" target="_blank" rel="noopener">구글맵 열기</a>`);
+      if (srcUrl) links.push(`<a href="${escapeHTML(srcUrl)}" target="_blank" rel="noopener">Source URL</a>`);
+
+      ui.mFoot.innerHTML = links.join("");
+      ui.modal.classList.add("show");
+    }
+
+    function closeModal(){
+      ui.modal.classList.remove("show");
+    }
+
+    ui.mClose.addEventListener("click", closeModal);
+    ui.modal.addEventListener("click", (e) => {
+      if (e.target === ui.modal) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    function applyFilters(){
+      const q = ui.q.value.trim().toLowerCase();
+      const mg = ui.mediaGroup.value;
+      const si = ui.sido.value;
+      const onlyK = ui.onlyKorea.checked;
+      const reviewOnly = ui.needsReview.checked;
+
+      filtered = raw.filter(it => {
+        if (mg && safeText(it.media_group) !== mg) return false;
+        if (si && safeText(it.sido) !== si) return false;
+
+        if (reviewOnly){
+          // status/verified_status 중 "REVIEW" 또는 "NEEDED" 등의 키워드가 있으면 포함
+          const s1 = safeText(it.status).toLowerCase();
+          const s2 = safeText(it.verified_status).toLowerCase();
+          const hit = (s1.includes("review") || s1.includes("needed") || s2.includes("review") || s2.includes("lowconf"));
+          if (!hit) return false;
+        }
+
+        if (q){
+          const hay = [
+            it.id, it.national_id, it.title, it.subtitle, it.address, it.media_group, it.sido,
+          ].map(safeText).join(" ").toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+
+        if (onlyK){
+          // __inKorea 가 아직 없을 수 있으니 normalize 기준으로 계산
+          const ll = normalizeLatLng(it.lat, it.lng);
+          if (!ll) return false;
+          if (!inKorea(ll.lat, ll.lng)) return false;
+        }
+
+        return true;
+      });
+
+      renderMapMarkers(filtered);
+      renderList(filtered);
+      ui.shownCount.textContent = String(filtered.length);
+
+      // 필터 적용 시에도 iframe/리사이즈 문제 방지용으로 최소 1회
+      safeInvalidate("applyFilters");
+    }
+
+    function renderMapMarkers(items){
+      if (!map || !cluster) return;
+
+      cluster.clearLayers();
+
+      const markers = [];
+      let valid = 0;
+      let koreaValid = 0;
+
+      for (const it of items){
+        const m = buildMarker(it);
+        if (!m) continue;
+        valid++;
+        if (it.__inKorea) koreaValid++;
+        markers.push(m);
+      }
+
+      if (markers.length) cluster.addLayers(markers);
+
+      // bounds: 기본은 "표시 중 마커" 기준
+      // 단, 이상치(한국 밖)가 섞여 bounds를 망치면, 한국 bbox 기준으로 안정화
+      if (markers.length){
+        const shouldPreferKorea = (koreaValid >= 10 && koreaValid / Math.max(valid,1) >= 0.7);
+        if (ui.onlyKorea.checked || shouldPreferKorea){
+          const sw = L.latLng(KOREA_BBOX.minLat, KOREA_BBOX.minLng);
+          const ne = L.latLng(KOREA_BBOX.maxLat, KOREA_BBOX.maxLng);
+          map.fitBounds(L.latLngBounds(sw, ne), { padding: [24,24], animate:false });
+        } else {
+          try{
+            const b = cluster.getBounds();
+            if (b && b.isValid()) map.fitBounds(b, { padding: [24,24], animate:false });
+          } catch(e){}
+        }
+      } else {
+        // 결과가 없으면 한국 중심
+        map.setView([36.5, 127.8], 7);
+      }
+
+      // 타일 깨짐 대비: fitBounds 직후 최소 1회
+      setTimeout(() => safeInvalidate("afterFitBounds"), 60);
+    }
+
+    function renderList(items){
+      const max = 120;
+      const show = items.slice(0, max);
+
+      if (!show.length){
+        ui.list.innerHTML = `<div style="color:rgba(207,216,227,.65);font-size:12.8px;line-height:1.4">
+          조건에 맞는 항목이 없습니다.<br/>필터를 완화하거나 검색어를 지워보세요.
+        </div>`;
+        return;
+      }
+
+      ui.list.innerHTML = show.map(it => {
+        const title = escapeHTML(safeText(it.title || it.name || "—"));
+        const sub = escapeHTML(safeText(it.subtitle || ""));
+        const addr = escapeHTML(safeText(it.address || ""));
+        const mg = escapeHTML(safeText(it.media_group || ""));
+        const si = escapeHTML(safeText(it.sido || ""));
+        const tier = escapeHTML(safeText(it.confidence_tier || ""));
+        const status = escapeHTML(safeText(it.status || it.verified_status || ""));
+
+        return `
+          <div class="item" data-id="${escapeHTML(safeText(it.id || ""))}">
+            <div class="t">${title}</div>
+            <div class="s">${sub ? sub + "<br/>" : ""}${addr}</div>
+            <div class="k">
+              ${mg ? `<span class="tag mint">${mg}</span>` : ""}
+              ${si ? `<span class="tag">${si}</span>` : ""}
+              ${tier ? `<span class="tag">${tier}</span>` : ""}
+              ${status ? `<span class="tag">${status}</span>` : ""}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // click binding (event delegation)
+      ui.list.querySelectorAll(".item").forEach(el => {
+        el.addEventListener("click", () => {
+          const id = el.getAttribute("data-id");
+          const it = raw.find(x => safeText(x.id) === id) || items.find(x => safeText(x.id) === id);
+          if (!it) return;
+          // map pan
+          const ll = normalizeLatLng(it.lat, it.lng);
+          if (ll && map){
+            map.setView([ll.lat, ll.lng], Math.max(map.getZoom(), 14), { animate:false });
+            setTimeout(() => safeInvalidate("afterSetView"), 60);
+          }
+          openModal(it);
+        });
+      });
+    }
+
+    function fillFilterDropdowns(items){
+      const groups = new Set();
+      const sidos = new Set();
+
+      for (const it of items){
+        const mg = safeText(it.media_group).trim();
+        const si = safeText(it.sido).trim();
+        if (mg) groups.add(mg);
+        if (si) sidos.add(si);
+      }
+
+      const gArr = [...groups].sort((a,b) => a.localeCompare(b, "ko"));
+      const sArr = [...sidos].sort((a,b) => a.localeCompare(b, "ko"));
+
+      buildOptions(ui.mediaGroup, gArr);
+      buildOptions(ui.sido, sArr);
+    }
+
+    async function loadData(){
+      showLoading("JSON fetch");
+      ui.pillStatus.textContent = "Loading…";
+
+      try{
+        const res = await fetch(DATA_URL, { cache: "no-store" });
+        if (!res.ok){
+          hideLoading();
+          ui.pillStatus.textContent = "Data Error";
+          toast(`<span class="bad">데이터 로드 실패</span><br/>
+                HTTP ${res.status}<br/>
+                경로: <b>${escapeHTML(DATA_URL)}</b><br/>
+                확인: GitHub Pages에서 JSON 파일이 같은 폴더에 있는지, 파일명이 정확한지 확인하세요.`);
+          return;
+        }
+
+        const json = await res.json();
+
+        // meta + items 형태 지원
+        const items = Array.isArray(json) ? json : (json.items || []);
+        raw = Array.isArray(items) ? items : [];
+
+        ui.totalCount.textContent = String(raw.length);
+        ui.pillStatus.textContent = `Loaded: ${raw.length}`;
+
+        // 필터 옵션 생성
+        fillFilterDropdowns(raw);
+
+        // 기본 적용 (이상치 제외 기본 ON)
+        applyFilters();
+
+        hideLoading();
+
+      } catch(err){
+        hideLoading();
+        ui.pillStatus.textContent = "Data Error";
+        toast(`<span class="bad">JSON 파싱/네트워크 오류</span><br/>
+              ${escapeHTML(err?.message || String(err))}<br/>
+              확인: JSON 문법이 유효한지, CORS/혼합콘텐츠(https) 문제는 없는지 확인하세요.`);
       }
     }
 
-    // 2) "한국 범위"가 아니면 스왑했을 때 한국 범위면 스왑
-    if(!inKorea(lat, lng) && inKorea(lng, lat)){
-      const t = lat; lat = lng; lng = t;
+    function resetUI(){
+      ui.q.value = "";
+      ui.mediaGroup.value = "";
+      ui.sido.value = "";
+      ui.onlyKorea.checked = true;
+      ui.needsReview.checked = false;
+      applyFilters();
     }
 
-    return { lat, lng, isKorea: inKorea(lat, lng) };
-  }
+    ui.apply.addEventListener("click", applyFilters);
+    ui.reset.addEventListener("click", resetUI);
 
-  const badgeClass = (k, v) => {
-    const val = safe(v).toUpperCase();
-    if(k === "confidence_tier"){
-      if(val==="HIGH") return "good";
-      if(val==="MED") return "warn";
-      if(val==="LOW") return "bad";
-    }
-    if(k === "verified_status"){
-      if(val==="VERIFIED") return "good";
-      if(val.includes("LOWCONF")) return "warn";
-    }
-    return "mint";
-  };
-  const makeBadge = (k, v) => {
-    const cls = badgeClass(k, v);
-    const c = cls==="good" ? "badge good" : cls==="warn" ? "badge warn" : cls==="bad" ? "badge bad" : "badge mint";
-    return `<span class="${c}">${escapeHtml(safe(v)||"-")}</span>`;
-  };
-
-  // ========================
-  // Elements
-  // ========================
-  const elPill = $("pillState");
-  const elTotal = $("statTotal");
-  const elShown = $("statShown");
-  const elCount = $("listCount");
-  const elList = $("list");
-  const elMetaLine = $("metaLine");
-  const elToast = $("toast");
-
-  const elQ = $("q");
-  const elFGroup = $("fGroup");
-  const elFSido  = $("fSido");
-  const elFTier  = $("fTier");
-  const elFVer   = $("fVer");
-  const elReset  = $("btnReset");
-  const elFit    = $("btnFit");
-
-  const elModal  = $("modal");
-  const elMTitle = $("mTitle");
-  const elMSub   = $("mSub");
-  const elMBadges= $("mBadges");
-  const elMGrid  = $("mGrid");
-  const elMRaw   = $("mRaw");
-  const elMClose = $("mClose");
-  const elMCenter= $("mCenter");
-  const elMCopy  = $("mCopy");
-
-  function setPill(t){ elPill.textContent = t; }
-  function setToast(html){ elToast.innerHTML = html; }
-
-  // ========================
-  // Map
-  // ========================
-  const map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
-
-  let baseLayer = L.tileLayer(TILE_PRIMARY, {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
-  }).addTo(map);
-
-  // 타일 에러가 계속 나면 OSM으로 스위치
-  let tileErr = 0;
-  baseLayer.on("tileerror", () => {
-    tileErr++;
-    if(tileErr >= 10 && baseLayer && baseLayer._url !== TILE_FALLBACK){
-      try{ map.removeLayer(baseLayer); }catch(e){}
-      baseLayer = L.tileLayer(TILE_FALLBACK, { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
-      setToast(`<b>주의</b>: 타일 오류가 반복되어 OSM으로 전환했습니다.`);
-    }
-  });
-
-  // 클러스터
-  const markers = L.markerClusterGroup({
-    showCoverageOnHover:false,
-    chunkedLoading:true,
-    spiderfyOnMaxZoom:true
-  });
-  map.addLayer(markers);
-
-  // ========================
-  // Resize / Zoom 안정화 (과하지 않게)
-  // ========================
-  let refreshTimer = null;
-  function scheduleRefresh(delay=120){
-    clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => {
-      try{ map.invalidateSize(true); }catch(e){}
-      try{ baseLayer && baseLayer.redraw(); }catch(e){}
-    }, delay);
-  }
-
-  // 창/iframe 크기 변화 대응
-  window.addEventListener("resize", () => scheduleRefresh(200));
-  window.addEventListener("orientationchange", () => scheduleRefresh(200));
-  document.addEventListener("visibilitychange", () => { if(!document.hidden) scheduleRefresh(250); });
-  window.addEventListener("focus", () => scheduleRefresh(250));
-
-  if("ResizeObserver" in window){
-    const ro = new ResizeObserver(() => scheduleRefresh(120));
-    ro.observe(document.getElementById("map"));
-    const wrap = document.querySelector(".mapWrap");
-    if(wrap) ro.observe(wrap);
-  }
-
-  // 휠 줌/이동 후 타일이 검게 남는 경우 방지
-  map.on("zoomend", () => scheduleRefresh(80));
-  map.on("moveend", () => scheduleRefresh(80));
-
-  // ========================
-  // Data + UI
-  // ========================
-  let items = [];
-  let filtered = [];
-  let fuse = null;
-  let markerById = new Map();
-  let selectedId = null;
-
-  function fillSelect(el, values){
-    el.innerHTML = `<option value="">전체</option>`;
-    values.forEach(v => {
-      const opt = document.createElement("option");
-      opt.value=v; opt.textContent=v;
-      el.appendChild(opt);
-    });
-  }
-
-  function getFilters(){
-    return {
-      q: safe(elQ.value).toLowerCase(),
-      group: safe(elFGroup.value),
-      sido: safe(elFSido.value),
-      tier: safe(elFTier.value),
-      ver: safe(elFVer.value),
-    };
-  }
-
-  function applyAll(){
-    const f = getFilters();
-
-    let out = items.filter(it => {
-      if(f.group && it.media_group !== f.group) return false;
-      if(f.sido  && it.sido !== f.sido) return false;
-      if(f.tier  && it.confidence_tier !== f.tier) return false;
-      if(f.ver   && it.verified_status !== f.ver) return false;
-      return true;
+    // Enter로 검색 적용
+    ui.q.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") applyFilters();
     });
 
-    if(f.q){
-      const results = fuse.search(f.q).map(r=>r.item);
-      const idset = new Set(out.map(x=>x.id));
-      out = results.filter(x=>idset.has(x.id));
-    }
-
-    filtered = out;
-    elShown.textContent = String(filtered.length);
-    elCount.textContent = String(filtered.length);
-
-    renderMarkers(filtered);
-    renderList(filtered);
-  }
-
-  function fitToFiltered(){
-    const arr = filtered.length ? filtered : items;
-    if(!arr.length) return;
-
-    // 핵심: "한국 좌표만"으로 화면 맞춤(튀는 해외좌표가 있어도 화면이 망가지지 않게)
-    const koreaArr = arr.filter(x => x._isKorea);
-    const target = koreaArr.length ? koreaArr : arr;
-
-    const bounds = L.latLngBounds(target.map(d => [d.lat, d.lng]));
-    map.fitBounds(bounds.pad(0.15));
-    scheduleRefresh(120);
-  }
-
-  function renderMarkers(data){
-    markers.clearLayers();
-    markerById.clear();
-
-    data.forEach(it => {
-      const tier = safe(it.confidence_tier).toUpperCase();
-      const cls = (tier==="HIGH") ? "good" : (tier==="MED") ? "warn" : (tier==="LOW") ? "bad" : "mint";
-      const color =
-        cls==="good" ? "rgba(76,212,164,.95)" :
-        cls==="warn" ? "rgba(255,209,102,.95)" :
-        cls==="bad"  ? "rgba(255,107,107,.95)" :
-        "rgba(162,222,204,.95)";
-
-      const icon = L.divIcon({
-        className: "",
-        html: `<div style="width:14px;height:14px;border-radius:999px;border:2px solid rgba(255,255,255,.75);
-              background:${color}; box-shadow:0 0 0 3px rgba(0,0,0,.35), 0 0 18px rgba(162,222,204,.18);"></div>`,
-        iconSize:[14,14],
-        iconAnchor:[7,7]
-      });
-
-      const m = L.marker([it.lat, it.lng], {icon});
-      m.on("click", ()=> openDetail(it.id));
-      m.bindTooltip(
-        `<div style="font-weight:900;font-size:12px;margin-bottom:4px">${escapeHtml(it.title||"")}</div>
-         <div style="font-size:11px;color:#9fb0c8">${escapeHtml(it.subtitle||"")}</div>`,
-        {direction:"top", opacity:0.96, sticky:true}
-      );
-
-      markers.addLayer(m);
-      markerById.set(it.id, m);
-    });
-
-    scheduleRefresh(80);
-  }
-
-  function renderList(data){
-    elList.innerHTML="";
-    if(!data.length){
-      elList.innerHTML = `<div style="padding:14px 12px;color:var(--muted);font-size:13px;line-height:1.4">결과가 없습니다. 검색/필터를 조정하세요.</div>`;
-      return;
-    }
-
-    // 한국좌표 우선 정렬 + tier 정렬
-    const tierRank = (t) => (String(t).toUpperCase()==="HIGH") ? 0 : (String(t).toUpperCase()==="MED") ? 1 : 2;
-    const sorted = [...data].sort((a,b)=>{
-      const ka = a._isKorea ? 0 : 1;
-      const kb = b._isKorea ? 0 : 1;
-      if(ka!==kb) return ka-kb;
-
-      const tr = tierRank(a.confidence_tier) - tierRank(b.confidence_tier);
-      if(tr!==0) return tr;
-
-      const as = (a.confidence_score ?? -1), bs = (b.confidence_score ?? -1);
-      if(bs!==as) return bs-as;
-
-      return String(a.title).localeCompare(String(b.title), "ko");
-    });
-
-    sorted.forEach(it => {
-      const div = document.createElement("div");
-      div.className="item";
-      div.innerHTML = `
-        <div class="h">
-          <div>${escapeHtml(it.title||"(Untitled)")}</div>
-          <div style="font-size:11px;color:var(--muted);font-weight:900;white-space:nowrap">${escapeHtml(it.id||"")}</div>
-        </div>
-        <div class="m">${escapeHtml([it.media_group, it.sido].filter(Boolean).join(" · "))}</div>
-        <div class="m" style="margin-top:6px">${escapeHtml(it.address||"")}</div>
-        <div class="badges">
-          ${makeBadge("confidence_tier", it.confidence_tier)}
-          ${it.verified_status ? makeBadge("verified_status", it.verified_status) : ""}
-          ${(it._isKorea ? `<span class="badge good">KOREA</span>` : `<span class="badge warn">OUTLIER</span>`)}
-        </div>
-      `;
-      div.addEventListener("click", ()=>{ flyTo(it.id); openDetail(it.id); });
-      elList.appendChild(div);
-    });
-  }
-
-  function flyTo(id){
-    const it = items.find(x=>x.id===id);
-    if(!it) return;
-
-    selectedId = id;
-    const ll = L.latLng(it.lat, it.lng);
-    const m = markerById.get(id);
-
-    if(m){
-      markers.zoomToShowLayer(m, ()=> {
-        map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
-        try{ m.openTooltip(); }catch(_){}
-        scheduleRefresh(120);
-      });
-    } else {
-      map.setView(ll, 15, {animate:true});
-      scheduleRefresh(120);
-    }
-  }
-
-  function openDetail(id){
-    const it = items.find(x=>x.id===id);
-    if(!it) return;
-    selectedId = id;
-
-    elMTitle.textContent = it.title || "(Untitled)";
-    elMSub.textContent = [it.sido, it.media_group, it.address].filter(Boolean).join(" · ");
-
-    elMBadges.innerHTML = "";
-    ["confidence_tier","confidence_score","verified_status","status","entity_type"].forEach(k=>{
-      if(safe(it[k])!=="") elMBadges.insertAdjacentHTML("beforeend", makeBadge(k, it[k]));
-    });
-    elMBadges.insertAdjacentHTML("beforeend", it._isKorea ? `<span class="badge good">KOREA</span>` : `<span class="badge warn">OUTLIER</span>`);
-
-    const kvs = [
-      ["id", it.id],
-      ["national_id", it.national_id],
-      ["media_group", it.media_group],
-      ["sido", it.sido],
-      ["address", it.address],
-      ["lat", it.lat],
-      ["lng", it.lng],
-      ["confidence_tier", it.confidence_tier],
-      ["confidence_score", it.confidence_score],
-      ["verified_status", it.verified_status],
-      ["status", it.status],
-      ["source_url", it.source_url],
-    ].filter(([k,v])=> safe(v)!=="");
-
-    elMGrid.innerHTML = "";
-    kvs.forEach(([k,v])=>{
-      const isUrl = safe(v).startsWith("http://") || safe(v).startsWith("https://");
-      const vv = isUrl ? `<a href="${escapeAttr(v)}" target="_blank" rel="noopener noreferrer">${escapeHtml(v)}</a>` : escapeHtml(v);
-      elMGrid.insertAdjacentHTML("beforeend", `<div class="kv"><div class="k">${escapeHtml(k)}</div><div class="v">${vv}</div></div>`);
-    });
-
-    elMRaw.textContent = JSON.stringify(it, null, 2);
-    elModal.classList.add("open");
-  }
-
-  function closeModal(){ elModal.classList.remove("open"); }
-
-  elModal.addEventListener("click", (e)=>{ if(e.target===elModal) closeModal(); });
-  document.addEventListener("keydown", (e)=>{ if(e.key==="Escape") closeModal(); });
-  elMClose.addEventListener("click", closeModal);
-  elMCenter.addEventListener("click", ()=>{ if(selectedId) flyTo(selectedId); });
-  elMCopy.addEventListener("click", async ()=>{
-    try{
-      await navigator.clipboard.writeText(elMRaw.textContent || "");
-      elMCopy.textContent="복사됨";
-      setTimeout(()=> elMCopy.textContent="JSON 복사", 900);
-    }catch(e){
-      alert("클립보드 복사 실패 (브라우저 권한 확인)");
-    }
-  });
-
-  ["input","change"].forEach(evt => {
-    elQ.addEventListener(evt, applyAll);
-    elFGroup.addEventListener(evt, applyAll);
-    elFSido.addEventListener(evt, applyAll);
-    elFTier.addEventListener(evt, applyAll);
-    elFVer.addEventListener(evt, applyAll);
-  });
-  elReset.addEventListener("click", ()=> {
-    elQ.value=""; elFGroup.value=""; elFSido.value=""; elFTier.value=""; elFVer.value="";
-    selectedId = null;
-    applyAll();
-    fitToFiltered();
-  });
-  elFit.addEventListener("click", ()=> fitToFiltered());
-
-  async function loadData(){
-    try{
-      setPill("LOADING…");
-      elMetaLine.textContent = DATA_URL;
-
-      const res = await fetch(DATA_URL, { cache:"no-store" });
-      if(!res.ok) throw new Error("HTTP " + res.status);
-      const data = await res.json();
-
-      const arr = Array.isArray(data?.items) ? data.items : [];
-
-      // 좌표 정규화 적용
-      items = arr
-        .map(x => {
-          const norm = normalizeLatLng(x.lat, x.lng);
-          if(!norm) return null;
-          return {
-            ...x,
-            lat: norm.lat,
-            lng: norm.lng,
-            confidence_score: toNum(x.confidence_score),
-            _isKorea: norm.isKorea
-          };
-        })
-        .filter(Boolean);
-
-      // 통계
-      const koreaCount = items.filter(x=>x._isKorea).length;
-      const outCount = items.length - koreaCount;
-
-      elTotal.textContent = String(items.length);
-
-      fillSelect(elFGroup, uniq(items.map(x=>x.media_group)));
-      fillSelect(elFSido,  uniq(items.map(x=>x.sido)));
-      fillSelect(elFTier,  uniq(items.map(x=>x.confidence_tier)));
-      fillSelect(elFVer,   uniq(items.map(x=>x.verified_status)));
-
-      fuse = new Fuse(items, {
-        includeScore:true,
-        threshold:0.35,
-        ignoreLocation:true,
-        keys:[
-          {name:"title", weight:0.50},
-          {name:"subtitle", weight:0.20},
-          {name:"media_group", weight:0.15},
-          {name:"sido", weight:0.10},
-          {name:"address", weight:0.05}
-        ]
-      });
-
-      setPill("READY");
-      setToast(`<b>준비 완료</b>: 총 <b>${items.length}</b>건 • 한국좌표 <b>${koreaCount}</b> • 튀는좌표 <b>${outCount}</b><br/>
-                <span style="color:rgba(159,176,200,.9)">튀는좌표는 표시되지만 “화면맞춤”에서는 제외됩니다.</span>`);
-
-      filtered = [...items];
-      applyAll();
-      fitToFiltered();
-      scheduleRefresh(180);
-
-    }catch(err){
-      console.error(err);
-      setPill("ERROR");
-      setToast(`<b>로딩 실패</b>: JSON 경로/형식을 확인하세요. (DATA_URL=${escapeHtml(DATA_URL)})`);
-    }
-  }
-
-  // 최초 보정
-  scheduleRefresh(200);
-  scheduleRefresh(900);
-
-  loadData();
-</script>
+    // 모듈 안정화: DOM + 지도 + 데이터 순으로 확실히
+    (async function boot(){
+      showLoading("init");
+      await initMap();
+      await loadData();
+      hideLoading();
+      // 초기 안정화 1회 (iframe에서 첫 렌더가 지연되는 경우)
+      setTimeout(() => safeInvalidate("bootFinal"), 220);
+    })();
+  </script>
+</body>
+</html>
