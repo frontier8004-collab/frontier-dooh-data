@@ -242,6 +242,40 @@
 
     window.map = L.map("map", { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM, zoomControl:true });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"&copy; OpenStreetMap contributors" }).addTo(map);
+    // ====== (추가) iframe/스냅/레이아웃 변경에서 타일이 회색으로 남는 현상 방지 ======
+(function(){
+  const map = window.map;
+  if(!map) return;
+
+  const elMap = document.getElementById("map");
+  if(!elMap) return;
+
+  let t = null;
+  const fix = (delay=0) => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      try{ map.invalidateSize(true); }catch(e){}
+    }, delay);
+  };
+
+  // 1) 기본 이벤트
+  window.addEventListener("resize", () => fix(200));
+  window.addEventListener("orientationchange", () => fix(200));
+  window.addEventListener("focus", () => fix(200));
+  document.addEventListener("visibilitychange", () => { if(!document.hidden) fix(250); });
+
+  // 2) 핵심: 컨테이너 크기 변화를 직접 감지
+  try{
+    const ro = new ResizeObserver(() => fix(50));
+    ro.observe(elMap);
+    const app = document.querySelector(".app") || document.body;
+    if(app) ro.observe(app);
+  }catch(e){}
+
+  // 3) 마지막 보험: 로딩 후 몇 번 더 강제 갱신
+  fix(300); fix(900); fix(1800); fix(3200);
+})();
+
 <script>
   // ===== Leaflet 지도 리사이즈/전체화면/레이아웃 변경 시 깨짐 방지 =====
   function __fixLeafletSize(){
