@@ -24,14 +24,12 @@
       --line:rgba(255,255,255,.10);
       --mint:#a2decc;
       --mint2:rgba(162,222,204,.20);
-      --danger:#ff6b6b;
     }
     *{box-sizing:border-box}
     body{
       margin:0; background:var(--bg); color:var(--text);
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
     }
-    a{color:inherit}
     .app{display:flex; height:100vh; width:100vw; overflow:hidden;}
     .left{
       width:420px; min-width:360px; max-width:520px;
@@ -52,16 +50,8 @@
     .title h1{
       margin:0; font-size:14px; font-weight:800; letter-spacing:.2px;
     }
-    .pill{
-      display:inline-flex; align-items:center; gap:10px;
-      padding:8px 10px; border:1px solid var(--mint2);
-      border-radius:999px;
-      background:rgba(0,0,0,.35);
-      box-shadow:0 0 16px rgba(162,222,204,.10);
-      font-size:12px; color:var(--text);
-      white-space:nowrap;
-    }
-    .pill b{color:var(--mint)}
+
+    /* ====== Meta ====== */
     .meta{
       display:grid; grid-template-columns:1fr 1fr;
       gap:6px; font-size:12px; color:var(--muted);
@@ -69,12 +59,15 @@
     }
     .meta div{padding:6px 8px; border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,.18)}
     .meta b{color:var(--text)}
+
+    /* ====== Controls ====== */
     .controls{
       display:grid; grid-template-columns:1fr 1fr; gap:10px;
       margin-top:10px;
     }
     .controls .full{grid-column:1/-1;}
-    input[type="text"], select{
+
+    input[type="text"]{
       width:100%; padding:10px 10px;
       border-radius:10px;
       border:1px solid var(--line);
@@ -83,6 +76,21 @@
       outline:none;
     }
     input[type="text"]::placeholder{color:rgba(207,216,227,.55)}
+
+    /* 드롭다운 가독성: 흰 배경 + 검은 글자 강제 */
+    select{
+      width:100%; padding:10px 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:#ffffff;
+      color:#111111;
+      outline:none;
+    }
+    select option{
+      background:#ffffff;
+      color:#111111;
+    }
+
     .checks{
       display:flex; flex-wrap:wrap; gap:10px;
       margin-top:10px;
@@ -97,6 +105,7 @@
       user-select:none;
     }
     .chk input{accent-color:var(--mint); cursor:pointer}
+
     .btns{display:flex; gap:10px; margin-top:10px;}
     .btn{
       flex:1;
@@ -111,6 +120,8 @@
       box-shadow:0 0 18px rgba(162,222,204,.12);
     }
     .btn:active{transform:translateY(1px)}
+
+    /* ====== List ====== */
     .listWrap{flex:1; overflow:auto;}
     .listHeader{
       padding:12px 14px 8px;
@@ -153,8 +164,28 @@
       margin-right:6px;
     }
     .badge.mint{border-color:rgba(162,222,204,.30); color:var(--mint)}
+
+    /* ====== Right / Map ====== */
     .right{flex:1; position:relative;}
     #map{height:100%; width:100%;}
+
+    /* 지도 위 우상단 Pill (기존 느낌: 지도 오버레이) */
+    .pillOverlay{
+      position:absolute;
+      top:12px; right:12px;
+      z-index:900;
+      display:inline-flex; align-items:center; gap:10px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(162,222,204,.25);
+      background:rgba(0,0,0,.55);
+      box-shadow:0 0 18px rgba(162,222,204,.10);
+      font-size:12px; color:var(--text);
+      white-space:nowrap;
+      backdrop-filter: blur(6px);
+    }
+    .pillOverlay b{color:var(--mint)}
+
     .toast{
       position:absolute; left:12px; bottom:12px;
       padding:10px 12px;
@@ -166,7 +197,7 @@
       max-width:min(520px, 70%);
     }
 
-    /* Modal */
+    /* ====== Modal ====== */
     .modalBack{
       position:fixed; inset:0; background:rgba(0,0,0,.65);
       display:none; align-items:center; justify-content:center;
@@ -227,16 +258,6 @@
       font-size:12px; font-weight:950;
     }
     .linkbtn.primary{border-color:rgba(162,222,204,.30); color:var(--mint)}
-    .warn{
-      margin-top:12px;
-      font-size:12px;
-      color:rgba(255,255,255,.70);
-      border:1px dashed rgba(255,255,255,.18);
-      background:rgba(0,0,0,.18);
-      border-radius:12px;
-      padding:10px 10px;
-    }
-    .warn b{color:var(--mint)}
   </style>
 </head>
 
@@ -246,11 +267,7 @@
     <div class="top">
       <div class="title">
         <h1>Frontier 전국 DOOH DB – Web Map MVP</h1>
-        <div class="pill" id="pill">
-          <span>Loaded: <b id="pillLoaded">-</b></span>
-          <span>Showing: <b id="pillShowing">-</b></span>
-          <span>InView: <b id="pillInView">-</b></span>
-        </div>
+        <!-- (알약은 지도 위 우상단으로 이동했음) -->
       </div>
 
       <div class="meta">
@@ -299,6 +316,14 @@
 
   <div class="right">
     <div id="map"></div>
+
+    <!-- 지도 위 우상단 알약(오버레이) -->
+    <div class="pillOverlay" id="pill">
+      <span>Loaded: <b id="pillLoaded">-</b></span>
+      <span>Showing: <b id="pillShowing">-</b></span>
+      <span>InView: <b id="pillInView">-</b></span>
+    </div>
+
     <div class="toast" id="toast">데이터 로딩 중…</div>
   </div>
 </div>
@@ -320,10 +345,6 @@
         <a class="linkbtn primary" id="lnkKakao" href="#" target="_blank" rel="noopener noreferrer">카카오맵</a>
         <a class="linkbtn primary" id="lnkGoogle" href="#" target="_blank" rel="noopener noreferrer">구글맵</a>
       </div>
-
-      <div class="warn">
-        <b>안내</b> : 본 화면은 MVP로, 추후(검증/운영사 파일/네트워크 취합) 단계에서 광고주·담당자용 핵심지표(노출/유동/타겟/기간·가격/운영사·담당자 등)를 확장합니다.
-      </div>
     </div>
   </div>
 </div>
@@ -332,7 +353,7 @@
   // ====== CONFIG ======
   const DATA_URL = "./data_house_kor_single_fixed_merged.json";
 
-  // "한국 밖 제외" 기준을 넉넉히 잡은 박스(대한민국 대략 범위)
+  // 대략적인 대한민국 범위(한국 밖 제외용)
   const KOREA_BOUNDS = L.latLngBounds(
     L.latLng(33.0, 124.0),
     L.latLng(39.8, 132.2)
@@ -357,7 +378,6 @@
     chunkedLoading: true,
     spiderfyOnMaxZoom: true
   });
-
   map.addLayer(clusters);
 
   // ====== UI ======
@@ -394,11 +414,9 @@
   const lnkKakao = document.getElementById("lnkKakao");
   const lnkGoogle = document.getElementById("lnkGoogle");
 
-  function toast(msg){
-    elToast.textContent = msg;
-  }
+  function toast(msg){ elToast.textContent = msg; }
 
-  // ====== NORMALIZE ======
+  // ====== HELPERS ======
   function pick(obj, keys){
     for(const k of keys){
       if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== ""){
@@ -407,20 +425,26 @@
     }
     return "";
   }
-
   function toNumber(v){
-    if(v === null || v === undefined) return NaN;
     const n = Number(v);
     return Number.isFinite(n) ? n : NaN;
   }
-
   function getLatLng(item){
     const lat = toNumber(pick(item, ["lat","latitude","Lat","LAT"]));
     const lng = toNumber(pick(item, ["lng","lon","longitude","Lng","LNG"]));
     if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
     return L.latLng(lat, lng);
   }
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
 
+  // ====== NORMALIZE ======
   function normItem(item){
     const id = String(pick(item, ["id","ID","_id","key"]) || "").trim();
     const title = String(pick(item, ["title","name","media_name","display_name"]) || "").trim();
@@ -430,13 +454,11 @@
     const sido = String(pick(item, ["sido","province","region"]) || "").trim();
     const status = String(pick(item, ["status","state"]) || "").trim();
     const verified_status = String(pick(item, ["verified_status","verified","verify"]) || "").trim();
-
     const ll = getLatLng(item);
 
-    // 내부식별 키(안정적)
     const key = id || (title + "|" + address + "|" + (ll ? (ll.lat+","+ll.lng) : "noLL"));
 
-    // NOTE: source_url / 외부 출처 관련 필드는 "화면 노출" 절대 금지 → 모달에서 제외함
+    // NOTE: Source URL 등 외부 출처 필드는 "UI/링크/랜딩"에서 절대 노출하지 않음 (현재 단계 유지)
     return {
       _raw: item,
       key,
@@ -462,7 +484,6 @@
     ].join(" ").toLowerCase();
     return base.includes(ql);
   }
-
   function isReview(n){
     const s = (n.status || "").toUpperCase();
     const v = (n.verified_status || "").toUpperCase();
@@ -470,7 +491,6 @@
   }
 
   function rebuildDropdowns(){
-    // media_group / sido 옵션 채우기
     const groups = new Set();
     const sidos = new Set();
     for(const n of normItems){
@@ -480,7 +500,6 @@
     const gArr = Array.from(groups).sort((a,b)=>a.localeCompare(b,"ko"));
     const sArr = Array.from(sidos).sort((a,b)=>a.localeCompare(b,"ko"));
 
-    // 기존 선택값 유지
     const gSel = selGroup.value;
     const sSel = selSido.value;
 
@@ -491,47 +510,36 @@
     selSido.value = sSel;
   }
 
-  function escapeHtml(s){
-    return String(s)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
   function applyFilters(reason = "user"){
     const query = q.value.trim();
     const g = selGroup.value.trim();
     const s = selSido.value.trim();
 
-    // 1) 텍스트/드롭다운/리뷰
+    // 1) 기본 필터(검색/드롭다운/리뷰/한국밖제외)
     let arr = normItems.filter(n=>{
       if(!textMatch(n, query)) return false;
       if(g && n.media_group !== g) return false;
       if(s && n.sido !== s) return false;
       if(chkReview.checked && !isReview(n)) return false;
-      // 한국 밖 제외(좌표 있는 것만 판정)
       if(chkKorea.checked && n.latlng && !KOREA_BOUNDS.contains(n.latlng)) return false;
       return true;
     });
 
-    // 2) 지도 범위 필터 (checkbox ON이면, 현 지도 bounds 안만 남김)
+    filteredItems = arr;
+
+    // 2) 지도 범위 필터
     const bounds = map.getBounds();
     let inViewArr = arr;
     if(chkBounds.checked){
       inViewArr = arr.filter(n => n.latlng && bounds.contains(n.latlng));
     }
 
-    filteredItems = arr;
+    // ✅ 핵심: 지도범위 ON이면 마커/리스트 모두 inViewArr 기준으로 줄어들어야 함
+    const renderArr = chkBounds.checked ? inViewArr : arr;
 
-    // 지도에 그릴 건 "지도범위 ON이면 inViewArr, OFF면 arr" 기준
-    const toRender = chkBounds.checked ? inViewArr : arr;
+    renderAll(renderArr);
 
-    renderAll(toRender);
-
-    // ★ 핵심 수정: "사용자 의도 검색/적용"이면 결과 영역으로 지도 이동
-    // 이유: 지도범위 ON 상태에서도 '대구 검색 → 지도 이동'이 되어야 함
+    // 사용자 의도(검색/적용/체크 변경 등)에는 결과로 지도 이동 허용
     if(reason === "user"){
       autoFitToResults(arr);
     }
@@ -540,16 +548,13 @@
   }
 
   function autoFitToResults(arr){
-    // 좌표 있는 결과만 대상으로 fit
     const pts = arr.filter(n=>n.latlng).map(n=>n.latlng);
     if(pts.length === 0) return;
 
-    // 단일 포인트면 적당한 줌으로 setView
     if(pts.length === 1){
       map.setView(pts[0], Math.max(map.getZoom(), 12), { animate:true });
       return;
     }
-
     const b = L.latLngBounds(pts);
     map.fitBounds(b, { padding:[28,28], animate:true, maxZoom: 15 });
   }
@@ -564,21 +569,19 @@
     const t = escapeHtml(n.title);
     const a = escapeHtml(n.address || "");
     const g = escapeHtml(n.media_group || "");
-    const s = escapeHtml(n.sido || "");
+    const si = escapeHtml(n.sido || "");
     return `<div style="font-weight:900;margin-bottom:6px">${t}</div>
-            <div style="font-size:12px;color:#8ea0b3;line-height:1.35">${g ? ("<b style='color:#a2decc'>"+g+"</b> · ") : ""}${s}${a ? ("<br/>"+a) : ""}</div>`;
+            <div style="font-size:12px;color:#8ea0b3;line-height:1.35">${g ? ("<b style='color:#a2decc'>"+g+"</b> · ") : ""}${si}${a ? ("<br/>"+a) : ""}</div>`;
   }
 
   function renderMarkers(items){
     clearMarkers();
     for(const n of items){
       if(!n.latlng) continue;
-
       const m = L.marker(n.latlng);
       m.bindPopup(makePopup(n));
       m.on("click", ()=> openModal(n));
       clusters.addLayer(m);
-
       markerByKey.set(n.key, m);
     }
   }
@@ -587,7 +590,6 @@
     list.innerHTML = "";
     listCount.textContent = String(items.length);
 
-    // 너무 길면 체감 느려질 수 있어 상위 800개만 렌더 (MVP 안전장치)
     const MAX = 800;
     const slice = items.slice(0, MAX);
 
@@ -615,8 +617,9 @@
 
     if(items.length > MAX){
       const more = document.createElement("div");
-      more.className = "warn";
-      more.textContent = `리스트 렌더는 상위 ${MAX}개만 표시 중 (현재 표시 ${items.length}개).`;
+      more.className = "item";
+      more.style.cursor = "default";
+      more.innerHTML = `<div class="s">리스트는 상위 ${MAX}개만 표시 중 (현재 ${items.length}개)</div>`;
       list.prepend(more);
     }
   }
@@ -624,9 +627,7 @@
   function renderAll(items){
     renderMarkers(items);
     renderList(items);
-    toast(`Loaded ${normItems.length} · Showing ${filteredItems.length} · Map ${items.length}`);
-    setTimeout(()=>{ elToast.style.opacity = "0.05"; }, 1200);
-    setTimeout(()=>{ elToast.style.opacity = "1"; }, 1600);
+    toast(`Loaded ${normItems.length} · Showing ${filteredItems.length} · InView ${items.length}`);
   }
 
   function updateNumbers(arr, inViewArr){
@@ -636,7 +637,7 @@
     const hasCoord = normItems.filter(n=>n.latlng).length;
     const noCoord = loaded - hasCoord;
 
-    const inView = (chkBounds.checked ? inViewArr.length : shown);
+    const inView = chkBounds.checked ? inViewArr.length : shown;
 
     // meta
     mLoaded.textContent = String(loaded);
@@ -650,25 +651,20 @@
     pillInView.textContent = String(inView);
   }
 
-  // ====== MODAL (출처 URL 절대 노출 금지) ======
+  // ====== MODAL (Source URL UI 노출 금지 유지) ======
   function openModal(n){
     mdTitle.textContent = n.title || "-";
     mdSub.textContent = [n.media_group, n.sido].filter(Boolean).join(" · ") || "-";
-
-    // 광고주/담당자 관점에서 "보이는 정보"를 최대한 늘리되, "없는 값은 표시하지 않음"
-    // + 외부 출처(source_url 등)는 절대 표시하지 않음
     mdGrid.innerHTML = "";
 
     const rows = [];
-
-    // 기본
     if(n.id) rows.push(["ID", n.id]);
     if(n.address) rows.push(["주소", n.address]);
     if(n.status) rows.push(["Status", n.status]);
     if(n.verified_status) rows.push(["Verified", n.verified_status]);
     if(n.latlng) rows.push(["좌표", `${n.latlng.lat.toFixed(6)}, ${n.latlng.lng.toFixed(6)}`]);
 
-    // 원본에서 "있을 수도 있는" 실무 정보(있을 때만 노출)
+    // 원본에 있을 수 있는 실무 필드(있을 때만)
     const raw = n._raw || {};
     const allowKeys = [
       ["운영사", ["operator","operator_name","company","owner"]],
@@ -679,13 +675,17 @@
       ["설치위치", ["site","venue","place"]],
       ["비고", ["note","memo","remark"]]
     ];
-
+    function pick2(obj, keys){
+      for(const k of keys){
+        if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== "") return obj[k];
+      }
+      return "";
+    }
     for(const [label, keys] of allowKeys){
-      const val = pick(raw, keys);
+      const val = pick2(raw, keys);
       if(val) rows.push([label, String(val)]);
     }
 
-    // rows -> cards
     for(const [k,v] of rows){
       const box = document.createElement("div");
       box.className = "kv";
@@ -693,34 +693,23 @@
       mdGrid.appendChild(box);
     }
 
-    // 지도 링크 (주소가 있으면 주소로, 없으면 좌표로)
     const addrQ = n.address ? n.address : (n.latlng ? `${n.latlng.lat},${n.latlng.lng}` : n.title);
-    const kakao = `https://map.kakao.com/?q=${encodeURIComponent(addrQ)}`;
-    const google = n.latlng
+    lnkKakao.href = `https://map.kakao.com/?q=${encodeURIComponent(addrQ)}`;
+    lnkGoogle.href = n.latlng
       ? `https://www.google.com/maps?q=${encodeURIComponent(n.latlng.lat + "," + n.latlng.lng)}`
       : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrQ)}`;
-
-    lnkKakao.href = kakao;
-    lnkGoogle.href = google;
 
     modalBack.style.display = "flex";
   }
 
-  function closeModal(){
-    modalBack.style.display = "none";
-  }
+  function closeModal(){ modalBack.style.display = "none"; }
 
   mdClose.addEventListener("click", closeModal);
-  modalBack.addEventListener("click", (e)=>{
-    if(e.target === modalBack) closeModal();
-  });
-  window.addEventListener("keydown",(e)=>{
-    if(e.key === "Escape") closeModal();
-  });
+  modalBack.addEventListener("click", (e)=>{ if(e.target === modalBack) closeModal(); });
+  window.addEventListener("keydown",(e)=>{ if(e.key === "Escape") closeModal(); });
 
   // ====== EVENTS ======
   btnApply.addEventListener("click", ()=> applyFilters("user"));
-
   btnReset.addEventListener("click", ()=>{
     q.value = "";
     selGroup.value = "";
@@ -731,26 +720,15 @@
     applyFilters("user");
   });
 
-  // 입력 후 Enter = 적용
-  q.addEventListener("keydown",(e)=>{
-    if(e.key === "Enter"){
-      applyFilters("user");
-    }
-  });
+  q.addEventListener("keydown",(e)=>{ if(e.key === "Enter") applyFilters("user"); });
 
-  // 체크 변경 즉시 반영 (bounds는 user 의도로 취급해도 무방)
   chkBounds.addEventListener("change", ()=> applyFilters("user"));
   chkKorea.addEventListener("change", ()=> applyFilters("user"));
   chkReview.addEventListener("change", ()=> applyFilters("user"));
 
-  // 지도 이동/줌 시: 지도범위 필터 ON이면 inView 수치/렌더가 즉시 따라가야 함
   map.on("moveend zoomend", ()=>{
-    if(chkBounds.checked){
-      applyFilters("bounds"); // reason bounds: autoFit 금지
-    }else{
-      // bounds off여도 pill의 InView는 Showing과 같게 유지됨
-      applyFilters("bounds");
-    }
+    // 지도 움직이면 bounds 기준이 달라지므로, bounds ON일 때는 즉시 재계산 필요
+    applyFilters("bounds");
   });
 
   // ====== LOAD ======
@@ -760,24 +738,18 @@
       const res = await fetch(DATA_URL, { cache:"no-store" });
       if(!res.ok) throw new Error("HTTP " + res.status);
       const data = await res.json();
-
       rawItems = Array.isArray(data) ? data : (data.items || data.data || []);
       normItems = rawItems.map(normItem);
 
       rebuildDropdowns();
-
-      // 최초 1회 렌더
       applyFilters("user");
 
       toast(`로드 완료: ${normItems.length}`);
     }catch(err){
       console.error(err);
       toast("데이터 로딩 실패: " + String(err));
-      elToast.style.borderColor = "rgba(255,107,107,.35)";
-      elToast.style.color = "rgba(255,255,255,.85)";
     }
   }
-
   load();
 </script>
 </body>
