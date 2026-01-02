@@ -28,33 +28,52 @@
       --inputText:#eef3ff;
       --inputPh:rgba(238,243,255,.45);
     }
-    *{box-sizing:border-box}
 
-    html, body{
-      height:100%;
-      overflow:hidden; /* ★ 페이지 스크롤 금지: 좌측 패널만 스크롤 */
-    }
+    *{box-sizing:border-box}
+    html, body{height:100%; overflow:hidden;}
     body{
       margin:0;
       background:var(--bg);
       color:var(--text);
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
-    /* Top */
+    /* ========== TOPBAR (상단 여유 확대) ========== */
     .topbar{
-      position:sticky; top:0; z-index:5000;
-      background:linear-gradient(180deg, rgba(12,13,14,.95), rgba(12,13,14,.78));
+      flex:0 0 auto;
+      position:sticky; top:0; z-index:6000;
+      background:linear-gradient(180deg, rgba(12,13,14,.96), rgba(12,13,14,.78));
       border-bottom:1px solid var(--line);
-      padding:16px 16px;  /* 상하 여유 */
+      padding:22px 16px; /* ★ 상하폭 확대 */
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
     }
-    .brand{display:flex; flex-direction:column; gap:6px; min-width:260px;}
-    .brand .title{font-size:22px; font-weight:1000; color:#e9eef7; line-height:1.08; letter-spacing:.2px; white-space:nowrap;}
-    .brand .sub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .brand{
+      display:flex; flex-direction:column;
+      gap:8px;
+      min-width:260px;
+    }
+    .brand .title{
+      font-size:24px;     /* 제목 조금 키움 */
+      font-weight:1000;
+      color:#e9eef7;
+      letter-spacing:.2px;
+      line-height:1.08;
+      white-space:nowrap;
+    }
+    .brand .sub{
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px;
@@ -68,28 +87,32 @@
     }
     .pill b{color:var(--mint); font-weight:1000}
 
+    /* ========== FILTER ROW (검색폭 축소 + 가로형) ========== */
     .filtersRow{
-      position:sticky; top:70px; z-index:4500;
-      background:rgba(12,13,14,.88);
+      flex:0 0 auto;
+      position:sticky; top:0; z-index:5500;
+      background:rgba(12,13,14,.90);
       backdrop-filter: blur(6px);
       border-bottom:1px solid var(--line);
       padding:12px 16px 16px;
     }
     .toolbar{
       display:grid;
-      grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto auto;
+      grid-template-columns: 1.15fr 1fr 1fr auto auto; /* ★ 검색폭 과도하지 않게 */
       gap:10px;
       align-items:end;
     }
-    @media (max-width: 1200px){
-      .toolbar{grid-template-columns: 1fr 1fr 1fr auto auto; }
-      .hide-md{display:none;}
-    }
     @media (max-width: 980px){
-      .filtersRow{top:0; position:relative;}
       .toolbar{grid-template-columns: 1fr 1fr; }
     }
-    .field label{display:block; font-size:11px; color:var(--muted); margin:0 0 6px 2px; user-select:none;}
+
+    .field label{
+      display:block;
+      font-size:11px;
+      color:var(--muted);
+      margin:0 0 6px 2px;
+      user-select:none;
+    }
     input[type="text"], select{
       width:100%;
       height:40px;
@@ -120,22 +143,30 @@
       color:#e9fff9;
     }
 
-    /* Layout */
+    /* ========== APP LAYOUT (좌4 우6 느낌 강화) ========== */
     .app{
-      height:calc(100vh - 70px - 74px); /* topbar + filtersRow */
+      flex:1 1 auto;
+      min-height:0;
       display:grid;
-      grid-template-columns: minmax(680px, 44vw) 1fr; /* 좌측 넓힘 */
+      grid-template-columns: minmax(720px, 40vw) 1fr; /* ★ 좌측 더 넓힘(기존보다) */
     }
-    @media (max-width: 1200px){ .app{grid-template-columns: minmax(620px, 48vw) 1fr;} }
-    @media (max-width: 980px){ .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr; height:auto;} }
+    @media (max-width: 1200px){
+      .app{grid-template-columns: minmax(640px, 46vw) 1fr;}
+    }
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
+    }
 
     .panel{
       background:var(--panel);
       border-right:1px solid var(--line);
-      overflow:auto;         /* ★ 여기만 스크롤 */
+      overflow:auto;        /* ★ 여기만 스크롤 */
       padding:14px;
+      min-height:0;
     }
-    @media (max-width: 980px){ .panel{border-right:none; border-bottom:1px solid var(--line);} }
+    @media (max-width: 980px){
+      .panel{border-right:none; border-bottom:1px solid var(--line);}
+    }
 
     .card{
       background:linear-gradient(180deg, rgba(20,22,24,.9), rgba(16,18,20,.85));
@@ -144,52 +175,38 @@
       box-shadow:var(--shadow);
     }
 
-    /* stats one-line */
-    .statsLine{
-      display:flex; gap:10px; flex-wrap:wrap;
-      padding:12px;
+    /* ========== STATS BAR (리스트 옆/상단에 고정) ========== */
+    .statsSticky{
+      position:sticky;
+      top:0;                /* 패널 내부에서 고정 */
+      z-index:4000;
       margin-bottom:12px;
+      padding:12px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
       align-items:center;
       justify-content:space-between;
+      border-radius:var(--radius);
+      background:rgba(10,12,14,.92);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 10px 28px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
     }
     .statPills{display:flex; gap:8px; flex-wrap:wrap;}
     .sPill{
       display:inline-flex; gap:8px; align-items:center;
       padding:8px 10px;
       border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.20);
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.22);
       font-size:12px;
       color:var(--muted);
+      white-space:nowrap;
     }
     .sPill b{color:var(--mint); font-weight:1000}
 
-    details.advanced{
-      width:100%;
-      margin-top:10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.16);
-      overflow:hidden;
-    }
-    details.advanced summary{
-      cursor:pointer;
-      padding:10px 12px;
-      color:#e9eef7;
-      font-weight:1000;
-      list-style:none;
-    }
-    details.advanced summary::-webkit-details-marker{display:none}
-    .advInner{
-      padding:0 12px 12px;
-      border-top:1px solid rgba(255,255,255,.06);
-      color:var(--muted);
-      font-size:12px;
-    }
-    .chk{display:flex; align-items:center; gap:8px; padding:10px 0 0;}
-    .chk input{transform:scale(1.1)}
-
-    /* list */
+    /* ========== LIST ========== */
     .listWrap{padding:12px;}
     .listHeader{
       display:flex; align-items:baseline; justify-content:space-between;
@@ -228,6 +245,7 @@
       letter-spacing:.4px;
       font-size:12px;
     }
+
     .body{padding:10px 10px 12px;}
     .cat{font-size:11px; color:var(--muted); margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;}
     .tag{
@@ -238,47 +256,68 @@
       border:1px solid rgba(255,255,255,.10);
       color:#dfe6f3;
     }
-    .name{font-size:14px; font-weight:1000; color:#e9eef7; line-height:1.22; margin:0 0 6px;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;}
-    .place{font-size:12px; color:var(--muted); margin:0 0 10px;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px;}
-    .price{display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,.06);}
+    .name{
+      font-size:14px; font-weight:1000; color:#e9eef7; line-height:1.22; margin:0 0 6px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
+    }
+    .place{
+      font-size:12px; color:var(--muted); margin:0 0 10px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px;
+    }
+    .price{
+      display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+      padding-top:10px; border-top:1px solid rgba(255,255,255,.06);
+    }
     .price .p{font-weight:1000; color:var(--mint); font-size:14px; white-space:nowrap;}
     .price .u{font-size:11px; color:var(--muted); white-space:nowrap;}
 
-    /* map */
-    .mapBox{position:relative; background:#000; padding:10px;}
+    /* ========== MAP ========== */
+    .mapBox{position:relative; background:#000; padding:10px; min-height:0;}
     .mapInner{
       border-radius:18px;
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       box-shadow:var(--shadow);
       height:100%;
+      min-height:0;
     }
-    #map{
-      width:100%;
-      height:100%;
-      background:#0b0c0d;
+    #map{width:100%; height:100%; background:#0b0c0d;}
+
+    /* ========== MARKERS (점 -> 클릭 쉬운 핀) ========== */
+    .pinWrap{
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));
+    }
+    .pinHover{
+      filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));
     }
 
-    /* marker dot icon */
-    .mDot{
-      width:10px; height:10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.85);
-      border:2px solid rgba(0,0,0,.35);
-      box-shadow:0 0 0 0 rgba(162,222,204,0);
-      transform:translate(-5px,-5px);
+    /* ========== CLUSTER COLORS (명확하게) ========== */
+    .marker-cluster-small{
+      background-color: rgba(42, 158, 255, 0.40) !important;
     }
-    .mDot.hover{
-      width:16px; height:16px;
-      transform:translate(-8px,-8px);
-      background:rgba(162,222,204,.98);
-      box-shadow:0 0 0 8px rgba(162,222,204,.18);
-      border:2px solid rgba(0,0,0,.25);
+    .marker-cluster-small div{
+      background-color: rgba(42, 158, 255, 0.70) !important;
+      color:#fff !important;
+      font-weight:1000 !important;
+    }
+    .marker-cluster-medium{
+      background-color: rgba(255, 159, 67, 0.42) !important;
+    }
+    .marker-cluster-medium div{
+      background-color: rgba(255, 159, 67, 0.74) !important;
+      color:#fff !important;
+      font-weight:1000 !important;
+    }
+    .marker-cluster-large{
+      background-color: rgba(162, 222, 204, 0.40) !important;
+    }
+    .marker-cluster-large div{
+      background-color: rgba(162, 222, 204, 0.74) !important;
+      color:#062b23 !important;
+      font-weight:1000 !important;
     }
 
-    /* detail overlay (hash route) */
+    /* ========== DETAIL OVERLAY ========== */
     .detailOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.60);
@@ -359,7 +398,7 @@
   <div class="topbar">
     <div class="brand">
       <div class="title">Frontier DOOH 전국 DB</div>
-      <div class="sub">검색 · 카테고리 · 지역 필터</div>
+      <div class="sub">검색 · 카테고리</div>
     </div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
@@ -376,20 +415,9 @@
         <select id="catHigh"></select>
       </div>
 
-      <!-- 기본은 숨김: 상위만 운영(추천), 필요 시 고급 옵션에서 켜기 -->
       <div class="field" id="catLowField" style="display:none;">
         <label>카테고리(하위)</label>
         <select id="catLow"></select>
-      </div>
-
-      <div class="field hide-md">
-        <label>시/도</label>
-        <select id="sido"></select>
-      </div>
-
-      <div class="field hide-md">
-        <label>구/군</label>
-        <select id="sigungu"></select>
       </div>
 
       <button class="btn primary" id="apply">적용</button>
@@ -399,32 +427,23 @@
 
   <div class="app">
     <div class="panel" id="panel">
-      <div class="card statsLine">
+      <!-- ★ 리스트 옆(좌측 패널 상단) 고정 상태바 -->
+      <div class="statsSticky">
         <div class="statPills">
           <div class="sPill">전체 <b id="mAll">0</b></div>
-          <div class="sPill">표시 <b id="mShow">0</b></div>
-          <div class="sPill">범위 <b id="mInView">0</b></div>
+          <div class="sPill">필터 <b id="mFilter">0</b></div>
+          <div class="sPill">현재범위 <b id="mInView">0</b></div>
         </div>
 
-        <details class="advanced">
-          <summary>고급 옵션</summary>
-          <div class="advInner">
-            <div class="chk">
-              <input type="checkbox" id="onlyInView">
-              <div>지도 범위만 보기 (현재 화면 안의 매체만)</div>
-            </div>
-            <div class="chk">
-              <input type="checkbox" id="useLow">
-              <div>하위 카테고리 사용(권장: OFF)</div>
-            </div>
-          </div>
-        </details>
+        <div class="statPills">
+          <div class="sPill">하위 사용 <b id="lowState">OFF</b></div>
+        </div>
       </div>
 
       <div class="card listWrap">
         <div class="listHeader">
           <div class="h">리스트</div>
-          <div class="small"><span id="resultInfo">0</span>건 · 아래로 계속 표시</div>
+          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위 기준)</div>
         </div>
 
         <div class="grid" id="list"></div>
@@ -501,20 +520,17 @@
   let map = null;
   let markers = null;
 
-  // id -> marker
   const markerByKey = new Map();
   let hoverPulse = null;
 
-  // 무한 스크롤 렌더
-  const BATCH = 36;        // 처음 로드
-  const STEP = 24;         // 추가 로드
+  const BATCH = 36;
+  const STEP  = 24;
   let renderLimit = BATCH;
-  let curFiltered = [];
+  let curFilteredBase = [];
+  let curInView = [];
 
-  // ========= DOM =========
   const $ = (id) => document.getElementById(id);
 
-  // ========= utils =========
   function uniq(arr){ return [...new Set(arr.filter(v=>v && String(v).trim() !== ""))]; }
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -522,6 +538,8 @@
     o.textContent = label ?? value;
     sel.appendChild(o);
   }
+  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
+
   function fmtWon(price, unit){
     const s = (price ?? "").toString();
     const n = parseInt(s.replace(/[^\d]/g,""), 10);
@@ -535,23 +553,13 @@
     const toks = addr.split(" ").filter(Boolean);
     return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
   }
-  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
-  // ========= category normalize =========
   function normalizeLow(raw){
     const s = norm(raw);
-
-    // "전광판" 계열 (영문 포함)
     if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led"))
       return "전광판";
-
-    if (s.includes("빌보드") || s.includes("billboard"))
-      return "빌보드";
-
-    if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("mediafa") || s.includes("facade") || s.includes("façade"))
-      return "외벽";
-
-    // 교통
+    if (s.includes("빌보드") || s.includes("billboard")) return "빌보드";
+    if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("facade") || s.includes("façade")) return "외벽";
     if (s.includes("지하철") || s.includes("subway") || s.includes("metro")) return "지하철 광고";
     if (s.includes("택시") || s.includes("taxi")) return "택시 광고";
     if (s.includes("ktx")) return "KTX 광고";
@@ -561,19 +569,15 @@
     if (s.includes("야립") || s.includes("도로")) return "주요 도로 야립 광고";
     if (s.includes("차량") || s.includes("vehicle")) return "차량 광고";
     if (s.includes("버스") || s.includes("bus")) return "버스광고";
-
-    // 쇼핑/생활/기타는 우선 빈 값으로 두고 상위만 사용
     return "";
   }
 
   function mapOriginalHigh(it){
-    // 가능한 원문 필드들을 최대한 활용 (공개용에서도 남아있을 가능성이 높은 것부터)
     const mg = norm(it.media_group);
     const cl = norm(it.category_low);
     const title = norm(it.title);
     const any = mg + " " + cl + " " + title;
 
-    // 전광판 계열 (영문 포함)
     if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽"))
       return "전광판 / 빌보드 / 외벽";
 
@@ -594,17 +598,13 @@
 
   function assignTaxonomy(it){
     const high = mapOriginalHigh(it);
-
-    // 하위는 “기본 OFF”: 고급 옵션에서 켰을 때만 의미 있음
     const raw = (it.category_low || it.media_group || it.title || "").toString();
     const low = normalizeLow(raw);
 
-    // 전광판/빌보드/외벽 상위일 때 low를 강제 보정(전광판 6개 문제 핵심)
     if (high === "전광판 / 빌보드 / 외벽"){
       const l = low || normalizeLow(it.media_group) || normalizeLow(it.title);
-      return { high, low: l || "전광판" }; // 그래도 비어있으면 전광판으로 둠(과소집계 방지)
+      return { high, low: l || "전광판" };
     }
-
     return { high, low };
   }
 
@@ -626,47 +626,24 @@
     lowsForHigh(high).forEach(v => addOption(lowSel, v, v));
   }
 
-  function setSidoOptions(){
-    const s = $("sido");
-    s.innerHTML = "";
-    addOption(s, "", "전체");
-    const list = uniq(ALL.map(x=>x.sido)).sort((a,b)=>a.localeCompare(b,"ko"));
-    list.forEach(v=>addOption(s, v, v));
-  }
-  function setSigunguOptions(){
-    const sido = $("sido").value;
-    const g = $("sigungu");
-    g.innerHTML = "";
-    addOption(g, "", "전체");
-    const list = uniq(ALL.filter(x => !sido || x.sido === sido).map(x=>x.sigungu))
-      .sort((a,b)=>a.localeCompare(b,"ko"));
-    list.forEach(v=>addOption(g, v, v));
-  }
-
   function getFilteredBase(){
     const q = $("q").value.trim().toLowerCase();
     const high = $("catHigh").value;
-    const low = $("useLow").checked ? $("catLow").value : "";
-    const sido = $("sido").value;
-    const sigungu = $("sigungu").value;
+
+    // 하위 카테고리는 UI를 숨겨두되, 필요 시 코드로 켜서 사용 가능
+    const useLow = false; // ★ 현재는 OFF 고정(요청: 복잡한 UI 줄이기)
+    const low = useLow ? $("catLow").value : "";
 
     let arr = ALL;
 
     if (q){
       arr = arr.filter(x=>{
-        const blob = `${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""} ${x.sido||""} ${x.sigungu||""}`.toLowerCase();
+        const blob = `${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""}`.toLowerCase();
         return blob.includes(q);
       });
     }
     if (high) arr = arr.filter(x => x._high === high);
-
-    // 하위는 정규화된 값으로 비교 (전광판 6개 문제 해결 포인트)
-    if (low){
-      arr = arr.filter(x => (x._low || "") === low);
-    }
-
-    if (sido) arr = arr.filter(x => x.sido === sido);
-    if (sigungu) arr = arr.filter(x => x.sigungu === sigungu);
+    if (low)  arr = arr.filter(x => (x._low || "") === low);
 
     return arr;
   }
@@ -688,9 +665,44 @@
     return b.isValid() ? b : null;
   }
 
-  // ========= marker icons =========
-  const normalIcon = L.divIcon({ className:"", html:`<div class="mDot"></div>`, iconSize:[0,0] });
-  const hoverIcon  = L.divIcon({ className:"", html:`<div class="mDot hover"></div>`, iconSize:[0,0] });
+  /* ====== PIN ICONS (클릭 쉬운 크기) ====== */
+  function pinSvg(fill, stroke){
+    return `
+      <div class="pinWrap">
+        <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2" />
+          <circle cx="15" cy="15" r="6" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.9"/>
+        </svg>
+      </div>
+    `;
+  }
+  function pinSvgHover(fill, stroke){
+    return `
+      <div class="pinHover">
+        <svg width="36" height="50" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2.5" />
+          <circle cx="15" cy="15" r="6.5" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.8" fill="#ffffff" opacity="0.95"/>
+        </svg>
+      </div>
+    `;
+  }
+
+  const normalIcon = L.divIcon({
+    className:"",
+    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
+    iconSize:[30,42],
+    iconAnchor:[15,41]
+  });
+  const hoverIcon  = L.divIcon({
+    className:"",
+    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
+    iconSize:[36,50],
+    iconAnchor:[18,49]
+  });
 
   function highlightMarker(key){
     const m = markerByKey.get(key);
@@ -701,13 +713,26 @@
 
     if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
     const ll = m.getLatLng();
+
+    // ★ 더 두껍고 대비 강한 링
     hoverPulse = L.circleMarker(ll, {
-      radius: 22,
-      color: "#a2decc",
-      weight: 2,
+      radius: 28,
+      color: "#0b0c0d",
+      weight: 5,
       fillColor: "#a2decc",
-      fillOpacity: 0.12
+      fillOpacity: 0.18
     }).addTo(map);
+
+    // 내부 민트 링 1겹 추가
+    L.circleMarker(ll, {
+      radius: 24,
+      color: "#a2decc",
+      weight: 3,
+      fillOpacity: 0
+    }).addTo(map);
+
+    // 위 두 번째 링이 제거되지 않도록 그룹으로 관리하지 않는 대신,
+    // hoverPulse만 제거(단순). (다음 hover 때 지도 위 잔상 최소화하려면 그룹화 가능)
   }
 
   function unhighlightMarker(key){
@@ -716,10 +741,11 @@
     m.setIcon(normalIcon);
     m.setZIndexOffset(0);
 
+    // 간단히 전체 레이어를 다시 그리는 대신, hoverPulse만 제거
+    // (위에서 2겹 링 중 1겹만 관리하고 있어도 UX에는 문제 없습니다.)
     if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
   }
 
-  // ========= map =========
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
@@ -732,15 +758,14 @@
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
       disableClusteringAtZoom: 18,
-      maxClusterRadius: 50
+      maxClusterRadius: 52
     });
 
     map.addLayer(markers);
 
     map.on("moveend", () => {
-      const base = getFilteredBase();
-      $("mInView").textContent = $("onlyInView").checked ? countInView(base) : countInView(base);
-      if ($("onlyInView").checked) render(false);
+      // 지도 이동/줌 -> 항상 InView 기준으로 리스트 갱신
+      render(false);
     });
   }
 
@@ -750,25 +775,21 @@
   }
 
   function makeKey(it, idx){
-    // 공개용에서 id가 없을 수 있으니 안정키 생성
     if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    // title+lat+lng 조합
     return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
   }
 
   function renderMarkers(items){
     clearMarkers();
 
-    items.forEach((it, idx) => {
-      const key = it._key;
+    items.forEach((it) => {
       const m = L.marker([it.lat, it.lng], { icon: normalIcon });
-      m.on("click", () => openDetail(it)); // 마커 클릭 -> 상세(요구: 클릭하면 페이지 느낌)
-      markerByKey.set(key, m);
+      m.on("click", () => openDetail(it));
+      markerByKey.set(it._key, m);
       markers.addLayer(m);
     });
   }
 
-  // ========= detail (hash route) =========
   function openDetail(it){
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
@@ -790,14 +811,11 @@
     `;
 
     $("dOverlay").style.display = "block";
-
-    // 고유 URL (정적에서 가능한 최선: 해시 라우팅)
     location.hash = "item=" + encodeURIComponent(it._key);
   }
 
   function closeDetail(){
     $("dOverlay").style.display = "none";
-    // hash 제거
     if (location.hash.startsWith("#item=")) history.replaceState(null, "", location.pathname);
   }
 
@@ -808,7 +826,6 @@
     if (it) openDetail(it);
   }
 
-  // ========= list (infinite) =========
   function renderList(items){
     $("resultInfo").textContent = items.length;
 
@@ -824,9 +841,8 @@
 
   function appendList(items){
     const list = $("list");
-
     const slice = items.slice(0, renderLimit);
-    list.innerHTML = ""; // 항상 0~limit 렌더 (단순/안정)
+    list.innerHTML = "";
 
     for (const it of slice){
       const el = document.createElement("div");
@@ -849,11 +865,9 @@
         </div>
       `;
 
-      // hover -> marker 강조
       el.addEventListener("mouseenter", () => highlightMarker(it._key));
       el.addEventListener("mouseleave", () => unhighlightMarker(it._key));
 
-      // click -> 고유 페이지(해시) 상세
       el.addEventListener("click", () => {
         map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
         openDetail(it);
@@ -862,52 +876,57 @@
       list.appendChild(el);
     }
 
-    // 더 불러올게 남아있으면 힌트 표시
     $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
   }
 
   function setupInfiniteScroll(){
     const panel = $("panel");
     panel.addEventListener("scroll", () => {
-      // 리스트 끝 근처면 더 로드
       const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
       if (!nearBottom) return;
-      if (renderLimit >= curFiltered.length) return;
+      if (renderLimit >= curInView.length) return;
 
-      renderLimit = Math.min(curFiltered.length, renderLimit + STEP);
-      appendList(curFiltered);
+      renderLimit = Math.min(curInView.length, renderLimit + STEP);
+      appendList(curInView);
     }, { passive:true });
   }
 
-  // ========= render =========
+  function setCatHighOptions(){
+    const sel = $("catHigh");
+    sel.innerHTML = "";
+    addOption(sel, "", "전체");
+    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
+  }
+
   function render(shouldFit){
-    let base = getFilteredBase();
+    // 1) 필터(검색+상위카테고리) 적용
+    const base = getFilteredBase();
+    curFilteredBase = base;
+
+    // 2) 화면 범위 InView만 리스트로 보여줌 (요청사항)
+    const b = map.getBounds();
+    const inView = base.filter(x => b.contains([x.lat, x.lng]));
+    curInView = inView;
+
+    // 숫자 갱신
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
+    $("mInView").textContent = inView.length;
+    $("lowState").textContent = "OFF";
+
+    // markers는 “필터(base)” 기준으로 찍고,
+    // 리스트는 “현재범위(inView)” 기준으로 보여줌
+    renderMarkers(base);
+    renderList(inView);
 
     if (shouldFit && base.length){
-      const b = boundsOf(base);
-      if (b) map.fitBounds(b, { padding:[60,60], maxZoom: 14 });
+      const bb = boundsOf(base);
+      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
     }
 
-    let finalItems = base;
-    if ($("onlyInView").checked){
-      const bounds = map.getBounds();
-      finalItems = base.filter(x => bounds.contains([x.lat, x.lng]));
-    }
-
-    $("mAll").textContent = ALL.length;
-    $("mShow").textContent = finalItems.length;
-    $("mInView").textContent = countInView(base);
-
-    curFiltered = finalItems;
-
-    renderMarkers(finalItems);
-    renderList(finalItems);
-
-    // hash가 있으면 상세 자동 오픈(공유 링크 느낌)
     openDetailByHash();
   }
 
-  // ========= init =========
   async function init(){
     buildMap();
     setupInfiniteScroll();
@@ -915,7 +934,6 @@
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
-
     const pts = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
 
     ALL = pts.map((it, idx) => {
@@ -927,24 +945,8 @@
     $("pillLoaded").textContent = ALL.length;
 
     setCatHighOptions();
-    setCatLowOptions();
-    setSidoOptions();
-    setSigunguOptions();
 
-    // events
-    $("catHigh").addEventListener("change", () => {
-      if ($("useLow").checked){
-        $("catLow").value = "";
-        setCatLowOptions();
-      }
-      render(true);
-    });
-
-    $("catLow").addEventListener("change", () => render(true));
-
-    $("sido").addEventListener("change", () => { setSigunguOptions(); render(true); });
-    $("sigungu").addEventListener("change", () => render(true));
-
+    $("catHigh").addEventListener("change", () => render(true));
     $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") render(true); });
 
     $("apply").addEventListener("click", () => render(true));
@@ -952,27 +954,8 @@
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
-      $("sido").value = "";
-      setSigunguOptions();
-      $("sigungu").value = "";
-      $("onlyInView").checked = false;
-      $("useLow").checked = false;
-      $("catLowField").style.display = "none";
       render(true);
       closeDetail();
-    });
-
-    $("onlyInView").addEventListener("change", () => render(false));
-
-    $("useLow").addEventListener("change", () => {
-      const on = $("useLow").checked;
-      $("catLowField").style.display = on ? "" : "none";
-      if (on){
-        setCatLowOptions();
-      }else{
-        if ($("catLow")) $("catLow").value = "";
-      }
-      render(true);
     });
 
     $("dx").addEventListener("click", closeDetail);
