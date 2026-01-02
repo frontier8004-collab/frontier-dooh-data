@@ -2,1064 +2,783 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Frontier DOOH Map (v13 Stable UI Wide)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Frontier 전국 DOOH DB – Web Map MVP</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <style>
     :root{
-      --bg:#07090c;
-      --panel:#0c1016;
-      --panel2:#0f141c;
+      --bg:#0b0c0d;
+      --panel:#101214;
+      --panel2:#0f1011;
+      --text:#cfd8e3;
+      --muted:#8ea0b3;
       --line:rgba(255,255,255,.10);
       --mint:#a2decc;
-      --text:#e7eef7;
-      --muted:rgba(231,238,247,.68);
+      --mint2:rgba(162,222,204,.20);
       --danger:#ff6b6b;
-      --shadow:0 18px 48px rgba(0,0,0,.55);
-      --radius:14px;
-
-      /* ✅ 기본 패널 폭 */
-      --panelW: 520px;
-      --gutter: 14px;
-      --topbarH: 58px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,NanumGothic,sans-serif}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    }
     a{color:inherit}
-
-    .shell{
-      height:100vh;
-      width:100vw;
-      overflow:hidden;
-      background:
-        radial-gradient(1100px 600px at 20% 10%, rgba(162,222,204,.12), transparent 60%),
-        radial-gradient(1000px 700px at 90% 30%, rgba(162,222,204,.10), transparent 65%),
-        var(--bg);
+    .app{display:flex; height:100vh; width:100vw; overflow:hidden;}
+    .left{
+      width:420px; min-width:360px; max-width:520px;
+      background:linear-gradient(180deg,var(--panel),var(--panel2));
+      border-right:1px solid var(--line);
+      display:flex; flex-direction:column;
     }
-
-    .topbar{
-      height:var(--topbarH);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:0 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
-      backdrop-filter: blur(8px);
+    .top{
+      padding:14px 14px 10px;
+      border-bottom:1px solid var(--line);
+      position:sticky; top:0; background:linear-gradient(180deg,var(--panel),var(--panel2));
+      z-index:5;
     }
-    .topbar .left{
-      display:flex; align-items:baseline; gap:10px;
-      min-width:0;
+    .title{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; margin-bottom:10px;
     }
-    .topbar .title{
-      font-weight:900;
-      letter-spacing:.2px;
-      font-size:15px;
-      white-space:nowrap;
-    }
-    .topbar .sub{
-      color:var(--muted);
-      font-size:12.5px;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:52vw;
+    .title h1{
+      margin:0; font-size:14px; font-weight:800; letter-spacing:.2px;
     }
     .pill{
-      font-size:12px;
-      padding:7px 10px;
+      display:inline-flex; align-items:center; gap:10px;
+      padding:8px 10px; border:1px solid var(--mint2);
       border-radius:999px;
-      border:1px solid rgba(162,222,204,.35);
-      color:rgba(162,222,204,.95);
-      background:rgba(162,222,204,.07);
+      background:rgba(0,0,0,.35);
+      box-shadow:0 0 16px rgba(162,222,204,.10);
+      font-size:12px; color:var(--text);
       white-space:nowrap;
     }
-
-    .main{
-      height:calc(100vh - var(--topbarH));
-      display:grid;
-      grid-template-columns: var(--panelW) 10px 1fr;
-      min-height:0;
+    .pill b{color:var(--mint)}
+    .meta{
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:6px; font-size:12px; color:var(--muted);
+      margin-top:8px;
     }
-
-    .panel{
-      min-height:0;
-      overflow:auto;
-      padding:16px;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.03), transparent 50%),
-        var(--panel);
-      border-right:1px solid rgba(255,255,255,.08);
+    .meta div{padding:6px 8px; border:1px solid var(--line); border-radius:10px; background:rgba(0,0,0,.18)}
+    .meta b{color:var(--text)}
+    .controls{
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
+      margin-top:10px;
     }
-
-    .resizer{
-      cursor: col-resize;
-      background:rgba(255,255,255,.04);
-      border-right:1px solid rgba(255,255,255,.08);
-      border-left:1px solid rgba(255,255,255,.08);
-      position:relative;
-    }
-    .resizer:before{
-      content:"";
-      position:absolute;
-      left:50%; top:50%;
-      width:3px; height:42px;
-      border-radius:999px;
-      transform:translate(-50%,-50%);
-      background:rgba(162,222,204,.28);
-      box-shadow:0 0 0 6px rgba(162,222,204,.05);
-    }
-
-    .map-wrap{
-      min-height:0;
-      position:relative;
-      overflow:hidden;
-      background:#050607;
-    }
-    #map{height:100%; width:100%; background:#050607;}
-
-    .section{
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.02);
-      border-radius:16px;
-      padding:14px;
-      box-shadow: 0 10px 26px rgba(0,0,0,.25);
-      margin-bottom:12px;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-    }
-    .row2{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-    @media (max-width: 980px){
-      .main{grid-template-columns: 1fr; grid-template-rows: auto 1fr;}
-      .resizer{display:none;}
-      .panel{
-        border-right:none;
-        border-bottom:1px solid rgba(255,255,255,.08);
-      }
-    }
-    @media (max-width: 520px){
-      .row2{grid-template-columns:1fr;}
-      .topbar .sub{display:none;}
-    }
-
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:0 0 6px 2px;
-    }
+    .controls .full{grid-column:1/-1;}
     input[type="text"], select{
-      width:100%;
-      padding:11px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.03);
+      width:100%; padding:10px 10px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
       color:var(--text);
       outline:none;
     }
-    input[type="text"]::placeholder{color:rgba(231,238,247,.42)}
-    input[type="text"]:focus, select:focus{
-      border-color: rgba(162,222,204,.45);
-      box-shadow: 0 0 0 3px rgba(162,222,204,.10);
+    input[type="text"]::placeholder{color:rgba(207,216,227,.55)}
+    .checks{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top:10px;
     }
-
-    .toggles{display:flex; gap:10px; flex-wrap:wrap;}
     .chk{
       display:flex; align-items:center; gap:8px;
-      padding:9px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
+      padding:8px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
       background:rgba(0,0,0,.18);
-      cursor:pointer;
+      font-size:12px; color:var(--text);
       user-select:none;
-      font-size:12.5px;
-      color:rgba(231,238,247,.88);
     }
-    .chk input{accent-color: var(--mint); cursor:pointer;}
-
-    .actions{display:flex; gap:10px; margin-top:6px;}
+    .chk input{accent-color:var(--mint); cursor:pointer}
+    .btns{display:flex; gap:10px; margin-top:10px;}
     .btn{
       flex:1;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.03);
+      padding:10px 12px; border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
       color:var(--text);
-      cursor:pointer;
-      font-weight:800;
+      font-weight:800; cursor:pointer;
     }
     .btn.primary{
-      border-color: rgba(162,222,204,.38);
-      background: linear-gradient(180deg, rgba(162,222,204,.14), rgba(162,222,204,.06));
-      box-shadow: 0 10px 26px rgba(162,222,204,.08);
+      border-color:var(--mint2);
+      box-shadow:0 0 18px rgba(162,222,204,.12);
     }
-
-    .meta{
-      margin-top:10px;
-      padding:12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.22);
+    .btn:active{transform:translateY(1px)}
+    .listWrap{flex:1; overflow:auto;}
+    .listHeader{
+      padding:12px 14px 8px;
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      position:sticky; top:0; background:linear-gradient(180deg,var(--panel),var(--panel2));
+      z-index:4;
     }
-    .meta .line{
-      display:flex; justify-content:space-between; gap:10px;
-      font-size:12.5px;
-      color:rgba(231,238,247,.85);
-      margin:4px 0;
-    }
-    .meta b{color:rgba(162,222,204,.95)}
-
+    .listHeader .small{font-size:12px; color:var(--muted)}
     .list{
-      margin-top:10px;
-    }
-    .list h2{
-      margin:0 0 10px;
-      font-size:13px;
-      color:rgba(231,238,247,.90);
-      letter-spacing:.2px;
+      padding:10px 10px 18px;
     }
     .item{
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.02);
-      border-radius:16px;
-      padding:12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:rgba(0,0,0,.18);
+      padding:10px 10px;
       margin-bottom:10px;
       cursor:pointer;
-      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      transition:transform .12s ease, border-color .12s ease;
     }
     .item:hover{
-      transform: translateY(-1px);
-      border-color: rgba(162,222,204,.32);
-      background:rgba(162,222,204,.06);
+      transform:translateY(-1px);
+      border-color:rgba(162,222,204,.30);
     }
-    .item .t{font-weight:900;font-size:13.7px;line-height:1.25}
-    .item .s{color:rgba(231,238,247,.70);font-size:12.5px;margin-top:6px;line-height:1.25}
-    .item .k{margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;}
-    .tag{
-      font-size:11.5px;
-      padding:4px 8px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      color:rgba(231,238,247,.78);
+    .item .t{
+      font-weight:900; font-size:13px; line-height:1.25;
+      margin-bottom:6px;
+    }
+    .item .s{
+      font-size:12px; color:var(--muted); line-height:1.35;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      font-size:11px;
+      padding:4px 8px; border-radius:999px;
+      border:1px solid var(--line);
       background:rgba(0,0,0,.18);
+      margin-right:6px;
     }
-    .tag.mint{
-      border-color: rgba(162,222,204,.30);
-      color: rgba(162,222,204,.95);
-      background: rgba(162,222,204,.08);
-    }
-
-    .loading{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      background:rgba(0,0,0,.35);
-      backdrop-filter: blur(3px);
-      z-index:999;
-      opacity:0;
-      pointer-events:none;
-      transition: opacity .18s ease;
-    }
-    .loading.show{opacity:1; pointer-events:auto;}
-    .loading .box{
-      padding:14px 16px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(15,19,24,.72);
-      box-shadow: var(--shadow);
-      font-size:13px;
-      color:rgba(231,238,247,.9);
-    }
-    .loading .box b{color:rgba(162,222,204,.95)}
-
+    .badge.mint{border-color:rgba(162,222,204,.30); color:var(--mint)}
+    .right{flex:1; position:relative;}
+    #map{height:100%; width:100%;}
     .toast{
-      position:fixed;
-      left:16px; bottom:16px;
-      max-width:min(560px, calc(100% - 32px));
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(10,12,14,.88);
-      color:rgba(231,238,247,.92);
-      box-shadow: var(--shadow);
-      z-index:2000;
-      display:none;
-      line-height:1.35;
-      font-size:12.8px;
-    }
-    .toast.show{display:block;}
-    .toast .bad{color:var(--danger); font-weight:900}
-
-    .modal{
-      position:fixed; inset:0;
+      position:absolute; left:12px; bottom:12px;
+      padding:10px 12px;
       background:rgba(0,0,0,.55);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:3000;
-      padding:18px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      font-size:12px; color:var(--muted);
+      z-index:700;
+      max-width:min(520px, 70%);
     }
-    .modal.show{display:flex;}
-    .modal .card{
-      width:min(820px, 100%);
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.22)),
-                 rgba(15,19,24,.92);
-      box-shadow: var(--shadow);
+
+    /* Modal */
+    .modalBack{
+      position:fixed; inset:0; background:rgba(0,0,0,.65);
+      display:none; align-items:center; justify-content:center;
+      z-index:2000;
+      padding:16px;
+    }
+    .modal{
+      width:min(860px, 96vw);
+      background:linear-gradient(180deg, rgba(16,18,20,.98), rgba(10,11,12,.98));
+      border:1px solid rgba(162,222,204,.20);
+      box-shadow:0 0 40px rgba(0,0,0,.55);
+      border-radius:16px;
       overflow:hidden;
     }
-    .modal .head{
+    .modalHead{
       padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
     }
-    .modal .head .title{font-size:15px; font-weight:900; line-height:1.25;}
-    .modal .head .sub{margin-top:6px;color:rgba(231,238,247,.70);font-size:12.5px;line-height:1.25}
-    .modal .close{
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      color:rgba(231,238,247,.9);
-      border-radius:12px;
-      padding:8px 10px;
+    .modalHead h2{margin:0; font-size:16px; font-weight:950; line-height:1.25}
+    .modalHead .sub{margin-top:6px; font-size:12px; color:var(--muted); line-height:1.35}
+    .close{
       cursor:pointer;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
+      color:var(--text);
+      border-radius:10px;
+      padding:8px 10px;
       font-weight:900;
     }
-    .modal .body{
-      padding:14px 16px 16px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
+    .modalBody{padding:14px 16px;}
+    .grid{
+      display:grid; grid-template-columns:1fr 1fr; gap:10px;
     }
-    @media (max-width: 720px){
-      .modal .body{grid-template-columns:1fr}
+    @media(max-width:760px){
+      .left{width:360px}
+      .grid{grid-template-columns:1fr}
     }
     .kv{
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.20);
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.18);
       border-radius:14px;
-      padding:12px;
+      padding:10px 10px;
+      font-size:12px;
     }
-    .kv .k{font-size:12px;color:rgba(231,238,247,.65);margin-bottom:6px}
-    .kv .v{font-size:13px;color:rgba(231,238,247,.92);line-height:1.35;word-break:break-word}
-    .modal .foot{
-      padding:12px 16px 16px;
-      border-top:1px solid rgba(255,255,255,.08);
-      display:flex; gap:10px; flex-wrap:wrap;
+    .kv .k{color:var(--muted); font-weight:800; margin-bottom:6px}
+    .kv .v{color:var(--text); font-weight:800; line-height:1.35}
+    .links{
+      display:flex; flex-wrap:wrap; gap:10px;
+      margin-top:12px;
     }
-    .modal .foot a{
+    .linkbtn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:10px 12px; border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.25);
       text-decoration:none;
-      border:1px solid rgba(162,222,204,.30);
-      background:rgba(162,222,204,.07);
-      color:rgba(162,222,204,.95);
-      padding:10px 12px;
-      border-radius:12px;
-      font-weight:900;
-      font-size:12.5px;
+      font-size:12px; font-weight:950;
     }
+    .linkbtn.primary{border-color:rgba(162,222,204,.30); color:var(--mint)}
+    .warn{
+      margin-top:12px;
+      font-size:12px;
+      color:rgba(255,255,255,.70);
+      border:1px dashed rgba(255,255,255,.18);
+      background:rgba(0,0,0,.18);
+      border-radius:12px;
+      padding:10px 10px;
+    }
+    .warn b{color:var(--mint)}
   </style>
 </head>
 
 <body>
-  <div class="shell">
-    <div class="topbar">
-      <div class="left">
-        <div class="title">Frontier DOOH 전국 DB</div>
-        <div class="sub" id="dataUrlLabel">—</div>
+<div class="app">
+  <div class="left">
+    <div class="top">
+      <div class="title">
+        <h1>Frontier 전국 DOOH DB – Web Map MVP</h1>
+        <div class="pill" id="pill">
+          <span>Loaded: <b id="pillLoaded">-</b></span>
+          <span>Showing: <b id="pillShowing">-</b></span>
+          <span>InView: <b id="pillInView">-</b></span>
+        </div>
       </div>
-      <div class="pill" id="pillStatus">Loading…</div>
-    </div>
 
-    <div class="main">
-      <aside class="panel">
-        <div class="section">
-          <div class="grid">
-            <div>
-              <label>검색 (title / subtitle / address / id)</label>
-              <input id="q" type="text" placeholder="예: 강남, 삼성역, CGV, 10023…" />
-            </div>
+      <div class="meta">
+        <div>전체 로드 <b id="mLoaded">-</b></div>
+        <div>현재 표시 <b id="mShown">-</b></div>
+        <div>좌표 있음 <b id="mHasCoord">-</b></div>
+        <div>좌표 없음 <b id="mNoCoord">-</b></div>
+      </div>
 
-            <div class="row2">
-              <div>
-                <label>media_group</label>
-                <select id="mediaGroup">
-                  <option value="">전체</option>
-                </select>
-              </div>
-              <div>
-                <label>sido</label>
-                <select id="sido">
-                  <option value="">전체</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="toggles">
-              <label class="chk" title="대한민국(대략 bbox) 밖 좌표를 기본 제외합니다.">
-                <input id="onlyKorea" type="checkbox" checked />
-                이상치 제외(한국 밖)
-              </label>
-
-              <!-- ✅ NEW: map bounds only -->
-              <label class="chk" title="지금 화면(지도 범위) 안에 있는 매체만 표시합니다. (줌/이동하면 즉시 갱신)">
-                <input id="boundsOnly" type="checkbox" />
-                지도 범위만 보기
-              </label>
-
-              <label class="chk" title="상태값(예: REVIEW 필요) 항목만 보고 싶을 때 사용하세요.">
-                <input id="needsReview" type="checkbox" />
-                REVIEW 필요만
-              </label>
-            </div>
-
-            <div class="actions">
-              <button class="btn primary" id="apply">적용</button>
-              <button class="btn" id="reset">초기화</button>
-            </div>
-
-            <div class="meta">
-              <div class="line"><span>전체 로드</span><span><b id="totalCount">—</b></span></div>
-              <div class="line"><span>현재 표시</span><span><b id="shownCount">—</b></span></div>
-              <div class="line"><span>현재 범위(지도)</span><span><b id="inBoundsCount">—</b></span></div>
-            </div>
-          </div>
+      <div class="controls">
+        <div class="full">
+          <input id="q" type="text" placeholder="검색 (예: 지역/주소/명칭/키워드)" />
         </div>
-
-        <div class="section list">
-          <h2>리스트 (최대 160개 표시)</h2>
-          <div id="list"></div>
-        </div>
-      </aside>
-
-      <div class="resizer" id="resizer" title="드래그해서 패널 폭 조절"></div>
-
-      <main class="map-wrap">
-        <div id="map"></div>
-        <div class="loading" id="loading">
-          <div class="box">데이터 로딩 중… <b id="loadingNote"></b></div>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
-
-  <div class="modal" id="modal">
-    <div class="card" role="dialog" aria-modal="true">
-      <div class="head">
         <div>
-          <div class="title" id="mTitle">—</div>
-          <div class="sub" id="mSub">—</div>
+          <select id="selGroup">
+            <option value="">media_group (전체)</option>
+          </select>
         </div>
-        <button class="close" id="mClose">닫기</button>
+        <div>
+          <select id="selSido">
+            <option value="">sido (전체)</option>
+          </select>
+        </div>
       </div>
-      <div class="body" id="mBody"></div>
-      <div class="foot" id="mFoot"></div>
+
+      <div class="checks">
+        <label class="chk"><input type="checkbox" id="chkBounds" /> 지도 범위만 보기</label>
+        <label class="chk"><input type="checkbox" id="chkKorea" checked /> 한국 밖 제외</label>
+        <label class="chk"><input type="checkbox" id="chkReview" /> REVIEW만</label>
+      </div>
+
+      <div class="btns">
+        <button class="btn primary" id="btnApply">적용</button>
+        <button class="btn" id="btnReset">초기화</button>
+      </div>
+    </div>
+
+    <div class="listWrap">
+      <div class="listHeader">
+        <div class="small">리스트 (클릭 → 상세모달 + 지도 이동)</div>
+        <div class="small">표시: <b id="listCount">-</b></div>
+      </div>
+      <div class="list" id="list"></div>
     </div>
   </div>
 
-  <script>
-    // ==============================
-    // Single-File Map App
-    // + NEW: boundsOnly (viewport filter)
-    // ==============================
+  <div class="right">
+    <div id="map"></div>
+    <div class="toast" id="toast">데이터 로딩 중…</div>
+  </div>
+</div>
 
-    const DATA_URL = "./data_house_kor_single_fixed_merged.json";
+<!-- Modal -->
+<div class="modalBack" id="modalBack" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modalHead">
+      <div>
+        <h2 id="mdTitle">-</h2>
+        <div class="sub" id="mdSub">-</div>
+      </div>
+      <button class="close" id="mdClose">닫기</button>
+    </div>
+    <div class="modalBody">
+      <div class="grid" id="mdGrid"></div>
 
-    // Korea bbox (대략)
-    const KOREA_BBOX = { minLat: 33.0, maxLat: 39.8, minLng: 124.0, maxLng: 132.0 };
+      <div class="links">
+        <a class="linkbtn primary" id="lnkKakao" href="#" target="_blank" rel="noopener noreferrer">카카오맵</a>
+        <a class="linkbtn primary" id="lnkGoogle" href="#" target="_blank" rel="noopener noreferrer">구글맵</a>
+      </div>
 
-    let raw = [];
-    let filtered = [];
-    let map = null;
-    let tileLayer = null;
-    let cluster = null;
+      <div class="warn">
+        <b>안내</b> : 본 화면은 MVP로, 추후(검증/운영사 파일/네트워크 취합) 단계에서 광고주·담당자용 핵심지표(노출/유동/타겟/기간·가격/운영사·담당자 등)를 확장합니다.
+      </div>
+    </div>
+  </div>
+</div>
 
-    // applyFilters 중 map 이동 이벤트 재호출 방지
-    let applying = false;
+<script>
+  // ====== CONFIG ======
+  const DATA_URL = "./data_house_kor_single_fixed_merged.json";
 
-    const $ = (id) => document.getElementById(id);
-    const ui = {
-      pillStatus: $("pillStatus"),
-      q: $("q"),
-      mediaGroup: $("mediaGroup"),
-      sido: $("sido"),
-      onlyKorea: $("onlyKorea"),
-      boundsOnly: $("boundsOnly"),
-      needsReview: $("needsReview"),
-      apply: $("apply"),
-      reset: $("reset"),
-      totalCount: $("totalCount"),
-      shownCount: $("shownCount"),
-      inBoundsCount: $("inBoundsCount"),
-      list: $("list"),
-      dataUrlLabel: $("dataUrlLabel"),
-      loading: $("loading"),
-      loadingNote: $("loadingNote"),
-      toast: $("toast"),
-      modal: $("modal"),
-      mTitle: $("mTitle"),
-      mSub: $("mSub"),
-      mBody: $("mBody"),
-      mFoot: $("mFoot"),
-      mClose: $("mClose"),
-      resizer: $("resizer"),
+  // "한국 밖 제외" 기준을 넉넉히 잡은 박스(대한민국 대략 범위)
+  const KOREA_BOUNDS = L.latLngBounds(
+    L.latLng(33.0, 124.0),
+    L.latLng(39.8, 132.2)
+  );
+
+  // ====== STATE ======
+  let rawItems = [];
+  let normItems = [];
+  let filteredItems = [];
+  let markerByKey = new Map();
+
+  // ====== MAP ======
+  const map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+
+  const clusters = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: true
+  });
+
+  map.addLayer(clusters);
+
+  // ====== UI ======
+  const elToast = document.getElementById("toast");
+
+  const pillLoaded = document.getElementById("pillLoaded");
+  const pillShowing = document.getElementById("pillShowing");
+  const pillInView = document.getElementById("pillInView");
+
+  const mLoaded = document.getElementById("mLoaded");
+  const mShown = document.getElementById("mShown");
+  const mHasCoord = document.getElementById("mHasCoord");
+  const mNoCoord = document.getElementById("mNoCoord");
+
+  const q = document.getElementById("q");
+  const selGroup = document.getElementById("selGroup");
+  const selSido = document.getElementById("selSido");
+  const chkBounds = document.getElementById("chkBounds");
+  const chkKorea = document.getElementById("chkKorea");
+  const chkReview = document.getElementById("chkReview");
+
+  const btnApply = document.getElementById("btnApply");
+  const btnReset = document.getElementById("btnReset");
+
+  const list = document.getElementById("list");
+  const listCount = document.getElementById("listCount");
+
+  // Modal
+  const modalBack = document.getElementById("modalBack");
+  const mdClose = document.getElementById("mdClose");
+  const mdTitle = document.getElementById("mdTitle");
+  const mdSub = document.getElementById("mdSub");
+  const mdGrid = document.getElementById("mdGrid");
+  const lnkKakao = document.getElementById("lnkKakao");
+  const lnkGoogle = document.getElementById("lnkGoogle");
+
+  function toast(msg){
+    elToast.textContent = msg;
+  }
+
+  // ====== NORMALIZE ======
+  function pick(obj, keys){
+    for(const k of keys){
+      if(obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== ""){
+        return obj[k];
+      }
+    }
+    return "";
+  }
+
+  function toNumber(v){
+    if(v === null || v === undefined) return NaN;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function getLatLng(item){
+    const lat = toNumber(pick(item, ["lat","latitude","Lat","LAT"]));
+    const lng = toNumber(pick(item, ["lng","lon","longitude","Lng","LNG"]));
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return L.latLng(lat, lng);
+  }
+
+  function normItem(item){
+    const id = String(pick(item, ["id","ID","_id","key"]) || "").trim();
+    const title = String(pick(item, ["title","name","media_name","display_name"]) || "").trim();
+    const subtitle = String(pick(item, ["subtitle","subTitle","operator","network","brand"]) || "").trim();
+    const address = String(pick(item, ["address","addr","road_address","location"]) || "").trim();
+    const media_group = String(pick(item, ["media_group","group","mediaGroup"]) || "").trim();
+    const sido = String(pick(item, ["sido","province","region"]) || "").trim();
+    const status = String(pick(item, ["status","state"]) || "").trim();
+    const verified_status = String(pick(item, ["verified_status","verified","verify"]) || "").trim();
+
+    const ll = getLatLng(item);
+
+    // 내부식별 키(안정적)
+    const key = id || (title + "|" + address + "|" + (ll ? (ll.lat+","+ll.lng) : "noLL"));
+
+    // NOTE: source_url / 외부 출처 관련 필드는 "화면 노출" 절대 금지 → 모달에서 제외함
+    return {
+      _raw: item,
+      key,
+      id,
+      title: title || "(제목 없음)",
+      subtitle,
+      address,
+      media_group,
+      sido,
+      status,
+      verified_status,
+      latlng: ll
     };
+  }
 
-    ui.dataUrlLabel.textContent = DATA_URL;
+  // ====== FILTERS ======
+  function textMatch(n, query){
+    if(!query) return true;
+    const ql = query.toLowerCase();
+    const base = [
+      n.id, n.title, n.subtitle, n.address, n.media_group, n.sido,
+      n.status, n.verified_status
+    ].join(" ").toLowerCase();
+    return base.includes(ql);
+  }
 
-    function showLoading(note=""){
-      ui.loadingNote.textContent = note ? `(${note})` : "";
-      ui.loading.classList.add("show");
+  function isReview(n){
+    const s = (n.status || "").toUpperCase();
+    const v = (n.verified_status || "").toUpperCase();
+    return s.includes("REVIEW") || v.includes("REVIEW");
+  }
+
+  function rebuildDropdowns(){
+    // media_group / sido 옵션 채우기
+    const groups = new Set();
+    const sidos = new Set();
+    for(const n of normItems){
+      if(n.media_group) groups.add(n.media_group);
+      if(n.sido) sidos.add(n.sido);
     }
-    function hideLoading(){
-      ui.loading.classList.remove("show");
-      ui.loadingNote.textContent = "";
-    }
+    const gArr = Array.from(groups).sort((a,b)=>a.localeCompare(b,"ko"));
+    const sArr = Array.from(sidos).sort((a,b)=>a.localeCompare(b,"ko"));
 
-    let toastTimer = null;
-    function toast(html, ms=5200){
-      ui.toast.innerHTML = html;
-      ui.toast.classList.add("show");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => ui.toast.classList.remove("show"), ms);
-    }
+    // 기존 선택값 유지
+    const gSel = selGroup.value;
+    const sSel = selSido.value;
 
-    function safeText(v){
-      if (v === null || v === undefined) return "";
-      return String(v);
-    }
+    selGroup.innerHTML = `<option value="">media_group (전체)</option>` + gArr.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
+    selSido.innerHTML = `<option value="">sido (전체)</option>` + sArr.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
 
-    function normStr(v){
-      return safeText(v)
-        .replace(/\u00A0/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
+    selGroup.value = gSel;
+    selSido.value = sSel;
+  }
 
-    function escapeHTML(s){
-      return String(s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
 
-    function normalizeLatLng(lat, lng){
-      let la = Number(lat);
-      let ln = Number(lng);
-      if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
+  function applyFilters(reason = "user"){
+    const query = q.value.trim();
+    const g = selGroup.value.trim();
+    const s = selSido.value.trim();
 
-      // (lat/lng 뒤바뀜 보정)
-      if (Math.abs(la) > 90 && Math.abs(ln) <= 90){
-        const tmp = la; la = ln; ln = tmp;
-      }
-      if (la < -90 || la > 90 || ln < -180 || ln > 180) return null;
-      return { lat: la, lng: ln };
-    }
-
-    function inKorea(lat, lng){
-      return lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat &&
-             lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng;
-    }
-
-    function ensureLL(it){
-      if (Number.isFinite(it.__lat) && Number.isFinite(it.__lng)) return true;
-      const ll = normalizeLatLng(it.lat, it.lng);
-      if (!ll) return false;
-      it.__lat = ll.lat;
-      it.__lng = ll.lng;
-      it.__inKorea = inKorea(ll.lat, ll.lng);
+    // 1) 텍스트/드롭다운/리뷰
+    let arr = normItems.filter(n=>{
+      if(!textMatch(n, query)) return false;
+      if(g && n.media_group !== g) return false;
+      if(s && n.sido !== s) return false;
+      if(chkReview.checked && !isReview(n)) return false;
+      // 한국 밖 제외(좌표 있는 것만 판정)
+      if(chkKorea.checked && n.latlng && !KOREA_BOUNDS.contains(n.latlng)) return false;
       return true;
+    });
+
+    // 2) 지도 범위 필터 (checkbox ON이면, 현 지도 bounds 안만 남김)
+    const bounds = map.getBounds();
+    let inViewArr = arr;
+    if(chkBounds.checked){
+      inViewArr = arr.filter(n => n.latlng && bounds.contains(n.latlng));
     }
 
-    function buildOptions(selectEl, values){
-      const current = selectEl.value;
-      selectEl.innerHTML = '<option value="">전체</option>';
-      values.forEach(v => {
-        const opt = document.createElement("option");
-        opt.value = v;
-        opt.textContent = v;
-        selectEl.appendChild(opt);
-      });
-      if ([...selectEl.options].some(o => o.value === current)) selectEl.value = current;
+    filteredItems = arr;
+
+    // 지도에 그릴 건 "지도범위 ON이면 inViewArr, OFF면 arr" 기준
+    const toRender = chkBounds.checked ? inViewArr : arr;
+
+    renderAll(toRender);
+
+    // ★ 핵심 수정: "사용자 의도 검색/적용"이면 결과 영역으로 지도 이동
+    // 이유: 지도범위 ON 상태에서도 '대구 검색 → 지도 이동'이 되어야 함
+    if(reason === "user"){
+      autoFitToResults(arr);
     }
 
-    function waitForNonZeroSize(el, maxFrames = 120){
-      return new Promise((resolve) => {
-        let frames = 0;
-        function tick(){
-          const r = el.getBoundingClientRect();
-          if (r.width > 10 && r.height > 10) return resolve(true);
-          frames++;
-          if (frames >= maxFrames) return resolve(false);
-          requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
-      });
+    updateNumbers(arr, inViewArr);
+  }
+
+  function autoFitToResults(arr){
+    // 좌표 있는 결과만 대상으로 fit
+    const pts = arr.filter(n=>n.latlng).map(n=>n.latlng);
+    if(pts.length === 0) return;
+
+    // 단일 포인트면 적당한 줌으로 setView
+    if(pts.length === 1){
+      map.setView(pts[0], Math.max(map.getZoom(), 12), { animate:true });
+      return;
     }
 
-    let resizeRAF = 0;
-    function safeInvalidate(){
-      if (!map) return;
-      cancelAnimationFrame(resizeRAF);
-      resizeRAF = requestAnimationFrame(() => {
-        try { map.invalidateSize({ animate:false }); } catch(e){}
-      });
-      setTimeout(() => {
-        if (!map) return;
-        try { map.invalidateSize({ animate:false }); } catch(e){}
-      }, 180);
+    const b = L.latLngBounds(pts);
+    map.fitBounds(b, { padding:[28,28], animate:true, maxZoom: 15 });
+  }
+
+  // ====== RENDER ======
+  function clearMarkers(){
+    clusters.clearLayers();
+    markerByKey.clear();
+  }
+
+  function makePopup(n){
+    const t = escapeHtml(n.title);
+    const a = escapeHtml(n.address || "");
+    const g = escapeHtml(n.media_group || "");
+    const s = escapeHtml(n.sido || "");
+    return `<div style="font-weight:900;margin-bottom:6px">${t}</div>
+            <div style="font-size:12px;color:#8ea0b3;line-height:1.35">${g ? ("<b style='color:#a2decc'>"+g+"</b> · ") : ""}${s}${a ? ("<br/>"+a) : ""}</div>`;
+  }
+
+  function renderMarkers(items){
+    clearMarkers();
+    for(const n of items){
+      if(!n.latlng) continue;
+
+      const m = L.marker(n.latlng);
+      m.bindPopup(makePopup(n));
+      m.on("click", ()=> openModal(n));
+      clusters.addLayer(m);
+
+      markerByKey.set(n.key, m);
     }
+  }
 
-    async function initMap(){
-      const start = Date.now();
-      while (!(window.L && window.L.map && window.L.markerClusterGroup)) {
-        await new Promise(r => setTimeout(r, 20));
-        if (Date.now() - start > 6000) {
-          toast(`<span class="bad">Leaflet 로딩 실패</span><br/>CDN 차단/네트워크 문제일 수 있습니다.`);
-          break;
-        }
-      }
+  function renderList(items){
+    list.innerHTML = "";
+    listCount.textContent = String(items.length);
 
-      const mapEl = $("map");
-      await waitForNonZeroSize(mapEl, 160);
+    // 너무 길면 체감 느려질 수 있어 상위 800개만 렌더 (MVP 안전장치)
+    const MAX = 800;
+    const slice = items.slice(0, MAX);
 
-      map = L.map("map", {
-        zoomControl: true,
-        preferCanvas: true,
-        worldCopyJump: true,
-        inertia: true,
-      });
-
-      tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors',
-        updateWhenIdle: true,
-        keepBuffer: 4
-      }).addTo(map);
-
-      cluster = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        spiderfyOnMaxZoom: true,
-        chunkedLoading: true,
-        chunkInterval: 120,
-      });
-      map.addLayer(cluster);
-
-      map.setView([36.5, 127.8], 7);
-
-      map.whenReady(() => safeInvalidate());
-
-      // ✅ boundsOnly가 켜져 있으면 지도 이동/줌 시 자동 갱신
-      map.on("moveend zoomend", () => {
-        if (!ui.boundsOnly.checked) return;
-        if (applying) return;
-        applyFilters();
-      });
-
-      const wrap = document.querySelector(".map-wrap");
-      if (window.ResizeObserver && wrap){
-        const ro = new ResizeObserver(() => safeInvalidate());
-        ro.observe(wrap);
-      } else {
-        window.addEventListener("resize", () => safeInvalidate(), { passive:true });
-      }
-
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) safeInvalidate();
-      });
-      window.addEventListener("focus", () => safeInvalidate());
-    }
-
-    function markerPopupHTML(it){
-      const title = safeText(it.title || it.name || "");
-      const sub = safeText(it.subtitle || "");
-      const addr = safeText(it.address || "");
-      const mg = safeText(it.__mg || it.media_group || "");
-      const si = safeText(it.__sido || it.sido || "");
-      const tier = safeText(it.confidence_tier || it.confidence || "");
-      return `
-        <div style="min-width:240px;line-height:1.35">
-          <div style="font-weight:900;margin-bottom:6px">${escapeHTML(title)}</div>
-          ${sub ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(sub)}</div>` : ""}
-          ${addr ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(addr)}</div>` : ""}
-          <div style="font-size:12px;opacity:.85">
-            ${mg ? `<span>그룹: <b>${escapeHTML(mg)}</b></span><br/>` : ""}
-            ${si ? `<span>시도: <b>${escapeHTML(si)}</b></span><br/>` : ""}
-            ${tier ? `<span>티어: <b>${escapeHTML(tier)}</b></span>` : ""}
-          </div>
+    for(const n of slice){
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div class="t">${escapeHtml(n.title)}</div>
+        <div class="s">
+          ${n.media_group ? `<span class="badge mint">${escapeHtml(n.media_group)}</span>` : ""}
+          ${n.sido ? `<span class="badge">${escapeHtml(n.sido)}</span>` : ""}
+          ${n.address ? `<div style="margin-top:6px">${escapeHtml(n.address)}</div>` : ""}
         </div>
       `;
-    }
-
-    function buildMarker(it){
-      if (!ensureLL(it)) return null;
-      const m = L.marker([it.__lat, it.__lng], { title: safeText(it.title || it.name || "") });
-      m.bindPopup(markerPopupHTML(it), { maxWidth: 380 });
-      m.on("click", () => openModal(it));
-      return m;
-    }
-
-    function openModal(it){
-      ui.mTitle.textContent = safeText(it.title || it.name || "—");
-      ui.mSub.textContent = safeText(it.subtitle || "");
-
-      const rows = [
-        ["id", it.id],
-        ["national_id", it.national_id],
-        ["media_group", it.__mg ?? it.media_group],
-        ["sido", it.__sido ?? it.sido],
-        ["address", it.address],
-        ["lat", it.__lat ?? it.lat],
-        ["lng", it.__lng ?? it.lng],
-        ["confidence_score", it.confidence_score],
-        ["confidence_tier", it.confidence_tier],
-        ["verified_status", it.verified_status],
-        ["status", it.status],
-        ["source_url", it.source_url],
-      ];
-
-      ui.mBody.innerHTML = rows.map(([k,v]) => {
-        const val = (v === null || v === undefined || v === "") ? "—" : escapeHTML(String(v));
-        return `
-          <div class="kv">
-            <div class="k">${escapeHTML(k)}</div>
-            <div class="v">${val}</div>
-          </div>
-        `;
-      }).join("");
-
-      const lat = it.__lat ?? Number(it.lat);
-      const lng = it.__lng ?? Number(it.lng);
-      const q = encodeURIComponent(safeText(it.title || it.name || "Frontier DOOH"));
-
-      const kakao = (Number.isFinite(lat) && Number.isFinite(lng))
-        ? `https://map.kakao.com/link/map/${q},${lat},${lng}` : null;
-
-      const google = (Number.isFinite(lat) && Number.isFinite(lng))
-        ? `https://www.google.com/maps?q=${lat},${lng}` : null;
-
-      const srcUrl = it.source_url ? String(it.source_url) : null;
-
-      const links = [];
-      if (kakao) links.push(`<a href="${kakao}" target="_blank" rel="noopener">카카오맵 열기</a>`);
-      if (google) links.push(`<a href="${google}" target="_blank" rel="noopener">구글맵 열기</a>`);
-      if (srcUrl) links.push(`<a href="${escapeHTML(srcUrl)}" target="_blank" rel="noopener">Source URL</a>`);
-
-      ui.mFoot.innerHTML = links.join("");
-      ui.modal.classList.add("show");
-    }
-
-    function closeModal(){ ui.modal.classList.remove("show"); }
-    ui.mClose.addEventListener("click", closeModal);
-    ui.modal.addEventListener("click", (e) => { if (e.target === ui.modal) closeModal(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-
-    function preprocessItems(items){
-      for (const it of items){
-        it.__mg = normStr(it.media_group);
-        it.__sido = normStr(it.sido);
-        // lat/lng 캐시는 ensureLL에서
-        it.__haystack = [
-          it.id, it.national_id, it.title, it.subtitle, it.address, it.__mg, it.__sido
-        ].map(safeText).join(" ");
-      }
-    }
-
-    function applyFilters(){
-      if (applying) return;
-      applying = true;
-
-      const q = normStr(ui.q.value).toLowerCase();
-      const mg = normStr(ui.mediaGroup.value);
-      const si = normStr(ui.sido.value);
-      const onlyK = ui.onlyKorea.checked;
-      const boundsOnly = ui.boundsOnly.checked;
-      const reviewOnly = ui.needsReview.checked;
-
-      const bounds = (boundsOnly && map) ? map.getBounds() : null;
-
-      let inBoundsCounter = 0;
-
-      filtered = raw.filter(it => {
-        const itMg = normStr(it.__mg ?? it.media_group);
-        const itSi = normStr(it.__sido ?? it.sido);
-
-        if (mg && itMg !== mg) return false;
-        if (si && itSi !== si) return false;
-
-        if (reviewOnly){
-          const s1 = normStr(it.status).toLowerCase();
-          const s2 = normStr(it.verified_status).toLowerCase();
-          const hit = (s1.includes("review") || s1.includes("needed") || s2.includes("review") || s2.includes("lowconf"));
-          if (!hit) return false;
+      div.addEventListener("click", ()=>{
+        openModal(n);
+        if(n.latlng){
+          map.setView(n.latlng, Math.max(map.getZoom(), 14), { animate:true });
+          const mk = markerByKey.get(n.key);
+          if(mk){ setTimeout(()=> mk.openPopup(), 150); }
         }
-
-        if (q){
-          const hay = (it.__haystack || "").toLowerCase();
-          if (!hay.includes(q)) return false;
-        }
-
-        // 좌표 유효성 + Korea 이상치 필터
-        if (!ensureLL(it)) return false;
-        if (onlyK && !it.__inKorea) return false;
-
-        // ✅ boundsOnly: 현재 지도 범위 내만
-        if (bounds){
-          const inside = bounds.contains([it.__lat, it.__lng]);
-          if (!inside) return false;
-          inBoundsCounter++;
-        }
-
-        return true;
       });
-
-      // boundsOnly가 꺼져 있으면 “현재 범위”는 표시만 (대략: 현재 표시=전체표시)
-      ui.inBoundsCount.textContent = bounds ? String(inBoundsCounter) : String(filtered.length);
-
-      renderMapMarkers(filtered);
-      renderList(filtered);
-
-      ui.shownCount.textContent = String(filtered.length);
-      safeInvalidate();
-
-      applying = false;
+      list.appendChild(div);
     }
 
-    function renderMapMarkers(items){
-      if (!map || !cluster) return;
+    if(items.length > MAX){
+      const more = document.createElement("div");
+      more.className = "warn";
+      more.textContent = `리스트 렌더는 상위 ${MAX}개만 표시 중 (현재 표시 ${items.length}개).`;
+      list.prepend(more);
+    }
+  }
 
-      cluster.clearLayers();
+  function renderAll(items){
+    renderMarkers(items);
+    renderList(items);
+    toast(`Loaded ${normItems.length} · Showing ${filteredItems.length} · Map ${items.length}`);
+    setTimeout(()=>{ elToast.style.opacity = "0.05"; }, 1200);
+    setTimeout(()=>{ elToast.style.opacity = "1"; }, 1600);
+  }
 
-      const markers = [];
-      let valid = 0;
-      let koreaValid = 0;
+  function updateNumbers(arr, inViewArr){
+    const loaded = normItems.length;
+    const shown = arr.length;
 
-      for (const it of items){
-        const m = buildMarker(it);
-        if (!m) continue;
-        valid++;
-        if (it.__inKorea) koreaValid++;
-        markers.push(m);
-      }
-      if (markers.length) cluster.addLayers(markers);
+    const hasCoord = normItems.filter(n=>n.latlng).length;
+    const noCoord = loaded - hasCoord;
 
-      // ✅ boundsOnly가 켜져 있으면 "지도가 튕기지 않게" 자동 fitBounds를 하지 않음
-      if (ui.boundsOnly.checked){
-        setTimeout(() => safeInvalidate(), 60);
-        return;
-      }
+    const inView = (chkBounds.checked ? inViewArr.length : shown);
 
-      // 기존 로직: 전체 표시 시에는 한국/전체 bounds로 보기 좋게 맞춤
-      if (markers.length){
-        const shouldPreferKorea = (koreaValid >= 10 && koreaValid / Math.max(valid,1) >= 0.7);
-        if (ui.onlyKorea.checked || shouldPreferKorea){
-          const sw = L.latLng(KOREA_BBOX.minLat, KOREA_BBOX.minLng);
-          const ne = L.latLng(KOREA_BBOX.maxLat, KOREA_BBOX.maxLng);
-          map.fitBounds(L.latLngBounds(sw, ne), { padding:[28,28], animate:false });
-        } else {
-          try{
-            const b = cluster.getBounds();
-            if (b && b.isValid()) map.fitBounds(b, { padding:[28,28], animate:false });
-          } catch(e){}
-        }
-      } else {
-        map.setView([36.5, 127.8], 7);
-      }
+    // meta
+    mLoaded.textContent = String(loaded);
+    mShown.textContent = String(shown);
+    mHasCoord.textContent = String(hasCoord);
+    mNoCoord.textContent = String(noCoord);
 
-      setTimeout(() => safeInvalidate(), 60);
+    // pill
+    pillLoaded.textContent = String(loaded);
+    pillShowing.textContent = String(shown);
+    pillInView.textContent = String(inView);
+  }
+
+  // ====== MODAL (출처 URL 절대 노출 금지) ======
+  function openModal(n){
+    mdTitle.textContent = n.title || "-";
+    mdSub.textContent = [n.media_group, n.sido].filter(Boolean).join(" · ") || "-";
+
+    // 광고주/담당자 관점에서 "보이는 정보"를 최대한 늘리되, "없는 값은 표시하지 않음"
+    // + 외부 출처(source_url 등)는 절대 표시하지 않음
+    mdGrid.innerHTML = "";
+
+    const rows = [];
+
+    // 기본
+    if(n.id) rows.push(["ID", n.id]);
+    if(n.address) rows.push(["주소", n.address]);
+    if(n.status) rows.push(["Status", n.status]);
+    if(n.verified_status) rows.push(["Verified", n.verified_status]);
+    if(n.latlng) rows.push(["좌표", `${n.latlng.lat.toFixed(6)}, ${n.latlng.lng.toFixed(6)}`]);
+
+    // 원본에서 "있을 수도 있는" 실무 정보(있을 때만 노출)
+    const raw = n._raw || {};
+    const allowKeys = [
+      ["운영사", ["operator","operator_name","company","owner"]],
+      ["매체유형", ["media_type","type","format"]],
+      ["상품구분", ["salesType","sales_type"]],
+      ["스크린정보", ["screen","screen_size","resolution","ratio"]],
+      ["수량/면수", ["faces","face_count","count","qty"]],
+      ["설치위치", ["site","venue","place"]],
+      ["비고", ["note","memo","remark"]]
+    ];
+
+    for(const [label, keys] of allowKeys){
+      const val = pick(raw, keys);
+      if(val) rows.push([label, String(val)]);
     }
 
-    function renderList(items){
-      const max = 160;
-      const show = items.slice(0, max);
-
-      if (!show.length){
-        ui.list.innerHTML = `<div style="color:rgba(231,238,247,.65);font-size:12.8px;line-height:1.45">
-          조건에 맞는 항목이 없습니다.<br/>필터를 완화하거나 검색어를 지워보세요.
-        </div>`;
-        return;
-      }
-
-      ui.list.innerHTML = show.map(it => {
-        const title = escapeHTML(safeText(it.title || it.name || "—"));
-        const sub = escapeHTML(safeText(it.subtitle || ""));
-        const addr = escapeHTML(safeText(it.address || ""));
-        const mg = escapeHTML(normStr(it.__mg ?? it.media_group));
-        const si = escapeHTML(normStr(it.__sido ?? it.sido));
-        const tier = escapeHTML(safeText(it.confidence_tier || ""));
-        const status = escapeHTML(safeText(it.status || it.verified_status || ""));
-
-        return `
-          <div class="item" data-id="${escapeHTML(safeText(it.id || ""))}">
-            <div class="t">${title}</div>
-            <div class="s">${sub ? sub + "<br/>" : ""}${addr}</div>
-            <div class="k">
-              ${mg ? `<span class="tag mint">${mg}</span>` : ""}
-              ${si ? `<span class="tag">${si}</span>` : ""}
-              ${tier ? `<span class="tag">${tier}</span>` : ""}
-              ${status ? `<span class="tag">${status}</span>` : ""}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      ui.list.querySelectorAll(".item").forEach(el => {
-        el.addEventListener("click", () => {
-          const id = el.getAttribute("data-id");
-          const it = raw.find(x => safeText(x.id) === id) || items.find(x => safeText(x.id) === id);
-          if (!it) return;
-
-          if (ensureLL(it) && map){
-            map.setView([it.__lat, it.__lng], Math.max(map.getZoom(), 14), { animate:false });
-            setTimeout(() => safeInvalidate(), 60);
-          }
-          openModal(it);
-        });
-      });
+    // rows -> cards
+    for(const [k,v] of rows){
+      const box = document.createElement("div");
+      box.className = "kv";
+      box.innerHTML = `<div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div>`;
+      mdGrid.appendChild(box);
     }
 
-    function fillFilterDropdowns(items){
-      const groups = new Set();
-      const sidos = new Set();
-      for (const it of items){
-        const mg = normStr(it.__mg ?? it.media_group);
-        const si = normStr(it.__sido ?? it.sido);
-        if (mg) groups.add(mg);
-        if (si) sidos.add(si);
-      }
-      const gArr = [...groups].sort((a,b) => a.localeCompare(b, "ko"));
-      const sArr = [...sidos].sort((a,b) => a.localeCompare(b, "ko"));
-      buildOptions(ui.mediaGroup, gArr);
-      buildOptions(ui.sido, sArr);
+    // 지도 링크 (주소가 있으면 주소로, 없으면 좌표로)
+    const addrQ = n.address ? n.address : (n.latlng ? `${n.latlng.lat},${n.latlng.lng}` : n.title);
+    const kakao = `https://map.kakao.com/?q=${encodeURIComponent(addrQ)}`;
+    const google = n.latlng
+      ? `https://www.google.com/maps?q=${encodeURIComponent(n.latlng.lat + "," + n.latlng.lng)}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrQ)}`;
+
+    lnkKakao.href = kakao;
+    lnkGoogle.href = google;
+
+    modalBack.style.display = "flex";
+  }
+
+  function closeModal(){
+    modalBack.style.display = "none";
+  }
+
+  mdClose.addEventListener("click", closeModal);
+  modalBack.addEventListener("click", (e)=>{
+    if(e.target === modalBack) closeModal();
+  });
+  window.addEventListener("keydown",(e)=>{
+    if(e.key === "Escape") closeModal();
+  });
+
+  // ====== EVENTS ======
+  btnApply.addEventListener("click", ()=> applyFilters("user"));
+
+  btnReset.addEventListener("click", ()=>{
+    q.value = "";
+    selGroup.value = "";
+    selSido.value = "";
+    chkReview.checked = false;
+    chkBounds.checked = false;
+    chkKorea.checked = true;
+    applyFilters("user");
+  });
+
+  // 입력 후 Enter = 적용
+  q.addEventListener("keydown",(e)=>{
+    if(e.key === "Enter"){
+      applyFilters("user");
     }
+  });
 
-    async function loadData(){
-      showLoading("JSON fetch");
-      ui.pillStatus.textContent = "Loading…";
+  // 체크 변경 즉시 반영 (bounds는 user 의도로 취급해도 무방)
+  chkBounds.addEventListener("change", ()=> applyFilters("user"));
+  chkKorea.addEventListener("change", ()=> applyFilters("user"));
+  chkReview.addEventListener("change", ()=> applyFilters("user"));
 
-      try{
-        const res = await fetch(DATA_URL, { cache:"no-store" });
-        if (!res.ok){
-          hideLoading();
-          ui.pillStatus.textContent = "Data Error";
-          toast(`<span class="bad">데이터 로드 실패</span><br/>
-                HTTP ${res.status}<br/>
-                경로: <b>${escapeHTML(DATA_URL)}</b>`);
-          return;
-        }
-
-        const json = await res.json();
-        const items = Array.isArray(json) ? json : (json.items || []);
-        raw = Array.isArray(items) ? items : [];
-
-        preprocessItems(raw);
-        fillFilterDropdowns(raw);
-
-        ui.totalCount.textContent = String(raw.length);
-        ui.pillStatus.textContent = `Loaded: ${raw.length}`;
-
-        applyFilters();
-        hideLoading();
-
-      } catch(err){
-        hideLoading();
-        ui.pillStatus.textContent = "Data Error";
-        toast(`<span class="bad">JSON 오류</span><br/>${escapeHTML(err?.message || String(err))}`);
-      }
+  // 지도 이동/줌 시: 지도범위 필터 ON이면 inView 수치/렌더가 즉시 따라가야 함
+  map.on("moveend zoomend", ()=>{
+    if(chkBounds.checked){
+      applyFilters("bounds"); // reason bounds: autoFit 금지
+    }else{
+      // bounds off여도 pill의 InView는 Showing과 같게 유지됨
+      applyFilters("bounds");
     }
+  });
 
-    function resetUI(){
-      ui.q.value = "";
-      ui.mediaGroup.value = "";
-      ui.sido.value = "";
-      ui.onlyKorea.checked = true;
-      ui.boundsOnly.checked = false;
-      ui.needsReview.checked = false;
-      applyFilters();
+  // ====== LOAD ======
+  async function load(){
+    toast("데이터 로딩 중…");
+    try{
+      const res = await fetch(DATA_URL, { cache:"no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+
+      rawItems = Array.isArray(data) ? data : (data.items || data.data || []);
+      normItems = rawItems.map(normItem);
+
+      rebuildDropdowns();
+
+      // 최초 1회 렌더
+      applyFilters("user");
+
+      toast(`로드 완료: ${normItems.length}`);
+    }catch(err){
+      console.error(err);
+      toast("데이터 로딩 실패: " + String(err));
+      elToast.style.borderColor = "rgba(255,107,107,.35)";
+      elToast.style.color = "rgba(255,255,255,.85)";
     }
+  }
 
-    ui.mediaGroup.addEventListener("change", applyFilters);
-    ui.sido.addEventListener("change", applyFilters);
-    ui.onlyKorea.addEventListener("change", applyFilters);
-    ui.needsReview.addEventListener("change", applyFilters);
-
-    // ✅ boundsOnly 토글: 켜는 순간 바로 “현재 지도 범위” 기준으로 필터 적용
-    ui.boundsOnly.addEventListener("change", () => {
-      applyFilters();
-    });
-
-    let qTimer = null;
-    ui.q.addEventListener("input", () => {
-      clearTimeout(qTimer);
-      qTimer = setTimeout(applyFilters, 180);
-    });
-
-    ui.apply.addEventListener("click", applyFilters);
-    ui.reset.addEventListener("click", resetUI);
-
-    (function initResizer(){
-      let dragging = false;
-
-      function setW(px){
-        const min = 360;
-        const max = Math.min(820, Math.floor(window.innerWidth * 0.65));
-        const w = Math.max(min, Math.min(max, px));
-        document.documentElement.style.setProperty("--panelW", w + "px");
-        setTimeout(() => safeInvalidate(), 60);
-      }
-
-      ui.resizer.addEventListener("mousedown", () => {
-        dragging = true;
-        document.body.style.userSelect = "none";
-      });
-
-      window.addEventListener("mousemove", (e) => {
-        if (!dragging) return;
-        setW(e.clientX);
-      }, { passive:true });
-
-      window.addEventListener("mouseup", () => {
-        if (!dragging) return;
-        dragging = false;
-        document.body.style.userSelect = "";
-      });
-
-      ui.resizer.addEventListener("touchstart", () => { dragging = true; }, { passive:true });
-      window.addEventListener("touchmove", (e) => {
-        if (!dragging) return;
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        setW(t.clientX);
-      }, { passive:true });
-      window.addEventListener("touchend", () => { dragging = false; }, { passive:true });
-    })();
-
-    (async function boot(){
-      showLoading("init");
-      await initMap();
-      await loadData();
-      hideLoading();
-      setTimeout(() => safeInvalidate(), 220);
-    })();
-  </script>
+  load();
+</script>
 </body>
 </html>
