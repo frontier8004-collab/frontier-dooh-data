@@ -19,18 +19,13 @@
       --bg:#0b0c0d;
       --panel:#0e1114;
       --panel2:#0b0d10;
-      --card:#0f1318;
       --line:rgba(255,255,255,.10);
       --text:#d6dfeb;
       --muted:#8ea0b3;
-
       --mint:#a2decc;
       --mintLine:rgba(162,222,204,.22);
-
-      --radius:14px;
       --shadow:0 10px 30px rgba(0,0,0,.35);
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
@@ -41,32 +36,28 @@
       overflow:hidden;
     }
 
-    /* ====== Top Bar (캡처1처럼) ====== */
+    /* ====== Top Bar (더 두껍게 + 타이틀 크게) ====== */
     .topbar{
-      height:44px;
+      height:64px;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding:0 14px;
-      background:#0a0c0f;
+      padding:0 18px;
+      background:#07090c;
       border-bottom:1px solid rgba(255,255,255,.08);
     }
     .brand{
-      display:flex; align-items:center; gap:10px;
-      font-size:13px; font-weight:900;
+      font-size:20px;
+      font-weight:950;
       letter-spacing:.2px;
       white-space:nowrap;
+      line-height:1;
     }
-    .brand small{
-      font-weight:700;
-      color:rgba(214,223,235,.65);
-    }
-
     .pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding:6px 10px;
+      padding:8px 12px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.35);
@@ -76,16 +67,17 @@
     }
     .pill b{color:var(--mint)}
 
-    /* ====== Main Layout ====== */
+    /* ====== Main ====== */
     .main{
-      height:calc(100vh - 44px);
+      height:calc(100vh - 64px);
       display:flex;
       overflow:hidden;
     }
 
-    /* Left Panel */
+    /* 좌측 폭 확대 (캡처2 느낌) */
     .left{
-      width:360px;
+      width:560px;
+      min-width:520px;
       background:linear-gradient(180deg,var(--panel),var(--panel2));
       border-right:1px solid rgba(255,255,255,.08);
       display:flex;
@@ -94,62 +86,63 @@
     }
 
     .controls{
-      padding:12px;
+      padding:14px;
       border-bottom:1px solid rgba(255,255,255,.08);
     }
-
     .label{
-      font-size:11px;
-      color:rgba(214,223,235,.60);
-      margin:10px 0 6px;
-      font-weight:800;
+      font-size:12px;
+      color:rgba(214,223,235,.62);
+      margin:10px 0 7px;
+      font-weight:900;
     }
 
     input[type="text"]{
       width:100%;
-      padding:10px 10px;
-      border-radius:10px;
+      padding:12px 12px;
+      border-radius:12px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.04);
       color:var(--text);
       outline:none;
+      font-size:13px;
     }
     input[type="text"]::placeholder{color:rgba(214,223,235,.45)}
 
-    /* 드롭다운: 다크 톤 통일(흰색 셀렉트 제거) */
+    /* 드롭다운: 다크 톤 유지 */
     select{
       width:100%;
-      padding:10px 10px;
-      border-radius:10px;
+      padding:12px 12px;
+      border-radius:12px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.04);
       color:var(--text);
       outline:none;
+      font-size:13px;
     }
     select option{
-      background:#0a0c0f;
+      background:#07090c;
       color:var(--text);
     }
 
     .grid2{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:10px;
+      gap:12px;
     }
 
     .checks{
       display:flex;
-      gap:10px;
-      margin-top:10px;
+      gap:12px;
+      margin-top:12px;
       flex-wrap:wrap;
     }
     .chk{
       display:flex; align-items:center; gap:8px;
-      padding:8px 10px;
+      padding:10px 12px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.03);
-      font-size:12px;
+      font-size:13px;
       color:rgba(214,223,235,.9);
       user-select:none;
     }
@@ -158,17 +151,18 @@
     .btnRow{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:10px;
-      margin-top:10px;
+      gap:12px;
+      margin-top:12px;
     }
     .btn{
-      padding:10px 12px;
-      border-radius:12px;
+      padding:12px 12px;
+      border-radius:14px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.04);
       color:var(--text);
-      font-weight:900;
+      font-weight:950;
       cursor:pointer;
+      font-size:13px;
     }
     .btn.primary{
       border-color:var(--mintLine);
@@ -176,31 +170,29 @@
     }
     .btn:active{transform:translateY(1px)}
 
-    /* Stats Box (캡처1처럼 좌측에) */
     .stats{
-      margin-top:12px;
+      margin-top:14px;
       border:1px solid rgba(255,255,255,.10);
-      border-radius:12px;
+      border-radius:14px;
       background:rgba(0,0,0,.22);
       overflow:hidden;
     }
     .stats .row{
       display:flex;
       justify-content:space-between;
-      padding:10px 10px;
+      padding:12px 12px;
       border-top:1px solid rgba(255,255,255,.06);
-      font-size:12px;
-      color:rgba(214,223,235,.8);
+      font-size:13px;
+      color:rgba(214,223,235,.82);
     }
     .stats .row:first-child{border-top:none}
-    .stats .row b{color:var(--mint); font-weight:900}
+    .stats .row b{color:var(--mint); font-weight:950}
 
-    /* List Area */
     .listHeader{
-      padding:10px 12px;
+      padding:12px 14px;
       border-bottom:1px solid rgba(255,255,255,.08);
-      color:rgba(214,223,235,.75);
-      font-size:12px;
+      color:rgba(214,223,235,.78);
+      font-size:13px;
       display:flex;
       justify-content:space-between;
       align-items:center;
@@ -209,19 +201,19 @@
     .listWrap{
       flex:1;
       overflow:auto;
-      padding:12px;
+      padding:14px;
     }
 
-    /* 카드형 리스트(캡처2 느낌: 썸네일+정리된 카드) */
+    /* 카드 크게(올망졸망 해결) */
     .cards{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:10px;
+      gap:14px;
     }
     .card{
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.03);
-      border-radius:14px;
+      border-radius:16px;
       overflow:hidden;
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
@@ -232,13 +224,13 @@
       border-color:rgba(162,222,204,.22);
     }
     .thumb{
-      height:78px;
-      background:#0a0c0f;
+      height:132px;
+      background:#07090c;
       display:flex;
       align-items:center;
       justify-content:center;
       color:rgba(214,223,235,.40);
-      font-size:11px;
+      font-size:12px;
       overflow:hidden;
     }
     .thumb img{
@@ -247,33 +239,33 @@
       display:block;
     }
     .cardBody{
-      padding:10px 10px 10px;
+      padding:12px 12px 12px;
     }
     .ctitle{
-      font-size:12px;
+      font-size:13.5px;
       font-weight:950;
       line-height:1.25;
-      margin:0 0 6px;
+      margin:0 0 8px;
       color:rgba(214,223,235,.95);
       display:-webkit-box;
       -webkit-line-clamp:2;
       -webkit-box-orient:vertical;
       overflow:hidden;
-      min-height:30px;
+      min-height:34px;
     }
     .metaLine{
-      font-size:11px;
-      color:rgba(214,223,235,.60);
+      font-size:12px;
+      color:rgba(214,223,235,.62);
       line-height:1.35;
       margin-top:4px;
       display:flex;
       flex-wrap:wrap;
-      gap:6px;
+      gap:8px;
     }
     .tag{
       display:inline-flex;
       align-items:center;
-      padding:3px 7px;
+      padding:5px 9px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.18);
@@ -281,26 +273,25 @@
     }
     .tag.mint{border-color:rgba(162,222,204,.22); color:var(--mint)}
     .price{
-      margin-top:8px;
-      font-size:12px;
+      margin-top:10px;
+      font-size:13px;
       font-weight:950;
       color:rgba(214,223,235,.92);
     }
 
     .empty{
       border:1px dashed rgba(255,255,255,.12);
-      border-radius:12px;
-      padding:12px;
-      color:rgba(214,223,235,.65);
-      font-size:12px;
+      border-radius:14px;
+      padding:14px;
+      color:rgba(214,223,235,.68);
+      font-size:13px;
       background:rgba(0,0,0,.18);
     }
 
-    /* Right Map */
     .right{flex:1; position:relative;}
     #map{width:100%; height:100%;}
 
-    /* ====== Modal (일반인 이해 중심, 내부정보 제거) ====== */
+    /* ====== Modal ====== */
     .modalBack{
       position:fixed; inset:0;
       background:rgba(0,0,0,.65);
@@ -312,7 +303,7 @@
     }
     .modal{
       width:min(920px, 96vw);
-      border-radius:16px;
+      border-radius:18px;
       overflow:hidden;
       border:1px solid rgba(162,222,204,.18);
       background:linear-gradient(180deg, rgba(14,17,20,.98), rgba(10,12,15,.98));
@@ -344,55 +335,61 @@
       color:rgba(214,223,235,.9);
       border-radius:10px;
       padding:8px 10px;
-      font-weight:900;
+      font-weight:950;
       height:fit-content;
     }
     .modalBody{padding:14px 16px;}
     .kvGrid{
       display:grid;
       grid-template-columns:1fr 1fr;
-      gap:10px;
+      gap:12px;
+    }
+    @media(max-width:980px){
+      .left{width:520px; min-width:440px}
     }
     @media(max-width:760px){
       .kvGrid{grid-template-columns:1fr}
       .cards{grid-template-columns:1fr}
-      .left{width:360px}
+      .left{width:360px; min-width:320px}
+      .topbar{height:58px}
+      .brand{font-size:17px}
+      .main{height:calc(100vh - 58px)}
     }
     .kv{
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.22);
       border-radius:14px;
-      padding:10px 10px;
-      font-size:12px;
+      padding:12px 12px;
+      font-size:13px;
     }
     .kv .k{
-      font-size:11px;
+      font-size:12px;
       color:rgba(214,223,235,.60);
-      font-weight:900;
-      margin-bottom:6px;
+      font-weight:950;
+      margin-bottom:8px;
     }
     .kv .v{
       color:rgba(214,223,235,.92);
-      font-weight:900;
+      font-weight:950;
       line-height:1.35;
       word-break:keep-all;
     }
     .links{
       display:flex; flex-wrap:wrap;
       gap:10px;
-      margin-top:12px;
+      margin-top:14px;
     }
     .linkbtn{
       text-decoration:none;
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      padding:10px 12px;
-      border-radius:12px;
+      padding:11px 12px;
+      border-radius:14px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.04);
       color:rgba(214,223,235,.92);
-      font-size:12px;
+      font-size:13px;
       font-weight:950;
     }
     .linkbtn.primary{
@@ -405,15 +402,11 @@
 <body>
   <!-- Top Bar -->
   <div class="topbar">
-    <div class="brand">
-      Frontier DOOH 전국 DB
-      <small id="fileHint">/data_house_kor_single_fixed_merged.json</small>
-    </div>
+    <div class="brand">Frontier DOOH 전국 DB</div>
     <div class="pill">Loaded: <b id="pillLoaded">-</b></div>
   </div>
 
   <div class="main">
-    <!-- Left -->
     <div class="left">
       <div class="controls">
         <div class="label">검색 (예: 이름 / 지역 / 주소 / 카테고리)</div>
@@ -428,8 +421,8 @@
           </div>
           <div>
             <div class="label">카테고리(하위)</div>
-            <select id="selLow">
-              <option value="">전체</option>
+            <select id="selLow" disabled>
+              <option value="">(상위를 먼저 선택)</option>
             </select>
           </div>
         </div>
@@ -443,8 +436,8 @@
           </div>
           <div>
             <div class="label">구/군</div>
-            <select id="selSigungu">
-              <option value="">전체</option>
+            <select id="selSigungu" disabled>
+              <option value="">(시/도를 먼저 선택)</option>
             </select>
           </div>
         </div>
@@ -477,7 +470,6 @@
       </div>
     </div>
 
-    <!-- Right -->
     <div class="right">
       <div id="map"></div>
     </div>
@@ -495,7 +487,6 @@
       </div>
       <div class="modalBody">
         <div class="kvGrid" id="mdGrid"></div>
-
         <div class="links">
           <a class="linkbtn primary" id="lnkKakao" href="#" target="_blank" rel="noopener noreferrer">카카오맵</a>
           <a class="linkbtn primary" id="lnkGoogle" href="#" target="_blank" rel="noopener noreferrer">구글맵</a>
@@ -509,6 +500,16 @@
   const DATA_URL = "./data_house_kor_single_fixed_merged.json";
   const LIST_MAX = 200;
 
+  // 외부 이미지 출처 노출/단서 방지(화이트리스트만 허용)
+  // 지금은 "우리 소유/통제 도메인"만 넣어두고, 나중에 실제 운영 도메인으로 확장.
+  const IMAGE_HOST_WHITELIST = new Set([
+    "frontier8004-collab.github.io",
+    "raw.githubusercontent.com",
+    "frontier800414681.imweb.me",
+    "imweb.me"
+  ]);
+
+  // 한국 밖 제외용(대략)
   const KOREA_BOUNDS = L.latLngBounds(
     L.latLng(33.0, 124.0),
     L.latLng(39.8, 132.2)
@@ -516,7 +517,6 @@
 
   // ====== DOM ======
   const pillLoaded = document.getElementById("pillLoaded");
-  const fileHint = document.getElementById("fileHint");
 
   const q = document.getElementById("q");
   const selHigh = document.getElementById("selHigh");
@@ -547,16 +547,27 @@
 
   // ====== STATE ======
   let rawItems = [];
-  let items = [];          // normalized
-  let filtered = [];       // after filters (전체 조건)
-  let inView = [];         // after bounds (지도 범위)
+  let items = [];      // normalized
+  let filtered = [];   // after filters
+  let inView = [];     // after bounds
   let markerByKey = new Map();
 
-  // ====== MAP ======
+  // dropdown dependency maps
+  let allHighs = [];
+  let allLows = [];
+  let allSidos = [];
+  let allSigungus = [];
+
+  const lowByHigh = new Map();     // high -> Set(low)
+  const sigunguBySido = new Map(); // sido -> Set(sigungu)
+
+  // ====== MAP (지도 퀄리티 개선: 기본 OSM 대신 CARTO Positron) ======
   const map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+
+  // CARTO Positron (깔끔/라이트)
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
     maxZoom: 19,
-    attribution: "&copy; OpenStreetMap"
+    attribution: "&copy; OpenStreetMap &copy; CARTO"
   }).addTo(map);
 
   const clusters = L.markerClusterGroup({
@@ -575,7 +586,6 @@
       .replaceAll('"',"&quot;")
       .replaceAll("'","&#039;");
   }
-
   function pick(obj, keys){
     for(const k of keys){
       if(obj && obj[k] !== undefined && obj[k] !== null){
@@ -585,12 +595,10 @@
     }
     return "";
   }
-
   function toNumber(v){
     const n = Number(v);
     return Number.isFinite(n) ? n : NaN;
   }
-
   function getLatLng(obj){
     const lat = toNumber(pick(obj, ["lat","latitude","Lat","LAT"]));
     const lng = toNumber(pick(obj, ["lng","lon","longitude","Lng","LNG"]));
@@ -598,24 +606,46 @@
     return L.latLng(lat, lng);
   }
 
+  function safeImageUrl(url){
+    try{
+      if(!url) return "";
+      const u = new URL(url, window.location.href);
+      // data: / blob: 차단
+      if(u.protocol !== "http:" && u.protocol !== "https:") return "";
+      // 허용 호스트만
+      if(!IMAGE_HOST_WHITELIST.has(u.host)) return "";
+      return u.href;
+    }catch(e){
+      return "";
+    }
+  }
+
   function normalize(obj){
     const title = String(pick(obj, ["title","name","media_name","display_name"]) || "").trim() || "(제목 없음)";
     const address = String(pick(obj, ["address","addr","road_address","location"]) || "").trim();
+
+    // 카테고리 키는 데이터마다 다를 수 있어서 넓게 잡음
     const high = String(pick(obj, ["category_high","categoryHigh","high_category","media_group","group"]) || "").trim();
     const low  = String(pick(obj, ["category_low","categoryLow","low_category","subcategory","sub_category"]) || "").trim();
+
     const sido = String(pick(obj, ["sido","province","region"]) || "").trim();
     const sigungu = String(pick(obj, ["sigungu","district","gu","gun"]) || "").trim();
+
     const operator = String(pick(obj, ["operator","operator_name","company","owner"]) || "").trim();
 
-    const img = String(pick(obj, ["thumbnail","thumbnail_url","thumb","image","image_url","cover","cover_url","photo","photo_url","mainImage","main_image"]) || "").trim();
+    // 이미지: '우리 도메인'만 허용(외부 단서 차단)
+    const rawImg = String(pick(obj, ["thumbnail","thumbnail_url","thumb","image","image_url","cover","cover_url","photo","photo_url","mainImage","main_image"]) || "").trim();
+    const img = safeImageUrl(rawImg);
+
     const price = String(pick(obj, ["price","price_krw","starting_price","min_price","from_price"]) || "").trim();
     const priceUnit = String(pick(obj, ["price_unit","unit"]) || "").trim();
+
     const ll = getLatLng(obj);
 
     const idLike = String(pick(obj, ["id","ID","_id","key"]) || "").trim();
     const key = idLike || (title + "|" + address + "|" + (ll ? (ll.lat+","+ll.lng) : "noLL"));
 
-    // 내부상태 문자열(예: House_ooh_API) 노출 금지 → 표시용 상태는 따로 만든다
+    // 내부 문자열 노출 방지용(검수 문구는 사람이 이해하는 텍스트로만)
     const rawStatus = String(pick(obj, ["status","state","verified_status","verified"]) || "").trim();
 
     return {
@@ -638,49 +668,96 @@
 
   function humanStatus(s){
     const up = String(s || "").toUpperCase();
-    // 내부 문자열 노출 금지
+    // 내부 문자열 단서(예: HOUSE/API) 자체를 차단
     if(up.includes("HOUSE") || up.includes("API")) return "";
     if(up.includes("VERIFIED") || up.includes("CONFIRMED") || up.includes("APPROVED")) return "검수완료";
     if(up.includes("REVIEW") || up.includes("PENDING")) return "검수중";
-    return ""; // 모르면 아예 표시하지 않음
+    return "";
   }
 
   function textMatch(n, query){
     if(!query) return true;
     const ql = query.toLowerCase();
-    const base = [
-      n.title, n.address, n.high, n.low, n.sido, n.sigungu, n.operator
-    ].join(" ").toLowerCase();
+    const base = [n.title, n.address, n.high, n.low, n.sido, n.sigungu, n.operator].join(" ").toLowerCase();
     return base.includes(ql);
   }
 
-  // ====== DROPDOWNS ======
-  function fillSelect(selectEl, values){
+  // ====== DROPDOWNS (상위→하위, 시도→구군) ======
+  function fillSelect(selectEl, values, placeholderText="전체"){
     const cur = selectEl.value;
-    const opts = ['<option value="">전체</option>'].concat(
+    const opts = ['<option value="">' + escapeHtml(placeholderText) + '</option>'].concat(
       values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)
     );
     selectEl.innerHTML = opts.join("");
-    selectEl.value = cur;
+    // 기존 선택이 새 옵션에 없으면 초기화
+    const exists = values.includes(cur);
+    selectEl.value = exists ? cur : "";
   }
 
-  function rebuildDropdowns(){
+  function rebuildDependencyMaps(){
+    lowByHigh.clear();
+    sigunguBySido.clear();
+
     const highs = new Set();
     const lows = new Set();
     const sidos = new Set();
-    const sigungus = new Set();
+    const sigs = new Set();
 
     for(const n of items){
-      if(n.high) highs.add(n.high);
+      if(n.high){
+        highs.add(n.high);
+        if(!lowByHigh.has(n.high)) lowByHigh.set(n.high, new Set());
+        if(n.low) lowByHigh.get(n.high).add(n.low);
+      }
       if(n.low) lows.add(n.low);
-      if(n.sido) sidos.add(n.sido);
-      if(n.sigungu) sigungus.add(n.sigungu);
+
+      if(n.sido){
+        sidos.add(n.sido);
+        if(!sigunguBySido.has(n.sido)) sigunguBySido.set(n.sido, new Set());
+        if(n.sigungu) sigunguBySido.get(n.sido).add(n.sigungu);
+      }
+      if(n.sigungu) sigs.add(n.sigungu);
     }
 
-    fillSelect(selHigh, Array.from(highs).sort((a,b)=>a.localeCompare(b,"ko")));
-    fillSelect(selLow, Array.from(lows).sort((a,b)=>a.localeCompare(b,"ko")));
-    fillSelect(selSido, Array.from(sidos).sort((a,b)=>a.localeCompare(b,"ko")));
-    fillSelect(selSigungu, Array.from(sigungus).sort((a,b)=>a.localeCompare(b,"ko")));
+    allHighs = Array.from(highs).sort((a,b)=>a.localeCompare(b,"ko"));
+    allLows = Array.from(lows).sort((a,b)=>a.localeCompare(b,"ko"));
+    allSidos = Array.from(sidos).sort((a,b)=>a.localeCompare(b,"ko"));
+    allSigungus = Array.from(sigs).sort((a,b)=>a.localeCompare(b,"ko"));
+  }
+
+  function refreshLowOptions(){
+    const h = selHigh.value.trim();
+    if(!h){
+      selLow.disabled = true;
+      selLow.innerHTML = `<option value="">(상위를 먼저 선택)</option>`;
+      selLow.value = "";
+      return;
+    }
+    const set = lowByHigh.get(h);
+    const lows = set ? Array.from(set).sort((a,b)=>a.localeCompare(b,"ko")) : [];
+    selLow.disabled = false;
+    fillSelect(selLow, lows, "전체");
+  }
+
+  function refreshSigunguOptions(){
+    const s = selSido.value.trim();
+    if(!s){
+      selSigungu.disabled = true;
+      selSigungu.innerHTML = `<option value="">(시/도를 먼저 선택)</option>`;
+      selSigungu.value = "";
+      return;
+    }
+    const set = sigunguBySido.get(s);
+    const sigs = set ? Array.from(set).sort((a,b)=>a.localeCompare(b,"ko")) : [];
+    selSigungu.disabled = false;
+    fillSelect(selSigungu, sigs, "전체");
+  }
+
+  function rebuildDropdowns(){
+    fillSelect(selHigh, allHighs, "전체");
+    fillSelect(selSido, allSidos, "전체");
+    refreshLowOptions();
+    refreshSigunguOptions();
   }
 
   // ====== RENDER ======
@@ -688,7 +765,6 @@
     clusters.clearLayers();
     markerByKey.clear();
   }
-
   function makePopup(n){
     const t = escapeHtml(n.title);
     const a = escapeHtml(n.address || "");
@@ -718,7 +794,6 @@
   function renderCards(arr){
     cards.innerHTML = "";
     empty.style.display = "none";
-
     listCount.textContent = String(arr.length);
 
     if(arr.length === 0){
@@ -757,8 +832,6 @@
 
       div.addEventListener("click", ()=>{
         openModal(n);
-
-        // 지도 이동 + 팝업
         if(n.latlng){
           map.setView(n.latlng, Math.max(map.getZoom(), 14), { animate:true });
           const mk = markerByKey.get(n.key);
@@ -772,21 +845,20 @@
     if(arr.length > LIST_MAX){
       const note = document.createElement("div");
       note.className = "empty";
-      note.style.marginTop = "10px";
+      note.style.marginTop = "12px";
       note.textContent = `리스트는 최대 ${LIST_MAX}개만 표시합니다. (현재 ${arr.length}개)`;
       cards.appendChild(note);
     }
   }
 
-  // ====== FILTER + APPLY ======
+  // ====== FILTER ======
   function applyFilters(reason="user"){
     const query = q.value.trim();
     const vHigh = selHigh.value.trim();
-    const vLow = selLow.value.trim();
+    const vLow = selLow.disabled ? "" : selLow.value.trim();
     const vSido = selSido.value.trim();
-    const vSig = selSigungu.value.trim();
+    const vSig = selSigungu.disabled ? "" : selSigungu.value.trim();
 
-    // 1) 전체 조건 필터
     filtered = items.filter(n=>{
       if(!textMatch(n, query)) return false;
       if(vHigh && n.high !== vHigh) return false;
@@ -798,22 +870,18 @@
       return true;
     });
 
-    // 2) 지도 범위
     const bounds = map.getBounds();
     inView = chkBounds.checked
       ? filtered.filter(n => n.latlng && bounds.contains(n.latlng))
       : filtered;
 
-    // ✅ 핵심: 지도범위 ON이면 마커/리스트 모두 inView 기준
     renderMarkers(inView);
     renderCards(inView);
 
-    // 숫자 갱신
     mLoaded.textContent = String(items.length);
     mShown.textContent = String(filtered.length);
     mInView.textContent = String(inView.length);
 
-    // 검색/적용 등 사용자 의도일 때는 결과로 지도 이동(대구 검색 해결 유지)
     if(reason === "user"){
       autoFitToResults(filtered);
     }
@@ -822,7 +890,6 @@
   function autoFitToResults(arr){
     const pts = arr.filter(n=>n.latlng).map(n=>n.latlng);
     if(pts.length === 0) return;
-
     if(pts.length === 1){
       map.setView(pts[0], Math.max(map.getZoom(), 12), { animate:true });
       return;
@@ -831,25 +898,22 @@
     map.fitBounds(b, { padding:[28,28], animate:true, maxZoom: 15 });
   }
 
-  // ====== MODAL (내부정보 제거 / 일반인 이해 중심) ======
+  // ====== MODAL (일반인 이해 중심) ======
   function openModal(n){
     mdTitle.textContent = n.title || "-";
-
     const cat = [n.high,n.low].filter(Boolean).join(" / ");
     const region = [n.sido,n.sigungu].filter(Boolean).join(" ");
     mdSub.textContent = [cat, region].filter(Boolean).join(" · ") || "-";
 
     mdGrid.innerHTML = "";
 
-    // 표시할 필드(일반인 이해 중심)
     const rows = [];
-
     if(cat) rows.push(["카테고리", cat]);
     if(region) rows.push(["지역", region]);
     if(n.address) rows.push(["주소", n.address]);
     if(n.operator) rows.push(["운영사", n.operator]);
 
-    // 원본에서 실무 정보 있을 때만
+    // 실무 정보(있을 때만)
     const raw = n._raw || {};
     const extra = [
       ["매체유형", ["media_type","type","format"]],
@@ -863,12 +927,10 @@
       if(v) rows.push([label, String(v)]);
     }
 
-    // 가격은 있을 때만
     if(n.price){
       rows.push(["가격(참고)", `${n.price}${n.priceUnit ? " " + n.priceUnit : ""}`]);
     }
 
-    // 검수 상태: 내부 문자열(HOUSE/API) 나오면 아예 숨김
     const st = humanStatus(n.rawStatus);
     if(st) rows.push(["검수 상태", st]);
 
@@ -879,7 +941,6 @@
       mdGrid.appendChild(box);
     }
 
-    // 지도 링크
     const qstr = n.address ? n.address : (n.title || "");
     lnkKakao.href = `https://map.kakao.com/?q=${encodeURIComponent(qstr)}`;
     lnkGoogle.href = n.latlng
@@ -888,7 +949,6 @@
 
     modalBack.style.display = "flex";
   }
-
   function closeModal(){ modalBack.style.display = "none"; }
   mdClose.addEventListener("click", closeModal);
   modalBack.addEventListener("click",(e)=>{ if(e.target === modalBack) closeModal(); });
@@ -896,12 +956,13 @@
 
   // ====== EVENTS ======
   btnApply.addEventListener("click", ()=> applyFilters("user"));
+
   btnReset.addEventListener("click", ()=>{
     q.value = "";
     selHigh.value = "";
-    selLow.value = "";
     selSido.value = "";
-    selSigungu.value = "";
+    selLow.disabled = true; selLow.innerHTML = `<option value="">(상위를 먼저 선택)</option>`; selLow.value="";
+    selSigungu.disabled = true; selSigungu.innerHTML = `<option value="">(시/도를 먼저 선택)</option>`; selSigungu.value="";
     chkBounds.checked = false;
     chkKorea.checked = true;
     applyFilters("user");
@@ -911,22 +972,33 @@
   chkBounds.addEventListener("change", ()=> applyFilters("user"));
   chkKorea.addEventListener("change", ()=> applyFilters("user"));
 
-  // 지도 이동 시: bounds ON이면 리스트도 즉시 동기화(버그 해결 포인트)
+  // 상위/시도 선택 시 하위/구군 옵션을 "실제로" 바꾼다
+  selHigh.addEventListener("change", ()=>{
+    refreshLowOptions();
+    applyFilters("user");
+  });
+  selSido.addEventListener("change", ()=>{
+    refreshSigunguOptions();
+    applyFilters("user");
+  });
+  selLow.addEventListener("change", ()=> applyFilters("user"));
+  selSigungu.addEventListener("change", ()=> applyFilters("user"));
+
+  // 지도 이동 시: bounds ON이면 리스트도 동기화
   map.on("moveend zoomend", ()=> applyFilters("bounds"));
 
   // ====== LOAD ======
   async function load(){
-    fileHint.textContent = "/" + DATA_URL.replace("./","");
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const data = await res.json();
 
     rawItems = Array.isArray(data) ? data : (data.items || data.data || []);
     items = rawItems.map(normalize);
 
-    // Loaded
     pillLoaded.textContent = String(items.length);
     mLoaded.textContent = String(items.length);
 
+    rebuildDependencyMaps();
     rebuildDropdowns();
     applyFilters("user");
   }
