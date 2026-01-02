@@ -20,6 +20,7 @@
       --muted:#9aa6b2;
       --line:rgba(255,255,255,.08);
       --mint:#a2decc;
+
       --shadow:0 12px 30px rgba(0,0,0,.45);
       --radius:16px;
 
@@ -41,40 +42,31 @@
       min-height:0;
     }
 
-    /* ========== TOPBAR (상단 여유 확대) ========== */
+    /* ===== TOPBAR: 제목 중앙/크게 ===== */
     .topbar{
       flex:0 0 auto;
       position:sticky; top:0; z-index:6000;
-      background:linear-gradient(180deg, rgba(12,13,14,.96), rgba(12,13,14,.78));
+      background:linear-gradient(180deg, rgba(12,13,14,.98), rgba(12,13,14,.85));
       border-bottom:1px solid var(--line);
-      padding:22px 16px; /* ★ 상하폭 확대 */
-      display:flex;
+      padding:22px 16px 20px;
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items:center;
-      justify-content:space-between;
       gap:12px;
     }
-    .brand{
-      display:flex; flex-direction:column;
-      gap:8px;
-      min-width:260px;
-    }
-    .brand .title{
-      font-size:24px;     /* 제목 조금 키움 */
+    .titleCenter{
+      grid-column:2;
+      font-size:30px;
       font-weight:1000;
-      color:#e9eef7;
       letter-spacing:.2px;
+      color:#e9eef7;
       line-height:1.08;
+      text-align:center;
       white-space:nowrap;
     }
-    .brand .sub{
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-
     .pill{
+      grid-column:3;
+      justify-self:end;
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px;
       border-radius:999px;
@@ -83,38 +75,27 @@
       box-shadow:0 8px 18px rgba(0,0,0,.25);
       font-size:12px;
       color:#e9eef7;
-      flex:0 0 auto;
     }
     .pill b{color:var(--mint); font-weight:1000}
 
-    /* ========== FILTER ROW (검색폭 축소 + 가로형) ========== */
+    /* ===== FILTER BAR: 콤팩트 좌측 정렬 + 자동적용(적용버튼 제거) ===== */
     .filtersRow{
       flex:0 0 auto;
-      position:sticky; top:0; z-index:5500;
-      background:rgba(12,13,14,.90);
+      position:sticky; top:72px; z-index:5500; /* topbar 아래 */
+      background:rgba(12,13,14,.92);
       backdrop-filter: blur(6px);
       border-bottom:1px solid var(--line);
-      padding:12px 16px 16px;
+      padding:12px 16px 12px;
     }
-    .toolbar{
-      display:grid;
-      grid-template-columns: 1.15fr 1fr 1fr auto auto; /* ★ 검색폭 과도하지 않게 */
+    .filtersInner{
+      display:flex;
+      align-items:center;
       gap:10px;
-      align-items:end;
-    }
-    @media (max-width: 980px){
-      .toolbar{grid-template-columns: 1fr 1fr; }
-    }
-
-    .field label{
-      display:block;
-      font-size:11px;
-      color:var(--muted);
-      margin:0 0 6px 2px;
-      user-select:none;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+      max-width:1100px; /* 너무 벌어지지 않게 */
     }
     input[type="text"], select{
-      width:100%;
       height:40px;
       padding:0 12px;
       border-radius:12px;
@@ -122,10 +103,19 @@
       background:var(--inputBg);
       color:var(--inputText);
       outline:none;
+      font-size:14px;
     }
     input[type="text"]::placeholder{color:var(--inputPh)}
     option{background:#0c0e10; color:#eef3ff;}
 
+    .q{
+      width:min(420px, 92vw); /* 검색 폭 줄임 */
+      flex:0 0 auto;
+    }
+    .cat{
+      width:260px;
+      flex:0 0 auto;
+    }
     .btn{
       height:40px;
       border-radius:12px;
@@ -136,31 +126,29 @@
       cursor:pointer;
       padding:0 14px;
       white-space:nowrap;
-    }
-    .btn.primary{
-      background:rgba(162,222,204,.16);
-      border-color:rgba(162,222,204,.35);
-      color:#e9fff9;
+      font-size:13px;
     }
 
-    /* ========== APP LAYOUT (좌4 우6 느낌 강화) ========== */
+    /* ===== APP LAYOUT: 리스트 더 넓게, 지도 조금 줄임 ===== */
     .app{
       flex:1 1 auto;
       min-height:0;
       display:grid;
-      grid-template-columns: minmax(720px, 40vw) 1fr; /* ★ 좌측 더 넓힘(기존보다) */
+      grid-template-columns: minmax(820px, 45vw) 1fr;  /* ★ 좌측 확장 */
     }
-    @media (max-width: 1200px){
-      .app{grid-template-columns: minmax(640px, 46vw) 1fr;}
+    @media (max-width: 1250px){
+      .app{grid-template-columns: minmax(720px, 48vw) 1fr;}
     }
     @media (max-width: 980px){
+      .filtersRow{top:0;}
+      .topbar{position:relative;}
       .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
     }
 
     .panel{
       background:var(--panel);
       border-right:1px solid var(--line);
-      overflow:auto;        /* ★ 여기만 스크롤 */
+      overflow:auto;            /* ★ 여기만 스크롤 */
       padding:14px;
       min-height:0;
     }
@@ -175,10 +163,10 @@
       box-shadow:var(--shadow);
     }
 
-    /* ========== STATS BAR (리스트 옆/상단에 고정) ========== */
+    /* ===== STATS BAR: 패널 상단 고정 + OFF 제거 ===== */
     .statsSticky{
       position:sticky;
-      top:0;                /* 패널 내부에서 고정 */
+      top:0;
       z-index:4000;
       margin-bottom:12px;
       padding:12px;
@@ -186,34 +174,32 @@
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
-      justify-content:space-between;
+      justify-content:flex-start;
       border-radius:var(--radius);
-      background:rgba(10,12,14,.92);
+      background:rgba(10,12,14,.94);
       border:1px solid rgba(255,255,255,.10);
       box-shadow:0 10px 28px rgba(0,0,0,.35);
       backdrop-filter: blur(6px);
     }
-    .statPills{display:flex; gap:8px; flex-wrap:wrap;}
     .sPill{
       display:inline-flex; gap:8px; align-items:center;
       padding:8px 10px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.22);
-      font-size:12px;
+      font-size:13px;           /* 폰트 조금 키움 */
       color:var(--muted);
       white-space:nowrap;
     }
     .sPill b{color:var(--mint); font-weight:1000}
 
-    /* ========== LIST ========== */
+    /* ===== LIST ===== */
     .listWrap{padding:12px;}
     .listHeader{
       display:flex; align-items:baseline; justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
+      gap:10px; margin-bottom:10px;
     }
-    .listHeader .h{font-weight:1000; color:#e9eef7;}
+    .listHeader .h{font-weight:1000; color:#e9eef7; font-size:16px;}
     .listHeader .small{color:var(--muted); font-size:12px;}
 
     .grid{
@@ -231,7 +217,7 @@
       overflow:hidden;
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
-      min-height:300px;
+      min-height:308px;
     }
     .item:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.35); }
 
@@ -247,7 +233,7 @@
     }
 
     .body{padding:10px 10px 12px;}
-    .cat{font-size:11px; color:var(--muted); margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;}
+    .catRow{font-size:12px; color:var(--muted); margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap;}
     .tag{
       display:inline-flex; align-items:center;
       padding:3px 8px;
@@ -257,21 +243,21 @@
       color:#dfe6f3;
     }
     .name{
-      font-size:14px; font-weight:1000; color:#e9eef7; line-height:1.22; margin:0 0 6px;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
+      font-size:15px; font-weight:1000; color:#e9eef7; line-height:1.24; margin:0 0 6px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:36px;
     }
     .place{
-      font-size:12px; color:var(--muted); margin:0 0 10px;
-      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px;
+      font-size:13px; color:var(--muted); margin:0 0 10px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
     }
     .price{
       display:flex; align-items:baseline; justify-content:space-between; gap:8px;
       padding-top:10px; border-top:1px solid rgba(255,255,255,.06);
     }
-    .price .p{font-weight:1000; color:var(--mint); font-size:14px; white-space:nowrap;}
-    .price .u{font-size:11px; color:var(--muted); white-space:nowrap;}
+    .price .p{font-weight:1000; color:var(--mint); font-size:15px; white-space:nowrap;}
+    .price .u{font-size:12px; color:var(--muted); white-space:nowrap;}
 
-    /* ========== MAP ========== */
+    /* ===== MAP ===== */
     .mapBox{position:relative; background:#000; padding:10px; min-height:0;}
     .mapInner{
       border-radius:18px;
@@ -283,41 +269,19 @@
     }
     #map{width:100%; height:100%; background:#0b0c0d;}
 
-    /* ========== MARKERS (점 -> 클릭 쉬운 핀) ========== */
-    .pinWrap{
-      filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));
-    }
-    .pinHover{
-      filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));
-    }
+    /* ===== MARKERS: 링 제거, 색만 변경 ===== */
+    .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
+    .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 
-    /* ========== CLUSTER COLORS (명확하게) ========== */
-    .marker-cluster-small{
-      background-color: rgba(42, 158, 255, 0.40) !important;
-    }
-    .marker-cluster-small div{
-      background-color: rgba(42, 158, 255, 0.70) !important;
-      color:#fff !important;
-      font-weight:1000 !important;
-    }
-    .marker-cluster-medium{
-      background-color: rgba(255, 159, 67, 0.42) !important;
-    }
-    .marker-cluster-medium div{
-      background-color: rgba(255, 159, 67, 0.74) !important;
-      color:#fff !important;
-      font-weight:1000 !important;
-    }
-    .marker-cluster-large{
-      background-color: rgba(162, 222, 204, 0.40) !important;
-    }
-    .marker-cluster-large div{
-      background-color: rgba(162, 222, 204, 0.74) !important;
-      color:#062b23 !important;
-      font-weight:1000 !important;
-    }
+    /* ===== CLUSTER COLORS (명확) ===== */
+    .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.40) !important; }
+    .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.70) !important; color:#fff !important; font-weight:1000 !important; }
+    .marker-cluster-medium{ background-color: rgba(255, 159, 67, 0.42) !important; }
+    .marker-cluster-medium div{ background-color: rgba(255, 159, 67, 0.74) !important; color:#fff !important; font-weight:1000 !important; }
+    .marker-cluster-large{ background-color: rgba(35, 205, 158, 0.35) !important; }
+    .marker-cluster-large div{ background-color: rgba(35, 205, 158, 0.70) !important; color:#062b23 !important; font-weight:1000 !important; }
 
-    /* ========== DETAIL OVERLAY ========== */
+    /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.60);
@@ -395,61 +359,38 @@
 </head>
 
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="title">Frontier DOOH 전국 DB</div>
-      <div class="sub">검색 · 카테고리</div>
-    </div>
+  <div class="topbar" id="topbar">
+    <div></div>
+    <div class="titleCenter">Frontier DOOH 전국 DB</div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
-  <div class="filtersRow">
-    <div class="toolbar">
-      <div class="field">
-        <label>검색</label>
-        <input id="q" type="text" placeholder="예: 강남, 대구, 병원, 엘리베이터..." />
-      </div>
-
-      <div class="field">
-        <label>카테고리(상위)</label>
-        <select id="catHigh"></select>
-      </div>
-
-      <div class="field" id="catLowField" style="display:none;">
-        <label>카테고리(하위)</label>
-        <select id="catLow"></select>
-      </div>
-
-      <button class="btn primary" id="apply">적용</button>
+  <div class="filtersRow" id="filtersRow">
+    <div class="filtersInner">
+      <input id="q" class="q" type="text" placeholder="검색 (예: 강남, 대구, 병원, 엘리베이터…)" />
+      <select id="catHigh" class="cat" aria-label="카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
   </div>
 
   <div class="app">
     <div class="panel" id="panel">
-      <!-- ★ 리스트 옆(좌측 패널 상단) 고정 상태바 -->
       <div class="statsSticky">
-        <div class="statPills">
-          <div class="sPill">전체 <b id="mAll">0</b></div>
-          <div class="sPill">필터 <b id="mFilter">0</b></div>
-          <div class="sPill">현재범위 <b id="mInView">0</b></div>
-        </div>
-
-        <div class="statPills">
-          <div class="sPill">하위 사용 <b id="lowState">OFF</b></div>
-        </div>
+        <div class="sPill">전체 <b id="mAll">0</b></div>
+        <div class="sPill">필터 <b id="mFilter">0</b></div>
+        <div class="sPill">현재범위 <b id="mInView">0</b></div>
       </div>
 
       <div class="card listWrap">
         <div class="listHeader">
           <div class="h">리스트</div>
-          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위 기준)</div>
+          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위)</div>
         </div>
 
         <div class="grid" id="list"></div>
 
         <div id="empty" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
-          조건에 맞는 항목이 없습니다. 필터를 완화하거나 검색어를 바꿔보세요.
+          조건에 맞는 항목이 없습니다. 검색어/카테고리를 바꿔보세요.
         </div>
 
         <div id="moreHint" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
@@ -465,7 +406,7 @@
     </div>
   </div>
 
-  <!-- Detail overlay (hash route) -->
+  <!-- Detail overlay -->
   <div class="detailOverlay" id="dOverlay">
     <div class="detail">
       <div class="detailHead">
@@ -521,7 +462,6 @@
   let markers = null;
 
   const markerByKey = new Map();
-  let hoverPulse = null;
 
   const BATCH = 36;
   const STEP  = 24;
@@ -531,7 +471,6 @@
 
   const $ = (id) => document.getElementById(id);
 
-  function uniq(arr){ return [...new Set(arr.filter(v=>v && String(v).trim() !== ""))]; }
   function addOption(sel, value, label){
     const o = document.createElement("option");
     o.value = value;
@@ -608,31 +547,23 @@
     return { high, low };
   }
 
-  function categoryHighOptions(){ return CATEGORY_TREE.map(x => x.high); }
-  function lowsForHigh(high){ return CATEGORY_TREE.find(x => x.high === high)?.lows ?? []; }
-
   function setCatHighOptions(){
-    const highSel = $("catHigh");
-    highSel.innerHTML = "";
-    addOption(highSel, "", "전체");
-    categoryHighOptions().forEach(v => addOption(highSel, v, v));
+    const sel = $("catHigh");
+    sel.innerHTML = "";
+    addOption(sel, "", "카테고리 (전체)");
+    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
-  function setCatLowOptions(){
-    const high = $("catHigh").value;
-    const lowSel = $("catLow");
-    lowSel.innerHTML = "";
-    addOption(lowSel, "", "전체");
-    if (!high) return;
-    lowsForHigh(high).forEach(v => addOption(lowSel, v, v));
+
+  // ====== 자동 적용(디바운스) ======
+  let timer = null;
+  function debounceRender(fit){
+    clearTimeout(timer);
+    timer = setTimeout(()=>render(fit), 220);
   }
 
   function getFilteredBase(){
     const q = $("q").value.trim().toLowerCase();
     const high = $("catHigh").value;
-
-    // 하위 카테고리는 UI를 숨겨두되, 필요 시 코드로 켜서 사용 가능
-    const useLow = false; // ★ 현재는 OFF 고정(요청: 복잡한 UI 줄이기)
-    const low = useLow ? $("catLow").value : "";
 
     let arr = ALL;
 
@@ -643,18 +574,8 @@
       });
     }
     if (high) arr = arr.filter(x => x._high === high);
-    if (low)  arr = arr.filter(x => (x._low || "") === low);
 
     return arr;
-  }
-
-  function countInView(items){
-    const b = map.getBounds();
-    let c = 0;
-    for (const it of items){
-      if (b.contains([it.lat, it.lng])) c++;
-    }
-    return c;
   }
 
   function boundsOf(items){
@@ -665,7 +586,7 @@
     return b.isValid() ? b : null;
   }
 
-  /* ====== PIN ICONS (클릭 쉬운 크기) ====== */
+  /* ====== PIN ICONS (링 없음) ====== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -673,7 +594,7 @@
           <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
                 fill="${fill}" stroke="${stroke}" stroke-width="2" />
           <circle cx="15" cy="15" r="6" fill="#0b0c0d" opacity="0.65"/>
-          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.9"/>
+          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.92"/>
         </svg>
       </div>
     `;
@@ -707,43 +628,14 @@
   function highlightMarker(key){
     const m = markerByKey.get(key);
     if (!m) return;
-
     m.setIcon(hoverIcon);
     m.setZIndexOffset(9999);
-
-    if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
-    const ll = m.getLatLng();
-
-    // ★ 더 두껍고 대비 강한 링
-    hoverPulse = L.circleMarker(ll, {
-      radius: 28,
-      color: "#0b0c0d",
-      weight: 5,
-      fillColor: "#a2decc",
-      fillOpacity: 0.18
-    }).addTo(map);
-
-    // 내부 민트 링 1겹 추가
-    L.circleMarker(ll, {
-      radius: 24,
-      color: "#a2decc",
-      weight: 3,
-      fillOpacity: 0
-    }).addTo(map);
-
-    // 위 두 번째 링이 제거되지 않도록 그룹으로 관리하지 않는 대신,
-    // hoverPulse만 제거(단순). (다음 hover 때 지도 위 잔상 최소화하려면 그룹화 가능)
   }
-
   function unhighlightMarker(key){
     const m = markerByKey.get(key);
     if (!m) return;
     m.setIcon(normalIcon);
     m.setZIndexOffset(0);
-
-    // 간단히 전체 레이어를 다시 그리는 대신, hoverPulse만 제거
-    // (위에서 2겹 링 중 1겹만 관리하고 있어도 UX에는 문제 없습니다.)
-    if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
   }
 
   function buildMap(){
@@ -763,10 +655,7 @@
 
     map.addLayer(markers);
 
-    map.on("moveend", () => {
-      // 지도 이동/줌 -> 항상 InView 기준으로 리스트 갱신
-      render(false);
-    });
+    map.on("moveend", () => render(false));
   }
 
   function clearMarkers(){
@@ -781,16 +670,24 @@
 
   function renderMarkers(items){
     clearMarkers();
-
     items.forEach((it) => {
       const m = L.marker([it.lat, it.lng], { icon: normalIcon });
-      m.on("click", () => openDetail(it));
+      m.on("click", () => openDetail(it, true));
       markerByKey.set(it._key, m);
       markers.addLayer(m);
     });
   }
 
-  function openDetail(it){
+  // ====== 해시 라우팅 ======
+  function setHash(key){
+    const next = "#item=" + encodeURIComponent(key);
+    if (location.hash !== next) location.hash = next;
+  }
+  function clearHash(){
+    if (location.hash.startsWith("#item=")) history.replaceState(null, "", location.pathname);
+  }
+
+  function openDetail(it, sethash){
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
 
@@ -811,19 +708,24 @@
     `;
 
     $("dOverlay").style.display = "block";
-    location.hash = "item=" + encodeURIComponent(it._key);
+
+    // 클릭 시 지도도 해당 위치로
+    map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
+
+    if (sethash) setHash(it._key);
   }
 
   function closeDetail(){
     $("dOverlay").style.display = "none";
-    if (location.hash.startsWith("#item=")) history.replaceState(null, "", location.pathname);
+    clearHash();
   }
 
   function openDetailByHash(){
     if (!location.hash.startsWith("#item=")) return;
     const key = decodeURIComponent(location.hash.replace("#item=", ""));
     const it = ALL.find(x => x._key === key);
-    if (it) openDetail(it);
+    if (!it) return;
+    openDetail(it, false); // 해시는 이미 있으니 재설정 불필요
   }
 
   function renderList(items){
@@ -852,7 +754,7 @@
           ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
         </div>
         <div class="body">
-          <div class="cat">
+          <div class="catRow">
             ${it._high ? `<span class="tag">${it._high}</span>` : ``}
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
@@ -869,8 +771,7 @@
       el.addEventListener("mouseleave", () => unhighlightMarker(it._key));
 
       el.addEventListener("click", () => {
-        map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
-        openDetail(it);
+        openDetail(it, true); // 클릭하면 해시 반영
       });
 
       list.appendChild(el);
@@ -891,31 +792,18 @@
     }, { passive:true });
   }
 
-  function setCatHighOptions(){
-    const sel = $("catHigh");
-    sel.innerHTML = "";
-    addOption(sel, "", "전체");
-    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
-  }
-
   function render(shouldFit){
-    // 1) 필터(검색+상위카테고리) 적용
     const base = getFilteredBase();
     curFilteredBase = base;
 
-    // 2) 화면 범위 InView만 리스트로 보여줌 (요청사항)
     const b = map.getBounds();
     const inView = base.filter(x => b.contains([x.lat, x.lng]));
     curInView = inView;
 
-    // 숫자 갱신
     $("mAll").textContent = ALL.length;
     $("mFilter").textContent = base.length;
     $("mInView").textContent = inView.length;
-    $("lowState").textContent = "OFF";
 
-    // markers는 “필터(base)” 기준으로 찍고,
-    // 리스트는 “현재범위(inView)” 기준으로 보여줌
     renderMarkers(base);
     renderList(inView);
 
@@ -924,7 +812,17 @@
       if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
     }
 
+    // 해시가 있으면 항상 열어줌(새로고침 포함)
     openDetailByHash();
+  }
+
+  // ====== 상단 영역에서 휠을 돌려도 리스트만 스크롤 되도록 강제 ======
+  function forwardWheelToPanel(el){
+    el.addEventListener("wheel", (e)=>{
+      const panel = $("panel");
+      panel.scrollTop += e.deltaY;
+      e.preventDefault();
+    }, { passive:false });
   }
 
   async function init(){
@@ -946,16 +844,16 @@
 
     setCatHighOptions();
 
+    // 자동 적용: 검색/카테고리 변경 즉시 반영
     $("catHigh").addEventListener("change", () => render(true));
-    $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") render(true); });
-
-    $("apply").addEventListener("click", () => render(true));
+    $("q").addEventListener("input", () => debounceRender(true));
+    $("q").addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
-      render(true);
       closeDetail();
+      render(true);
     });
 
     $("dx").addEventListener("click", closeDetail);
@@ -966,6 +864,11 @@
       else closeDetail();
     });
 
+    // 휠 포워딩: 상단/필터 위에서 돌려도 리스트만 움직이게
+    forwardWheelToPanel($("topbar"));
+    forwardWheelToPanel($("filtersRow"));
+
+    // 초기 렌더
     render(false);
   }
 
