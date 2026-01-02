@@ -26,6 +26,11 @@
       --mint2:rgba(162,222,204,.18);
       --shadow:0 12px 30px rgba(0,0,0,.45);
       --radius:16px;
+
+      --inputBg:#0c0e10;
+      --inputLine:rgba(255,255,255,.14);
+      --inputText:#eef3ff;
+      --inputPh:rgba(238,243,255,.45);
     }
     *{box-sizing:border-box}
     body{
@@ -35,31 +40,99 @@
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     }
 
-    /* Top bar */
+    /* ===== Topbar: 좌측 제목 + 가로 툴바 + 우측 Loaded ===== */
     .topbar{
       position:sticky; top:0; z-index:50;
       background:linear-gradient(180deg, rgba(12,13,14,.95), rgba(12,13,14,.78));
       border-bottom:1px solid var(--line);
-      padding:14px 18px; /* 두께 키움 */
-      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 14px;
+      display:flex;
+      align-items:center;
       gap:12px;
     }
     .brand{
       display:flex; flex-direction:column; gap:2px;
-      min-width:0;
+      min-width:220px;
+      flex:0 0 auto;
     }
     .brand .title{
-      font-size:18px; /* 타이틀 키움 */
-      font-weight:800;
+      font-size:18px;
+      font-weight:900;
       letter-spacing:.2px;
       line-height:1.12;
       color:#e9eef7;
+      white-space:nowrap;
     }
     .brand .sub{
       font-size:12px;
       color:var(--muted);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
     }
+
+    .toolbar{
+      flex:1 1 auto;
+      display:grid;
+      grid-template-columns: 1.3fr 0.9fr 0.9fr 0.8fr 0.8fr auto auto; /* 검색+상+하+시도+구군+적용+초기화 */
+      gap:10px;
+      align-items:end;
+      min-width:0;
+    }
+    @media (max-width: 1280px){
+      .toolbar{
+        grid-template-columns: 1.2fr 1fr 1fr auto auto;
+        grid-auto-rows:auto;
+      }
+      .toolbar .hide-md{display:none;}
+    }
+    @media (max-width: 920px){
+      .topbar{flex-wrap:wrap}
+      .brand{width:100%}
+      .toolbar{width:100%; grid-template-columns: 1fr 1fr; }
+      .pill{margin-left:auto}
+    }
+
+    .field label{
+      display:block;
+      font-size:11px;
+      color:var(--muted);
+      margin:0 0 6px 2px;
+      user-select:none;
+    }
+
+    input[type="text"], select{
+      width:100%;
+      height:40px;
+      padding:0 12px;
+      border-radius:12px;
+      border:1px solid var(--inputLine);
+      background:var(--inputBg);     /* 다크 */
+      color:var(--inputText);        /* 흰 글자 */
+      outline:none;
+    }
+    input[type="text"]::placeholder{color:var(--inputPh)}
+    /* select option 배경도 다크 (브라우저별 차이 있음) */
+    select{color:var(--inputText)}
+    option{background:#0c0e10; color:#eef3ff;}
+
+    .btn{
+      height:40px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:900;
+      cursor:pointer;
+      padding:0 14px;
+      white-space:nowrap;
+    }
+    .btn.primary{
+      background:rgba(162,222,204,.16);
+      border-color:rgba(162,222,204,.35);
+      color:#e9fff9;
+    }
+
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px;
@@ -70,103 +143,57 @@
       font-size:12px;
       color:#e9eef7;
       flex:0 0 auto;
+      margin-left:auto;
     }
-    .pill b{color:var(--mint); font-weight:800}
+    .pill b{color:var(--mint); font-weight:900}
 
-    /* Layout */
+    /* ===== Main Layout: 좌4 : 우6 느낌 ===== */
     .app{
       display:grid;
-      grid-template-columns: 540px 1fr; /* 좌측 넓힘 */
-      min-height:calc(100vh - 58px);
+      grid-template-columns: minmax(560px, 40vw) 1fr; /* 좌측 넓힘(핵심) */
+      min-height:calc(100vh - 64px);
     }
-    @media (max-width: 1200px){
-      .app{grid-template-columns: 480px 1fr;}
+    @media (max-width: 1100px){
+      .app{grid-template-columns: minmax(520px, 44vw) 1fr;}
     }
     @media (max-width: 980px){
       .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
     }
 
-    /* Panel */
+    /* ===== Panel ===== */
     .panel{
       background:var(--panel);
       border-right:1px solid var(--line);
-      padding:14px 14px 16px;
       overflow:auto;
+      padding:12px;
     }
+    @media (max-width: 980px){
+      .panel{border-right:none; border-bottom:1px solid var(--line);}
+    }
+
     .card{
       background:linear-gradient(180deg, rgba(20,22,24,.9), rgba(16,18,20,.85));
       border:1px solid rgba(255,255,255,.08);
       border-radius:var(--radius);
       box-shadow:var(--shadow);
     }
-    .filters{
-      padding:12px;
-    }
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      margin-top:10px;
-    }
-    .row3{
-      display:grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap:10px;
-      margin-top:10px;
-    }
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:0 0 6px 2px;
-    }
-    input[type="text"], select{
-      width:100%;
-      height:40px;
-      padding:0 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:#ffffff;           /* 드롭다운 가독성: 흰 배경 */
-      color:#101214;                /* 검은 글자 */
-      outline:none;
-    }
-    input[type="text"]::placeholder{color:#6d7783}
-    .btnrow{
-      display:flex; gap:10px; margin-top:12px;
-    }
-    button{
-      height:40px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      font-weight:800;
-      cursor:pointer;
-      flex:1;
-    }
-    button.primary{
-      background:rgba(162,222,204,.16);
-      border-color:rgba(162,222,204,.35);
-      color:#e9fff9;
-    }
 
+    .stats{
+      padding:12px;
+      margin-bottom:12px;
+    }
     .metaBox{
-      margin-top:12px;
-      padding:10px 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.20);
       display:grid;
       grid-template-columns: 1fr auto;
       gap:8px 10px;
       font-size:12px;
       color:var(--muted);
     }
-    .metaBox b{color:#e9eef7}
     .metaBox .num{color:var(--mint); font-weight:900}
+    .metaBox b{color:#e9eef7}
 
     details.advanced{
-      margin-top:12px;
+      margin-top:10px;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.08);
       background:rgba(0,0,0,.16);
@@ -176,7 +203,7 @@
       cursor:pointer;
       padding:10px 12px;
       color:#e9eef7;
-      font-weight:800;
+      font-weight:900;
       list-style:none;
     }
     details.advanced summary::-webkit-details-marker{display:none}
@@ -192,34 +219,23 @@
     }
     .chk input{transform:scale(1.1)}
 
-    /* List (3 columns) */
-    .listWrap{
-      margin-top:12px;
-      padding:12px;
-    }
+    /* ===== List ===== */
+    .listWrap{padding:12px;}
     .listHeader{
       display:flex; align-items:baseline; justify-content:space-between;
       gap:10px;
       margin-bottom:10px;
     }
-    .listHeader .h{
-      font-weight:900; color:#e9eef7;
-    }
-    .listHeader .small{
-      color:var(--muted); font-size:12px;
-    }
+    .listHeader .h{font-weight:1000; color:#e9eef7;}
+    .listHeader .small{color:var(--muted); font-size:12px;}
 
     .grid{
       display:grid;
-      grid-template-columns: repeat(3, 1fr); /* 3열 */
+      grid-template-columns: repeat(3, 1fr);
       gap:10px;
     }
     @media (max-width: 1200px){
       .grid{grid-template-columns: repeat(2, 1fr);}
-    }
-    @media (max-width: 980px){
-      .grid{grid-template-columns: repeat(2, 1fr);}
-      .panel{border-right:none; border-bottom:1px solid var(--line);}
     }
     @media (max-width: 520px){
       .grid{grid-template-columns: 1fr;}
@@ -232,7 +248,7 @@
       overflow:hidden;
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
-      min-height:270px; /* 세로 늘림 */
+      min-height:290px; /* 카드 더 큼 */
     }
     .item:hover{
       transform:translateY(-2px);
@@ -253,13 +269,11 @@
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
       color:rgba(255,255,255,.35);
-      font-weight:900;
+      font-weight:1000;
       letter-spacing:.4px;
       font-size:12px;
     }
-    .body{
-      padding:10px 10px 12px;
-    }
+    .body{padding:10px 10px 12px;}
     .cat{
       font-size:11px;
       color:var(--muted);
@@ -276,7 +290,7 @@
     }
     .name{
       font-size:14px;
-      font-weight:900;
+      font-weight:1000;
       color:#e9eef7;
       line-height:1.22;
       margin:0 0 6px;
@@ -303,27 +317,20 @@
       border-top:1px solid rgba(255,255,255,.06);
     }
     .price .p{
-      font-weight:900; color:var(--mint);
+      font-weight:1000; color:var(--mint);
       font-size:14px;
+      white-space:nowrap;
     }
     .price .u{
       font-size:11px; color:var(--muted);
       white-space:nowrap;
     }
 
-    /* Map */
-    #map{
-      width:100%;
-      height:calc(100vh - 58px);
-      background:#0b0c0d;
-    }
-    @media (max-width: 980px){
-      #map{height:520px}
-    }
+    /* ===== Map ===== */
     .mapBox{
       position:relative;
       background:#000;
-      padding:10px; /* 검은 박스 느낌 */
+      padding:10px;
     }
     .mapInner{
       border-radius:18px;
@@ -331,8 +338,16 @@
       border:1px solid rgba(255,255,255,.10);
       box-shadow:var(--shadow);
     }
+    #map{
+      width:100%;
+      height:calc(100vh - 64px - 20px);
+      background:#0b0c0d;
+    }
+    @media (max-width: 980px){
+      #map{height:520px}
+    }
 
-    /* Modal */
+    /* ===== Modal ===== */
     .modalBackdrop{
       position:fixed; inset:0;
       background:rgba(0,0,0,.55);
@@ -392,7 +407,7 @@
       padding:12px;
     }
     .info .k{font-size:12px; color:var(--muted); margin-bottom:6px;}
-    .info .v{font-size:14px; color:#e9eef7; font-weight:800; line-height:1.35; word-break:keep-all;}
+    .info .v{font-size:14px; color:#e9eef7; font-weight:900; line-height:1.35; word-break:keep-all;}
     .links{
       display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;
     }
@@ -403,7 +418,7 @@
       border:1px solid rgba(162,222,204,.30);
       background:rgba(162,222,204,.12);
       color:#e9fff9;
-      font-weight:900;
+      font-weight:1000;
       font-size:12px;
     }
   </style>
@@ -413,44 +428,45 @@
   <div class="topbar">
     <div class="brand">
       <div class="title">Frontier DOOH 전국 DB</div>
-      <div class="sub">지도 + 검색 + 필터 + 리스트 + 상세</div>
+      <div class="sub">검색 · 카테고리 · 지역 필터</div>
     </div>
+
+    <div class="toolbar">
+      <div class="field">
+        <label>검색</label>
+        <input id="q" type="text" placeholder="예: 강남, 대구, 병원, 엘리베이터..." />
+      </div>
+
+      <div class="field">
+        <label>카테고리(상위)</label>
+        <select id="catHigh"></select>
+      </div>
+
+      <div class="field">
+        <label>카테고리(하위)</label>
+        <select id="catLow"></select>
+      </div>
+
+      <div class="field hide-md">
+        <label>시/도</label>
+        <select id="sido"></select>
+      </div>
+
+      <div class="field hide-md">
+        <label>구/군</label>
+        <select id="sigungu"></select>
+      </div>
+
+      <button class="btn primary" id="apply">적용</button>
+      <button class="btn" id="reset">초기화</button>
+    </div>
+
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
   <div class="app">
     <div class="panel">
-      <div class="card filters">
-        <label>검색 (매체명 / 주소 / 키워드)</label>
-        <input id="q" type="text" placeholder="예: 강남, 대구, 병원, 엘리베이터..." />
-
-        <div class="row">
-          <div>
-            <label>카테고리(상위)</label>
-            <select id="catHigh"></select>
-          </div>
-          <div>
-            <label>카테고리(하위)</label>
-            <select id="catLow"></select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div>
-            <label>지역(시/도)</label>
-            <select id="sido"></select>
-          </div>
-          <div>
-            <label>구/군</label>
-            <select id="sigungu"></select>
-          </div>
-        </div>
-
-        <div class="btnrow">
-          <button class="primary" id="apply">적용</button>
-          <button id="reset">초기화</button>
-        </div>
-
+      <div class="card stats">
         <div class="metaBox">
           <div>전체 로드</div><div class="num" id="mAll">0</div>
           <div>현재 표시</div><div class="num" id="mShow">0</div>
@@ -525,9 +541,9 @@
 
 <script>
   // ===== 설정 =====
-  const DATA_URL = "./data_public.json";   // 현재 운영: sanitize된 공개용
+  const DATA_URL = "./data_public.json";
 
-  // 당신이 올린 "아임웹 카테고리 구조"에 맞춘 상/하 분류(순서 고정)
+  // 당신의 아임웹 분류 체계(표시용)
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -541,6 +557,9 @@
   let markers = null;
   let map = null;
 
+  // fitBounds 후 1회 재렌더용
+  let pendingPostFitRender = false;
+
   // ===== 유틸 =====
   const $ = (id) => document.getElementById(id);
 
@@ -553,28 +572,90 @@
     o.textContent = label ?? value;
     sel.appendChild(o);
   }
+
+  // "₩는 뒤에 붙는다" 요구 반영: 12,000,000원 형태로 표기
   function fmtWon(price, unit){
-    // price가 문자열일 수 있으니 숫자만 추출
     const s = (price ?? "").toString();
     const n = parseInt(s.replace(/[^\d]/g,""), 10);
     if (!n || isNaN(n)) return "문의";
-    const won = "₩" + n.toLocaleString("ko-KR");
+    const won = n.toLocaleString("ko-KR") + "원";
     const u = (unit ?? "").toString().trim();
     return u ? `${won} / ${u}` : won;
   }
+
   function guessPlace(item){
-    // 건물명/장소명: 데이터에 별도 필드가 없으면 주소 앞부분을 잘라서 사용
-    // (추후 DB 확장 시 building_name 같은 필드를 만들면 여기서 우선 사용하면 됨)
-    const t = (item.title || "").trim();
     const addr = (item.address || "").trim();
-    // 너무 길면 주소 앞 2~3덩이만
     const toks = addr.split(" ").filter(Boolean);
     const shortAddr = toks.slice(0, Math.min(4, toks.length)).join(" ");
-    // title이 너무 일반명일 수 있으니 place는 주소 기반으로 표시
-    return shortAddr || t || "-";
+    return shortAddr || (item.title || "-");
   }
 
-  function categoryHighOptionsFromTree(){
+  function norm(s){
+    return (s ?? "").toString().toLowerCase().replace(/\s+/g,"");
+  }
+
+  // ===== 핵심: 데이터의 원문 카테고리 문자열이 제각각이라서
+  // UI 카테고리와 "키워드 매칭"으로 안정적으로 매핑한다.
+  function assignTaxonomy(it){
+    const blob = norm([it.media_group, it.category_low, it.title, it.address].join(" "));
+
+    const hasAny = (keywords) => keywords.some(k => blob.includes(norm(k)));
+
+    // 1) 전광판/빌보드/외벽
+    if (hasAny(["전광판","빌보드","외벽","옥외전광판","led","mediafaçade","미디어파사드"])) {
+      const low =
+        blob.includes("외벽") || blob.includes("미디어파사드") ? "외벽" :
+        (blob.includes("빌보드") ? "빌보드" : "전광판");
+      return { high:"전광판 / 빌보드 / 외벽", low };
+    }
+
+    // 2) 교통매체
+    if (hasAny(["버스","지하철","택시","차량","ktx","터미널","공항","항공","기내","쉘터","정류장","도로","야립"])) {
+      let low = "버스광고";
+      if (hasAny(["지하철"])) low = "지하철 광고";
+      else if (hasAny(["택시"])) low = "택시 광고";
+      else if (hasAny(["ktx"])) low = "KTX 광고";
+      else if (hasAny(["터미널"])) low = "터미널 광고";
+      else if (hasAny(["공항","항공","기내"])) low = "공항 / 기내, 항공기 광고";
+      else if (hasAny(["쉘터","정류장"])) low = "버스 쉘터 광고";
+      else if (hasAny(["야립","도로"])) low = "주요 도로 야립 광고";
+      else if (hasAny(["차량"])) low = "차량 광고";
+      return { high:"교통매체", low };
+    }
+
+    // 3) 복합쇼핑몰/대형마트
+    if (hasAny(["쇼핑몰","복합","아울렛","백화점","마트","대형마트","트레이더스","이마트","롯데마트","홈플러스"])) {
+      const low = hasAny(["대형마트","마트","트레이더스","이마트","롯데마트","홈플러스"]) ? "대형마트" : "복합 쇼핑몰";
+      return { high:"복합 쇼핑몰 / 대형마트", low };
+    }
+
+    // 4) 극장/레저/휴양
+    if (hasAny(["극장","cgv","메가박스","롯데시네마","레저","리조트","스키","워터파크","테마파크","휴양"])) {
+      let low = "레저";
+      if (hasAny(["극장","cgv","메가박스","롯데시네마"])) low = "극장";
+      else if (hasAny(["휴양","리조트"])) low = "휴양, 편의시설";
+      return { high:"극장 / 레저 / 휴양 시설", low };
+    }
+
+    // 5) 생활 밀착형
+    if (hasAny(["엘리베이터","병원","편의점","약국","캠퍼스","대학교","학원","식당","주점","헤어","뷰티","드럭스토어","헬스","피트니스","필라테스","골프","운동"])) {
+      let low = "편의점";
+      if (hasAny(["엘리베이터"])) low = "엘리베이터 광고";
+      else if (hasAny(["병원"])) low = "병원";
+      else if (hasAny(["약국"])) low = "약국";
+      else if (hasAny(["캠퍼스","대학교","학원"])) low = "캠퍼스";
+      else if (hasAny(["식당","주점"])) low = "식당, 주점";
+      else if (hasAny(["헤어","뷰티"])) low = "헤어&뷰티살롱";
+      else if (hasAny(["드럭스토어"])) low = "드럭스토어";
+      else if (hasAny(["헬스","피트니스","필라테스","골프","운동"])) low = "운동시설";
+      return { high:"생활 밀착형 매체", low };
+    }
+
+    // 미분류
+    return { high:"", low:"" };
+  }
+
+  function categoryHighOptions(){
     return CATEGORY_TREE.map(x => x.high);
   }
   function lowsForHigh(high){
@@ -582,26 +663,19 @@
     return found ? found.lows : [];
   }
 
+  function setCatHighOptions(){
+    const highSel = $("catHigh");
+    highSel.innerHTML = "";
+    addOption(highSel, "", "전체");
+    categoryHighOptions().forEach(v => addOption(highSel, v, v));
+  }
   function setCatLowOptions(){
     const high = $("catHigh").value;
     const lowSel = $("catLow");
     lowSel.innerHTML = "";
     addOption(lowSel, "", "전체");
-
-    // 1) 트리 우선
-    const lows = lowsForHigh(high);
-    if (high && lows.length){
-      lows.forEach(v => addOption(lowSel, v, v));
-      return;
-    }
-
-    // 2) 트리에 없으면 데이터에서 유추(안전망)
-    const lowsFromData = uniq(ALL
-      .filter(x => !high || x.media_group === high)
-      .map(x => x.category_low)
-    );
-    lowsFromData.sort((a,b)=>a.localeCompare(b,"ko"));
-    lowsFromData.forEach(v => addOption(lowSel, v, v));
+    if (!high) return;
+    lowsForHigh(high).forEach(v => addOption(lowSel, v, v));
   }
 
   function setSidoOptions(){
@@ -621,23 +695,23 @@
     list.forEach(v=>addOption(g, v, v));
   }
 
-  function getFiltered(){
+  function getFilteredBase(){
     const q = $("q").value.trim().toLowerCase();
     const high = $("catHigh").value;
     const low = $("catLow").value;
-    const sido = $("sido").value;
-    const sigungu = $("sigungu").value;
+    const sido = $("sido") ? $("sido").value : "";
+    const sigungu = $("sigungu") ? $("sigungu").value : "";
 
     let arr = ALL;
 
     if (q){
       arr = arr.filter(x=>{
-        const blob = `${x.title||""} ${x.address||""} ${x.media_group||""} ${x.category_low||""} ${x.sido||""} ${x.sigungu||""}`.toLowerCase();
+        const blob = `${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""} ${x.sido||""} ${x.sigungu||""}`.toLowerCase();
         return blob.includes(q);
       });
     }
-    if (high) arr = arr.filter(x => x.media_group === high);
-    if (low)  arr = arr.filter(x => x.category_low === low);
+    if (high) arr = arr.filter(x => x._high === high);
+    if (low)  arr = arr.filter(x => x._low === low);
     if (sido) arr = arr.filter(x => x.sido === sido);
     if (sigungu) arr = arr.filter(x => x.sigungu === sigungu);
 
@@ -653,11 +727,19 @@
     return c;
   }
 
+  function boundsOf(items){
+    const pts = items.slice(0, 600); // 너무 많아도 fitBounds 부담 줄이기
+    if (!pts.length) return null;
+    const b = L.latLngBounds([]);
+    for (const it of pts) b.extend([it.lat, it.lng]);
+    return b.isValid() ? b : null;
+  }
+
   // ===== 지도/마커 =====
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
-    // 기본 OSM (카카오맵 타일은 키/정책 이슈가 있어 MVP에선 유지. 원하면 다음 단계에서 교체 검토)
+    // MVP: OSM 유지 (카카오 타일은 다음 단계에서 정책/키 기반으로 검토)
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -673,19 +755,21 @@
     map.addLayer(markers);
 
     map.on("moveend", () => {
+      if (pendingPostFitRender){
+        pendingPostFitRender = false;
+        render(false); // fitBounds 후 1회 재렌더(지도범위만보기 반영)
+        return;
+      }
       if ($("onlyInView").checked){
-        render();
+        render(false);
       }else{
-        // 현재범위 숫자만 업데이트
-        const filtered = getFiltered();
+        const filtered = getFilteredBase();
         $("mInView").textContent = countInView(filtered);
       }
     });
   }
 
-  function clearMarkers(){
-    markers.clearLayers();
-  }
+  function clearMarkers(){ markers.clearLayers(); }
 
   function renderMarkers(items){
     clearMarkers();
@@ -715,8 +799,8 @@
         </div>
         <div class="body">
           <div class="cat">
-            <span class="tag">${(it.media_group || "카테고리")}</span>
-            ${it.category_low ? `<span class="tag">${it.category_low}</span>` : ``}
+            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
+            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
           <div class="name">${it.title || "-"}</div>
           <div class="place">${guessPlace(it)}</div>
@@ -727,7 +811,6 @@
         </div>
       `;
       el.addEventListener("click", () => {
-        // 지도 이동
         map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
         openModal(it);
       });
@@ -738,9 +821,9 @@
   // ===== 모달 =====
   function openModal(it){
     $("mt").textContent = it.title || "-";
-    $("ms").textContent = it.status ? `상태: ${it.status}` : (it.media_group || "");
+    $("ms").textContent = it.status ? `상태: ${it.status}` : (it._high || "");
 
-    $("mcat").textContent = `${it.media_group || "-"}${it.category_low ? " > " + it.category_low : ""}`;
+    $("mcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
     $("mprice").textContent = fmtWon(it.price, it.price_unit);
     $("maddr").textContent = it.address || "-";
     $("mop").textContent = it.operator || "문의";
@@ -748,39 +831,46 @@
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
 
-    const links = $("mlinks");
-    links.innerHTML = `
+    $("mlinks").innerHTML = `
       <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
       <a href="${google}" target="_blank" rel="noopener">구글맵</a>
     `;
 
     $("mb").style.display = "flex";
   }
-  function closeModal(){
-    $("mb").style.display = "none";
-  }
+  function closeModal(){ $("mb").style.display = "none"; }
 
-  // ===== 렌더 전체 =====
-  function render(){
-    // 카운트/필터 결과
-    let filtered = getFiltered();
+  // ===== 렌더(검색/필터 적용) =====
+  function render(shouldFit){
+    // 1) 기본 필터 결과(지도범위만보기 제외)
+    let base = getFilteredBase();
+
     $("mAll").textContent = ALL.length;
-    $("mShow").textContent = filtered.length;
+    $("mShow").textContent = base.length;
 
-    // inView
-    const inView = countInView(filtered);
-    $("mInView").textContent = inView;
+    // 2) inView 카운트(기본)
+    $("mInView").textContent = countInView(base);
 
-    // 지도 범위만 보기
-    if ($("onlyInView").checked){
-      const b = map.getBounds();
-      filtered = filtered.filter(x => b.contains([x.lat, x.lng]));
-      $("mShow").textContent = filtered.length;
-      $("mInView").textContent = filtered.length;
+    // 3) 검색/필터 적용 시 자동 이동(원하는 UX)
+    if (shouldFit && base.length){
+      const b = boundsOf(base);
+      if (b){
+        pendingPostFitRender = true;
+        map.fitBounds(b, { padding:[60,60], maxZoom: 14 });
+      }
     }
 
-    renderMarkers(filtered);
-    renderList(filtered);
+    // 4) 지도범위만 보기 적용(UX: fitBounds 먼저 하고 moveend에서 재렌더)
+    let finalItems = base;
+    if ($("onlyInView").checked){
+      const bounds = map.getBounds();
+      finalItems = base.filter(x => bounds.contains([x.lat, x.lng]));
+      $("mShow").textContent = finalItems.length;
+      $("mInView").textContent = finalItems.length;
+    }
+
+    renderMarkers(finalItems);
+    renderList(finalItems);
   }
 
   async function init(){
@@ -790,39 +880,44 @@
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
 
-    // 데이터 최소 검증(좌표 없는 건 제외)
+    // 좌표 있는 것만
     ALL = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
+
+    // 카테고리 매핑(여기서 _high/_low를 안정적으로 고정)
+    ALL = ALL.map(it => {
+      const t = assignTaxonomy(it);
+      return { ...it, _high: t.high, _low: t.low };
+    });
 
     $("pillLoaded").textContent = ALL.length;
 
-    // 상/하 카테고리 셋업
-    const highSel = $("catHigh");
-    highSel.innerHTML = "";
-    addOption(highSel, "", "전체");
-    categoryHighOptionsFromTree().forEach(v => addOption(highSel, v, v));
+    // 옵션 세팅
+    setCatHighOptions();
+    setCatLowOptions();
 
-    // 지역 셋업
+    // 지역 드롭다운은 모바일에서 숨겨져도 값은 유지되게 존재
+    // (hide-md로 숨겨졌을 뿐 DOM에는 있음)
     setSidoOptions();
     setSigunguOptions();
 
     // 이벤트
     $("catHigh").addEventListener("change", () => {
-      setCatLowOptions();   // ★ 핵심: 상위 바뀌면 하위가 반드시 바뀜
-      render();
+      setCatLowOptions();
+      render(true); // 카테고리 변경 시 자동 이동
     });
-    $("catLow").addEventListener("change", render);
+    $("catLow").addEventListener("change", () => render(true));
 
     $("sido").addEventListener("change", () => {
       setSigunguOptions();
-      render();
+      render(true);
     });
-    $("sigungu").addEventListener("change", render);
+    $("sigungu").addEventListener("change", () => render(true));
 
     $("q").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") render();
+      if (e.key === "Enter") render(true); // 검색 Enter → 자동 이동
     });
 
-    $("apply").addEventListener("click", render);
+    $("apply").addEventListener("click", () => render(true));
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
@@ -831,20 +926,17 @@
       setSigunguOptions();
       $("sigungu").value = "";
       $("onlyInView").checked = false;
-      render();
+      render(true);
     });
-    $("onlyInView").addEventListener("change", render);
+    $("onlyInView").addEventListener("change", () => render(false));
 
     $("mx").addEventListener("click", closeModal);
     $("mb").addEventListener("click", (e) => {
       if (e.target.id === "mb") closeModal();
     });
 
-    // 초기 하위 옵션 세팅
-    setCatLowOptions();
-
     // 최초 렌더
-    render();
+    render(false);
   }
 
   init();
