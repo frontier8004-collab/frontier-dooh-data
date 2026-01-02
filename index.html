@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Frontier DOOH Map (House KOR Fixed - Wide + Frontier Taxonomy)</title>
+  <title>Frontier DOOH Map (House of OOH - Single/Fixed)</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -18,18 +18,14 @@
     :root{
       --bg:#07090c;
       --panel:#0c1016;
-      --panel2:#0f141c;
       --line:rgba(255,255,255,.10);
       --mint:#a2decc;
       --text:#e7eef7;
       --muted:rgba(231,238,247,.68);
       --danger:#ff6b6b;
       --shadow:0 18px 48px rgba(0,0,0,.55);
-      --radius:14px;
 
-      /* ✅ 기본 패널 폭(조금 더 넓게) */
-      --panelW: 600px;
-      --gutter: 14px;
+      --panelW: 520px;
       --topbarH: 58px;
     }
     *{box-sizing:border-box}
@@ -136,16 +132,9 @@
       margin-bottom:12px;
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-    }
-    .row2{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
+    .grid{display:grid;grid-template-columns:1fr;gap:10px;}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
     @media (max-width: 980px){
       .main{grid-template-columns: 1fr; grid-template-rows: auto 1fr;}
       .resizer{display:none;}
@@ -159,12 +148,7 @@
       .topbar .sub{display:none;}
     }
 
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:0 0 6px 2px;
-    }
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px;}
     input[type="text"], select{
       width:100%;
       padding:11px 12px;
@@ -226,15 +210,8 @@
     }
     .meta b{color:rgba(162,222,204,.95)}
 
-    .list{
-      margin-top:10px;
-    }
-    .list h2{
-      margin:0 0 10px;
-      font-size:13px;
-      color:rgba(231,238,247,.90);
-      letter-spacing:.2px;
-    }
+    .list{margin-top:10px;}
+    .list h2{margin:0 0 10px;font-size:13px;color:rgba(231,238,247,.90);letter-spacing:.2px;}
     .item{
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.02);
@@ -317,7 +294,7 @@
     }
     .modal.show{display:flex;}
     .modal .card{
-      width:min(920px, 100%);
+      width:min(900px, 100%);
       border-radius:18px;
       border:1px solid rgba(255,255,255,.10);
       background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,.22)),
@@ -344,10 +321,11 @@
     .modal .body{
       padding:14px 16px 16px;
       display:grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1.2fr .8fr;
       gap:12px;
+      align-items:start;
     }
-    @media (max-width: 720px){
+    @media (max-width: 780px){
       .modal .body{grid-template-columns:1fr}
     }
     .kv{
@@ -358,6 +336,41 @@
     }
     .kv .k{font-size:12px;color:rgba(231,238,247,.65);margin-bottom:6px}
     .kv .v{font-size:13px;color:rgba(231,238,247,.92);line-height:1.35;word-break:break-word}
+
+    .mMedia{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.20);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .mMedia .ph{
+      position:relative;
+      aspect-ratio: 16 / 9;
+      background:rgba(255,255,255,.03);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:rgba(231,238,247,.55);
+      font-size:12.5px;
+    }
+    .mMedia img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+    .mMedia .cap{
+      padding:10px 12px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
+      font-size:12.5px;
+      color:rgba(231,238,247,.85);
+    }
+    .mMedia .cap b{color:rgba(162,222,204,.95)}
+
     .modal .foot{
       padding:12px 16px 16px;
       border-top:1px solid rgba(255,255,255,.08);
@@ -391,77 +404,48 @@
         <div class="section">
           <div class="grid">
             <div>
-              <label>검색 (name/title/address/city/district/id/labels)</label>
-              <input id="q" type="text" placeholder="예: 강남, 삼성역, 명동, COEX, 36936…" />
+              <label>검색 (이름 / 지역 / 주소 / 카테고리 / ID)</label>
+              <input id="q" type="text" placeholder="예: 강남, 삼성역, 명동, 전광판, 36936…" />
             </div>
 
-            <!-- ✅ Frontier 세부분류 -->
             <div class="row2">
               <div>
-                <label>Frontier 분류</label>
-                <select id="frontierGroup">
+                <label>카테고리(상위)</label>
+                <select id="catParent">
                   <option value="">전체</option>
                 </select>
               </div>
               <div>
-                <label>노출(Inside/Outside)</label>
-                <select id="exposureType">
-                  <option value="">전체</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- ✅ House 원본 분류(Parent/Category) -->
-            <div class="row2">
-              <div>
-                <label>대분류(Parent)</label>
-                <select id="parentKor">
-                  <option value="">전체</option>
-                </select>
-              </div>
-              <div>
-                <label>중분류(Category)</label>
-                <select id="catKor">
+                <label>카테고리(하위)</label>
+                <select id="catChild">
                   <option value="">전체</option>
                 </select>
               </div>
             </div>
 
-            <!-- ✅ 지역/유형 -->
             <div class="row2">
               <div>
-                <label>City</label>
+                <label>지역(시/도)</label>
                 <select id="city">
                   <option value="">전체</option>
                 </select>
               </div>
               <div>
-                <label>District</label>
+                <label>구/군</label>
                 <select id="district">
                   <option value="">전체</option>
                 </select>
               </div>
             </div>
 
-            <div class="row2">
-              <div>
-                <label>유형 (DOOH/OOH)</label>
-                <select id="oohType">
-                  <option value="">전체</option>
-                </select>
-              </div>
-              <div>
-                <label>판매 (SINGLE/GROUP)</label>
-                <select id="salesType">
-                  <option value="">전체</option>
-                </select>
-              </div>
-            </div>
-
             <div class="toggles">
-              <label class="chk" title="대한민국(대략 bbox) 밖 좌표를 기본 제외합니다.">
+              <label class="chk" title="대한민국 bbox 밖 좌표를 기본 제외합니다.">
                 <input id="onlyKorea" type="checkbox" checked />
                 이상치 제외(한국 밖)
+              </label>
+              <label class="chk" title="가격 정보 있는 매체만 보고 싶을 때">
+                <input id="onlyHasPrice" type="checkbox" />
+                가격 있는 것만
               </label>
             </div>
 
@@ -478,7 +462,7 @@
         </div>
 
         <div class="section list">
-          <h2>리스트 (최대 160개 표시)</h2>
+          <h2>리스트 (최대 200개 표시)</h2>
           <div id="list"></div>
         </div>
       </aside>
@@ -505,18 +489,33 @@
         </div>
         <button class="close" id="mClose">닫기</button>
       </div>
-      <div class="body" id="mBody"></div>
+
+      <div class="body">
+        <div id="mBody"></div>
+
+        <div class="mMedia">
+          <div class="ph" id="mImgWrap">
+            <span id="mImgPh">이미지 없음</span>
+          </div>
+          <div class="cap">
+            <span>가격: <b id="mPrice">—</b></span>
+            <span>상품: <b id="mProduct">—</b></span>
+          </div>
+        </div>
+      </div>
+
       <div class="foot" id="mFoot"></div>
     </div>
   </div>
 
   <script>
     // ==============================
-    // Stable Single-File Map App
-    // - House data compatible (location.{lat,lon} or lat/lng)
-    // - Frontier derived taxonomy (frontierGroup)
+    // Single-File Map App (House of OOH compatible)
+    // - Filters: category parent/child, city/district, text, hasPrice
+    // - Modal: image + fee + product + links
     // ==============================
 
+    // ✅ 데이터 파일 경로 (같은 repo 루트에 있는 JSON)
     const DATA_URL = "./data_house_kor_single_fixed_merged.json";
 
     // Korea bbox (대략)
@@ -532,20 +531,14 @@
     const ui = {
       pillStatus: $("pillStatus"),
       q: $("q"),
-
-      frontierGroup: $("frontierGroup"),
-      exposureType: $("exposureType"),
-      parentKor: $("parentKor"),
-      catKor: $("catKor"),
+      catParent: $("catParent"),
+      catChild: $("catChild"),
       city: $("city"),
       district: $("district"),
-      oohType: $("oohType"),
-      salesType: $("salesType"),
-
       onlyKorea: $("onlyKorea"),
+      onlyHasPrice: $("onlyHasPrice"),
       apply: $("apply"),
       reset: $("reset"),
-
       totalCount: $("totalCount"),
       shownCount: $("shownCount"),
       list: $("list"),
@@ -560,6 +553,11 @@
       mBody: $("mBody"),
       mFoot: $("mFoot"),
       mClose: $("mClose"),
+
+      mImgWrap: $("mImgWrap"),
+      mImgPh: $("mImgPh"),
+      mPrice: $("mPrice"),
+      mProduct: $("mProduct"),
 
       resizer: $("resizer"),
     };
@@ -588,10 +586,7 @@
       return String(v);
     }
     function normStr(v){
-      return safeText(v)
-        .replace(/\u00A0/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+      return safeText(v).replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
     }
     function escapeHTML(s){
       return String(s)
@@ -602,24 +597,15 @@
         .replaceAll("'","&#039;");
     }
 
-    function normalizeLatLng(lat, lng){
+    function normalizeLatLngFromHouse(item){
+      // House of OOH: item.location.lat / item.location.lon
+      const lat = item?.location?.lat;
+      const lng = item?.location?.lon;
       let la = Number(lat);
       let ln = Number(lng);
       if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
-
-      // (가끔 lat/lng 뒤집힌 데이터 방어)
-      if (Math.abs(la) > 90 && Math.abs(ln) <= 90){
-        const tmp = la; la = ln; ln = tmp;
-      }
       if (la < -90 || la > 90 || ln < -180 || ln > 180) return null;
       return { lat: la, lng: ln };
-    }
-
-    function pickLatLng(it){
-      // House: location.lon/lat
-      const lat = it.lat ?? it.latitude ?? it.location?.lat ?? it.location?.latitude;
-      const lng = it.lng ?? it.lon ?? it.longitude ?? it.location?.lng ?? it.location?.lon ?? it.location?.longitude;
-      return normalizeLatLng(lat, lng);
     }
 
     function inKorea(lat, lng){
@@ -639,7 +625,7 @@
       if ([...selectEl.options].some(o => o.value === current)) selectEl.value = current;
     }
 
-    function waitForNonZeroSize(el, maxFrames = 120){
+    function waitForNonZeroSize(el, maxFrames = 140){
       return new Promise((resolve) => {
         let frames = 0;
         function tick(){
@@ -666,18 +652,113 @@
       }, 180);
     }
 
+    // ==============================
+    // ✅ COMPAT LAYER (House JSON -> App fields)
+    // ==============================
+    function compat(item){
+      // title
+      const name = normStr(item.name);
+      const second = normStr(item.second_name);
+      const building = normStr(item.building_name);
+      const title = name || building || "(no name)";
+
+      // subtitle
+      const parentKor = normStr(item.parent_category_code_kor);
+      const childKor = normStr(item.category_code_kor);
+      const city = normStr(item.city);
+      const district = normStr(item.district);
+      const subtitleParts = [];
+      if (second) subtitleParts.push(second);
+      if (building && building !== title) subtitleParts.push(building);
+      const subtitle = subtitleParts.join(" · ");
+
+      // categories
+      const catParent = parentKor || normStr(item.parent_category_code) || "";
+      const catChild = childKor || normStr(item.category_code) || "";
+
+      // location
+      const ll = normalizeLatLngFromHouse(item);
+      const lat = ll ? ll.lat : null;
+      const lng = ll ? ll.lng : null;
+
+      // price / product
+      const fee = item.advertisement_fee;
+      const feeCur = normStr(item.advertisement_fee_currency) || "KRW";
+      const product = normStr(item.product_display_name);
+      const exposure = normStr(item.exposure_type); // INSIDE/OUTSIDE
+      const oohType = normStr(item.ooh_type); // DOOH/OOH
+      const fixedMoving = normStr(item.fixed_moving_type);
+
+      // image
+      const image = normStr(item.image);
+
+      // id
+      const id = safeText(item.media_item_id || item.id || "");
+
+      // address
+      const address = normStr(item.address);
+
+      // labels
+      const labels = Array.isArray(item.labels) ? item.labels.map(normStr).filter(Boolean) : [];
+
+      // search haystack
+      const hay = [
+        id, title, subtitle, address,
+        catParent, catChild, city, district,
+        labels.join(" "),
+        product, oohType, exposure, fixedMoving
+      ].map(safeText).join(" ");
+
+      return {
+        __raw: item,
+
+        // app fields
+        id,
+        title,
+        subtitle,
+        address,
+        city,
+        district,
+        catParent,
+        catChild,
+        lat,
+        lng,
+        image,
+        fee,
+        feeCur,
+        product,
+        exposure,
+        oohType,
+        fixedMoving,
+        labels,
+
+        __inKorea: (lat !== null && lng !== null) ? inKorea(lat, lng) : false,
+        __haystack: hay,
+      };
+    }
+
+    function formatKRW(n){
+      const num = Number(n);
+      if (!Number.isFinite(num)) return "";
+      try{
+        return new Intl.NumberFormat("ko-KR").format(num);
+      } catch(e){
+        return String(num);
+      }
+    }
+
     async function initMap(){
       const start = Date.now();
       while (!(window.L && window.L.map && window.L.markerClusterGroup)) {
         await new Promise(r => setTimeout(r, 20));
-        if (Date.now() - start > 6000) {
+        if (Date.now() - start > 6500) {
           toast(`<span class="bad">Leaflet 로딩 실패</span><br/>CDN 차단/네트워크 문제일 수 있습니다.`);
           break;
         }
       }
 
       const mapEl = $("map");
-      await waitForNonZeroSize(mapEl, 160);
+      await waitForNonZeroSize(mapEl, 180);
 
       map = L.map("map", {
         zoomControl: true,
@@ -703,8 +784,6 @@
 
       map.setView([36.5, 127.8], 7);
 
-      map.whenReady(() => safeInvalidate());
-
       const wrap = document.querySelector(".map-wrap");
       if (window.ResizeObserver && wrap){
         const ro = new ResizeObserver(() => safeInvalidate());
@@ -713,130 +792,61 @@
         window.addEventListener("resize", () => safeInvalidate(), { passive:true });
       }
 
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) safeInvalidate();
-      });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) safeInvalidate(); });
       window.addEventListener("focus", () => safeInvalidate());
     }
 
-    // ------------------------------
-    // ✅ Frontier 세부 분류(파생)
-    // ------------------------------
-    function deriveFrontierGroup(it){
-      const parent = normStr(it.parent_category_code_kor || it.parentCategoryKor || "");
-      const cat = normStr(it.category_code_kor || it.categoryKor || "");
-      const exposure = normStr(it.exposure_type || it.exposureType || ""); // INSIDE/OUTSIDE
-      const oohType = normStr(it.ooh_type || it.oohType || ""); // DOOH/OOH
-
-      // 1) 전광판/빌보드 계열
-      if (parent.includes("전광판") || parent.includes("빌보드")) {
-        if (cat.includes("빌보드")) return "전광판/빌보드 · 빌보드(외벽/옥상)";
-        if (cat.includes("전광판") || cat.includes("전자")) return "전광판/빌보드 · 전광판(DOOH)";
-        return "전광판/빌보드";
-      }
-
-      // 2) 쇼핑몰/마트
-      if (parent.includes("쇼핑몰") || parent.includes("마트")) {
-        if (cat.includes("쇼핑몰")) return "쇼핑몰/마트 · 복합쇼핑몰";
-        if (cat.includes("마트")) return "쇼핑몰/마트 · 대형마트";
-        return "쇼핑몰/마트";
-      }
-
-      // 3) 지하철/교통
-      if (parent.includes("지하철")) return "교통 · 지하철";
-      if (parent.includes("공항") || parent.includes("기차") || parent.includes("터미널") || parent.includes("KTX")) return "교통 · 공항/기차/터미널";
-
-      // 4) Inside/Outside 힌트 보정
-      if (exposure === "INSIDE") {
-        if (cat.includes("지하철")) return "교통 · 지하철";
-        if (cat.includes("공항")) return "교통 · 공항/기차/터미널";
-        if (cat.includes("쇼핑")) return "쇼핑몰/마트 · 복합쇼핑몰";
-        return "인도어(실내) 기타";
-      }
-      if (exposure === "OUTSIDE") {
-        if (oohType === "DOOH") return "옥외 · DOOH(기타)";
-        return "옥외 · OOH(기타)";
-      }
-
-      // fallback
-      return parent || cat || (oohType ? `${oohType} 기타` : "기타");
-    }
-
     function markerPopupHTML(it){
-      const title = safeText(it.name || it.title || it.product_display_name || "");
-      const sub = safeText(it.second_name || it.subtitle || "");
-      const addr = safeText(it.address || "");
-      const fg = safeText(it.__frontier || "");
-      const city = safeText(it.__city || it.city || "");
-      const dist = safeText(it.__district || it.district || "");
-      const parentKor = safeText(it.__parentKor || "");
-      const catKor = safeText(it.__catKor || "");
+      const title = safeText(it.title);
+      const sub = safeText(it.subtitle);
+      const addr = safeText(it.address);
+      const p = safeText(it.catParent);
+      const c = safeText(it.catChild);
+
+      const fee = (it.fee !== null && it.fee !== undefined && it.fee !== "")
+        ? `${formatKRW(it.fee)} ${escapeHTML(it.feeCur || "KRW")}` : "";
 
       return `
         <div style="min-width:240px;line-height:1.35">
           <div style="font-weight:900;margin-bottom:6px">${escapeHTML(title)}</div>
           ${sub ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(sub)}</div>` : ""}
           ${addr ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(addr)}</div>` : ""}
-          <div style="font-size:12px;opacity:.85">
-            ${fg ? `<span>Frontier: <b>${escapeHTML(fg)}</b></span><br/>` : ""}
-            ${(parentKor || catKor) ? `<span>분류: <b>${escapeHTML(parentKor || "-")}</b> / <b>${escapeHTML(catKor || "-")}</b></span><br/>` : ""}
-            ${(city || dist) ? `<span>지역: <b>${escapeHTML(city)}</b> ${dist ? `(${escapeHTML(dist)})` : ""}</span>` : ""}
+          <div style="font-size:12px;opacity:.86">
+            ${p ? `<span>분류: <b>${escapeHTML(p)}</b></span><br/>` : ""}
+            ${c ? `<span>세부: <b>${escapeHTML(c)}</b></span><br/>` : ""}
+            ${fee ? `<span>가격: <b style="color:rgba(162,222,204,.95)">${fee}</b></span>` : ""}
           </div>
         </div>
       `;
     }
 
     function buildMarker(it){
-      const ll = pickLatLng(it);
-      if (!ll) return null;
-
-      it.__lat = ll.lat;
-      it.__lng = ll.lng;
-      it.__inKorea = inKorea(ll.lat, ll.lng);
-
-      const title = safeText(it.name || it.title || it.product_display_name || "");
-      const m = L.marker([ll.lat, ll.lng], { title });
+      if (it.lat === null || it.lng === null) return null;
+      const m = L.marker([it.lat, it.lng], { title: safeText(it.title) });
       m.bindPopup(markerPopupHTML(it), { maxWidth: 420 });
       m.on("click", () => openModal(it));
       return m;
     }
 
     function openModal(it){
-      const title = safeText(it.name || it.title || it.product_display_name || "—");
-      const sub = safeText(it.second_name || it.subtitle || "");
+      ui.mTitle.textContent = safeText(it.title || "—");
+      ui.mSub.textContent = safeText(it.subtitle || "");
 
-      ui.mTitle.textContent = title;
-      ui.mSub.textContent = sub;
-
+      // left column KV
       const rows = [
-        ["media_item_id", it.media_item_id],
-        ["id", it.id],
-        ["name", it.name],
-        ["second_name", it.second_name],
-        ["address", it.address],
-        ["city", it.city],
-        ["district", it.district],
-
-        ["Frontier 분류", it.__frontier],
-        ["parent_category_code_kor", it.__parentKor],
-        ["category_code_kor", it.__catKor],
-        ["ooh_type", it.ooh_type],
-        ["exposure_type", it.exposure_type],
-        ["fixed_moving_type", it.fixed_moving_type],
-        ["sales_type", it.sales_type],
-        ["contractual_duration", it.contractual_duration],
-        ["contractual_duration_type", it.contractual_duration_type],
-        ["advertisement_fee", it.advertisement_fee],
-        ["advertisement_fee_currency", it.advertisement_fee_currency],
-
-        ["lat", it.__lat],
-        ["lng", it.__lng],
-        ["image", it.image],
-        ["labels", Array.isArray(it.labels) ? it.labels.join(", ") : ""],
-        ["updated_at", it.updated_at],
-        ["created_at", it.created_at],
+        ["media_item_id", it.id],
+        ["상위카테고리", it.catParent],
+        ["하위카테고리", it.catChild],
+        ["도시", it.city],
+        ["구/군", it.district],
+        ["주소", it.address],
+        ["ooh_type", it.oohType],
+        ["exposure_type", it.exposure],
+        ["fixed/moving", it.fixedMoving],
+        ["lat", it.lat],
+        ["lng", it.lng],
+        ["labels", (it.labels && it.labels.length) ? it.labels.join(", ") : ""],
       ];
-
       ui.mBody.innerHTML = rows.map(([k,v]) => {
         const val = (v === null || v === undefined || v === "") ? "—" : escapeHTML(String(v));
         return `
@@ -847,20 +857,43 @@
         `;
       }).join("");
 
-      const lat = Number(it.__lat);
-      const lng = Number(it.__lng);
-      const q = encodeURIComponent(title);
+      // right image
+      ui.mImgWrap.innerHTML = "";
+      if (it.image){
+        const img = document.createElement("img");
+        img.src = it.image;
+        img.alt = it.title || "image";
+        img.loading = "lazy";
+        img.referrerPolicy = "no-referrer";
+        img.onerror = () => {
+          ui.mImgWrap.innerHTML = `<div class="ph"><span>이미지 로드 실패</span></div>`;
+        };
+        ui.mImgWrap.appendChild(img);
+      } else {
+        ui.mImgWrap.innerHTML = `<div class="ph"><span>이미지 없음</span></div>`;
+      }
+
+      // price/product
+      if (it.fee !== null && it.fee !== undefined && it.fee !== ""){
+        ui.mPrice.textContent = `${formatKRW(it.fee)} ${it.feeCur || "KRW"}`;
+      } else {
+        ui.mPrice.textContent = "—";
+      }
+      ui.mProduct.textContent = it.product ? it.product : "—";
+
+      // footer links
+      const lat = Number(it.lat);
+      const lng = Number(it.lng);
+      const q = encodeURIComponent(safeText(it.title || "Frontier DOOH"));
 
       const kakao = (Number.isFinite(lat) && Number.isFinite(lng))
         ? `https://map.kakao.com/link/map/${q},${lat},${lng}` : null;
-
       const google = (Number.isFinite(lat) && Number.isFinite(lng))
         ? `https://www.google.com/maps?q=${lat},${lng}` : null;
 
       const links = [];
       if (kakao) links.push(`<a href="${kakao}" target="_blank" rel="noopener">카카오맵 열기</a>`);
       if (google) links.push(`<a href="${google}" target="_blank" rel="noopener">구글맵 열기</a>`);
-      if (it.image) links.push(`<a href="${escapeHTML(it.image)}" target="_blank" rel="noopener">이미지 열기</a>`);
 
       ui.mFoot.innerHTML = links.join("");
       ui.modal.classList.add("show");
@@ -871,88 +904,44 @@
     ui.modal.addEventListener("click", (e) => { if (e.target === ui.modal) closeModal(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
-    function preprocessItems(items){
-      for (const it of items){
-        it.__parentKor = normStr(it.parent_category_code_kor || it.parent_category_code || "");
-        it.__catKor = normStr(it.category_code_kor || it.category_code || "");
-        it.__city = normStr(it.city || "");
-        it.__district = normStr(it.district || "");
-        it.__exposure = normStr(it.exposure_type || "");
-        it.__oohType = normStr(it.ooh_type || "");
-        it.__salesType = normStr(it.sales_type || it.salesType || "");
-        it.__frontier = deriveFrontierGroup(it);
-
-        const ll = pickLatLng(it);
-        it.__lat = ll?.lat ?? null;
-        it.__lng = ll?.lng ?? null;
-        it.__inKorea = ll ? inKorea(ll.lat, ll.lng) : false;
-
-        const labels = Array.isArray(it.labels) ? it.labels.join(" ") : "";
-        it.__haystack = [
-          it.media_item_id, it.id,
-          it.name, it.second_name,
-          it.address, it.__city, it.__district,
-          it.__frontier, it.__parentKor, it.__catKor,
-          it.__oohType, it.__exposure,
-          labels
-        ].map(safeText).join(" ");
-      }
-    }
-
-    function fillFilterDropdowns(items){
-      const fg = new Set();
-      const ex = new Set();
-      const pk = new Set();
-      const ck = new Set();
-      const city = new Set();
-      const dist = new Set();
-      const ooh = new Set();
-      const sales = new Set();
+    function fillDropdowns(items){
+      const parents = new Set();
+      const childs = new Set();
+      const cities = new Set();
+      const districts = new Set();
 
       for (const it of items){
-        if (it.__frontier) fg.add(it.__frontier);
-        if (it.__exposure) ex.add(it.__exposure);
-        if (it.__parentKor) pk.add(it.__parentKor);
-        if (it.__catKor) ck.add(it.__catKor);
-        if (it.__city) city.add(it.__city);
-        if (it.__district) dist.add(it.__district);
-        if (it.__oohType) ooh.add(it.__oohType);
-        if (it.__salesType) sales.add(it.__salesType);
+        if (it.catParent) parents.add(it.catParent);
+        if (it.catChild) childs.add(it.catChild);
+        if (it.city) cities.add(it.city);
+        if (it.district) districts.add(it.district);
       }
 
-      buildOptions(ui.frontierGroup, [...fg].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.exposureType, [...ex].sort((a,b)=>a.localeCompare(b,"en")));
-      buildOptions(ui.parentKor, [...pk].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.catKor, [...ck].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.city, [...city].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.district, [...dist].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.oohType, [...ooh].sort((a,b)=>a.localeCompare(b,"en")));
-      buildOptions(ui.salesType, [...sales].sort((a,b)=>a.localeCompare(b,"en")));
+      buildOptions(ui.catParent, [...parents].sort((a,b)=>a.localeCompare(b,"ko")));
+      buildOptions(ui.catChild, [...childs].sort((a,b)=>a.localeCompare(b,"ko")));
+      buildOptions(ui.city, [...cities].sort((a,b)=>a.localeCompare(b,"ko")));
+      buildOptions(ui.district, [...districts].sort((a,b)=>a.localeCompare(b,"ko")));
     }
 
     function applyFilters(){
       const q = normStr(ui.q.value).toLowerCase();
-
-      const fg = normStr(ui.frontierGroup.value);
-      const ex = normStr(ui.exposureType.value);
-      const pk = normStr(ui.parentKor.value);
-      const ck = normStr(ui.catKor.value);
+      const p = normStr(ui.catParent.value);
+      const c = normStr(ui.catChild.value);
       const city = normStr(ui.city.value);
       const dist = normStr(ui.district.value);
-      const ooh = normStr(ui.oohType.value);
-      const sales = normStr(ui.salesType.value);
-
       const onlyK = ui.onlyKorea.checked;
+      const hasPrice = ui.onlyHasPrice.checked;
 
       filtered = raw.filter(it => {
-        if (fg && it.__frontier !== fg) return false;
-        if (ex && it.__exposure !== ex) return false;
-        if (pk && it.__parentKor !== pk) return false;
-        if (ck && it.__catKor !== ck) return false;
-        if (city && it.__city !== city) return false;
-        if (dist && it.__district !== dist) return false;
-        if (ooh && it.__oohType !== ooh) return false;
-        if (sales && it.__salesType !== sales) return false;
+        if (p && it.catParent !== p) return false;
+        if (c && it.catChild !== c) return false;
+        if (city && it.city !== city) return false;
+        if (dist && it.district !== dist) return false;
+
+        if (hasPrice){
+          const fee = Number(it.fee);
+          if (!Number.isFinite(fee) || fee <= 0) return false;
+        }
 
         if (q){
           const hay = (it.__haystack || "").toLowerCase();
@@ -960,9 +949,10 @@
         }
 
         if (onlyK){
-          if (!(it.__lat !== null && it.__lng !== null)) return false;
-          if (!it.__inKorea) return false;
+          if (it.lat === null || it.lng === null) return false;
+          if (!inKorea(it.lat, it.lng)) return false;
         }
+
         return true;
       });
 
@@ -989,11 +979,12 @@
         if (it.__inKorea) koreaValid++;
         markers.push(m);
       }
+
       if (markers.length) cluster.addLayers(markers);
 
       if (markers.length){
-        const shouldPreferKorea = (koreaValid >= 10 && koreaValid / Math.max(valid,1) >= 0.7);
-        if (ui.onlyKorea.checked || shouldPreferKorea){
+        const preferK = (koreaValid >= 10 && koreaValid / Math.max(valid,1) >= 0.7);
+        if (ui.onlyKorea.checked || preferK){
           const sw = L.latLng(KOREA_BBOX.minLat, KOREA_BBOX.minLng);
           const ne = L.latLng(KOREA_BBOX.maxLat, KOREA_BBOX.maxLng);
           map.fitBounds(L.latLngBounds(sw, ne), { padding:[28,28], animate:false });
@@ -1007,11 +998,11 @@
         map.setView([36.5, 127.8], 7);
       }
 
-      setTimeout(() => safeInvalidate(), 60);
+      setTimeout(() => safeInvalidate(), 80);
     }
 
     function renderList(items){
-      const max = 160;
+      const max = 200;
       const show = items.slice(0, max);
 
       if (!show.length){
@@ -1022,24 +1013,24 @@
       }
 
       ui.list.innerHTML = show.map(it => {
-        const title = escapeHTML(safeText(it.name || it.title || it.product_display_name || "—"));
-        const sub = escapeHTML(safeText(it.second_name || it.subtitle || ""));
+        const title = escapeHTML(safeText(it.title || "—"));
+        const sub = escapeHTML(safeText(it.subtitle || ""));
         const addr = escapeHTML(safeText(it.address || ""));
-        const fg = escapeHTML(safeText(it.__frontier || ""));
-        const parentKor = escapeHTML(safeText(it.__parentKor || ""));
-        const catKor = escapeHTML(safeText(it.__catKor || ""));
-        const loc = [it.__city, it.__district].filter(Boolean).join(" / ");
+        const p = escapeHTML(safeText(it.catParent || ""));
+        const c = escapeHTML(safeText(it.catChild || ""));
+        const fee = (it.fee !== null && it.fee !== undefined && it.fee !== "")
+          ? `${formatKRW(it.fee)} ${escapeHTML(it.feeCur || "KRW")}` : "";
 
         return `
-          <div class="item" data-id="${escapeHTML(safeText(it.media_item_id || it.id || ""))}">
+          <div class="item" data-id="${escapeHTML(safeText(it.id || ""))}">
             <div class="t">${title}</div>
-            <div class="s">${sub ? sub + "<br/>" : ""}${addr}${loc ? `<br/>${escapeHTML(loc)}` : ""}</div>
+            <div class="s">${sub ? sub + "<br/>" : ""}${addr}</div>
             <div class="k">
-              ${fg ? `<span class="tag mint">${fg}</span>` : ""}
-              ${(parentKor || catKor) ? `<span class="tag">${parentKor || "-"}</span>` : ""}
-              ${catKor ? `<span class="tag">${catKor}</span>` : ""}
-              ${it.__oohType ? `<span class="tag">${escapeHTML(it.__oohType)}</span>` : ""}
-              ${it.__exposure ? `<span class="tag">${escapeHTML(it.__exposure)}</span>` : ""}
+              ${p ? `<span class="tag mint">${p}</span>` : ""}
+              ${c ? `<span class="tag">${c}</span>` : ""}
+              ${fee ? `<span class="tag">₩ ${fee}</span>` : ""}
+              ${it.city ? `<span class="tag">${escapeHTML(it.city)}</span>` : ""}
+              ${it.district ? `<span class="tag">${escapeHTML(it.district)}</span>` : ""}
             </div>
           </div>
         `;
@@ -1048,11 +1039,11 @@
       ui.list.querySelectorAll(".item").forEach(el => {
         el.addEventListener("click", () => {
           const id = el.getAttribute("data-id");
-          const it = raw.find(x => safeText(x.media_item_id || x.id) === id) || items.find(x => safeText(x.media_item_id || x.id) === id);
+          const it = raw.find(x => safeText(x.id) === id) || items.find(x => safeText(x.id) === id);
           if (!it) return;
 
-          if (Number.isFinite(Number(it.__lat)) && Number.isFinite(Number(it.__lng)) && map){
-            map.setView([Number(it.__lat), Number(it.__lng)], Math.max(map.getZoom(), 14), { animate:false });
+          if (it.lat !== null && it.lng !== null && map){
+            map.setView([it.lat, it.lng], Math.max(map.getZoom(), 14), { animate:false });
             setTimeout(() => safeInvalidate(), 60);
           }
           openModal(it);
@@ -1069,25 +1060,17 @@
         if (!res.ok){
           hideLoading();
           ui.pillStatus.textContent = "Data Error";
-          toast(`<span class="bad">데이터 로드 실패</span><br/>
-                HTTP ${res.status}<br/>
-                경로: <b>${escapeHTML(DATA_URL)}</b>`);
+          toast(`<span class="bad">데이터 로드 실패</span><br/>HTTP ${res.status}<br/>경로: <b>${escapeHTML(DATA_URL)}</b>`);
           return;
         }
 
         const json = await res.json();
-        // 배열/객체 모두 수용
-        const items =
-          Array.isArray(json) ? json :
-          Array.isArray(json.items) ? json.items :
-          Array.isArray(json.data?.items) ? json.data.items :
-          Array.isArray(json.data) ? json.data :
-          [];
+        const items = Array.isArray(json) ? json : (json.items || (json.data && json.data.items) || []);
 
-        raw = Array.isArray(items) ? items : [];
+        const arr = Array.isArray(items) ? items : [];
+        raw = arr.map(compat);
 
-        preprocessItems(raw);
-        fillFilterDropdowns(raw);
+        fillDropdowns(raw);
 
         ui.totalCount.textContent = String(raw.length);
         ui.pillStatus.textContent = `Loaded: ${raw.length}`;
@@ -1104,47 +1087,39 @@
 
     function resetUI(){
       ui.q.value = "";
-      ui.frontierGroup.value = "";
-      ui.exposureType.value = "";
-      ui.parentKor.value = "";
-      ui.catKor.value = "";
+      ui.catParent.value = "";
+      ui.catChild.value = "";
       ui.city.value = "";
       ui.district.value = "";
-      ui.oohType.value = "";
-      ui.salesType.value = "";
       ui.onlyKorea.checked = true;
+      ui.onlyHasPrice.checked = false;
       applyFilters();
     }
 
-    // ✅ 자동 적용(즉시 반영)
-    const autoApply = () => applyFilters();
-    ui.frontierGroup.addEventListener("change", autoApply);
-    ui.exposureType.addEventListener("change", autoApply);
-    ui.parentKor.addEventListener("change", autoApply);
-    ui.catKor.addEventListener("change", autoApply);
-    ui.city.addEventListener("change", autoApply);
-    ui.district.addEventListener("change", autoApply);
-    ui.oohType.addEventListener("change", autoApply);
-    ui.salesType.addEventListener("change", autoApply);
-    ui.onlyKorea.addEventListener("change", autoApply);
+    // Auto apply
+    ui.catParent.addEventListener("change", applyFilters);
+    ui.catChild.addEventListener("change", applyFilters);
+    ui.city.addEventListener("change", applyFilters);
+    ui.district.addEventListener("change", applyFilters);
+    ui.onlyKorea.addEventListener("change", applyFilters);
+    ui.onlyHasPrice.addEventListener("change", applyFilters);
 
-    // 검색 디바운스
     let qTimer = null;
     ui.q.addEventListener("input", () => {
       clearTimeout(qTimer);
-      qTimer = setTimeout(applyFilters, 180);
+      qTimer = setTimeout(applyFilters, 160);
     });
 
     ui.apply.addEventListener("click", applyFilters);
     ui.reset.addEventListener("click", resetUI);
 
-    // ✅ 패널 리사이즈(드래그)
+    // Panel resize
     (function initResizer(){
       let dragging = false;
 
       function setW(px){
-        const min = 420;
-        const max = Math.min(920, Math.floor(window.innerWidth * 0.70));
+        const min = 360;
+        const max = Math.min(820, Math.floor(window.innerWidth * 0.65));
         const w = Math.max(min, Math.min(max, px));
         document.documentElement.style.setProperty("--panelW", w + "px");
         setTimeout(() => safeInvalidate(), 60);
@@ -1154,12 +1129,10 @@
         dragging = true;
         document.body.style.userSelect = "none";
       });
-
       window.addEventListener("mousemove", (e) => {
         if (!dragging) return;
         setW(e.clientX);
       }, { passive:true });
-
       window.addEventListener("mouseup", () => {
         if (!dragging) return;
         dragging = false;
@@ -1176,7 +1149,7 @@
       window.addEventListener("touchend", () => { dragging = false; }, { passive:true });
     })();
 
-    // boot
+    // Boot
     (async function boot(){
       showLoading("init");
       await initMap();
