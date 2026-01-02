@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Frontier DOOH 전국 DB</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
@@ -31,6 +29,11 @@
       --inputPh:rgba(238,243,255,.45);
     }
     *{box-sizing:border-box}
+
+    html, body{
+      height:100%;
+      overflow:hidden; /* ★ 페이지 스크롤 금지: 좌측 패널만 스크롤 */
+    }
     body{
       margin:0;
       background:var(--bg);
@@ -38,36 +41,20 @@
       font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     }
 
-    /* ===== Top: 2줄 (협소 해결) ===== */
+    /* Top */
     .topbar{
       position:sticky; top:0; z-index:5000;
       background:linear-gradient(180deg, rgba(12,13,14,.95), rgba(12,13,14,.78));
       border-bottom:1px solid var(--line);
-      padding:14px 16px;                 /* 상하 여유 확대 */
+      padding:16px 16px;  /* 상하 여유 */
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
     }
-    .brand{
-      display:flex; flex-direction:column; gap:4px;
-      min-width:260px;
-    }
-    .brand .title{
-      font-size:20px;
-      font-weight:1000;
-      color:#e9eef7;
-      line-height:1.1;
-      letter-spacing:.2px;
-      white-space:nowrap;
-    }
-    .brand .sub{
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+    .brand{display:flex; flex-direction:column; gap:6px; min-width:260px;}
+    .brand .title{font-size:22px; font-weight:1000; color:#e9eef7; line-height:1.08; letter-spacing:.2px; white-space:nowrap;}
+    .brand .sub{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px;
@@ -82,15 +69,15 @@
     .pill b{color:var(--mint); font-weight:1000}
 
     .filtersRow{
-      position:sticky; top:62px; z-index:4500;
+      position:sticky; top:70px; z-index:4500;
       background:rgba(12,13,14,.88);
       backdrop-filter: blur(6px);
       border-bottom:1px solid var(--line);
-      padding:12px 16px 14px;            /* 상하 여유 확대 */
+      padding:12px 16px 16px;
     }
     .toolbar{
       display:grid;
-      grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr auto auto;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr auto auto;
       gap:10px;
       align-items:end;
     }
@@ -102,13 +89,7 @@
       .filtersRow{top:0; position:relative;}
       .toolbar{grid-template-columns: 1fr 1fr; }
     }
-    .field label{
-      display:block;
-      font-size:11px;
-      color:var(--muted);
-      margin:0 0 6px 2px;
-      user-select:none;
-    }
+    .field label{display:block; font-size:11px; color:var(--muted); margin:0 0 6px 2px; user-select:none;}
     input[type="text"], select{
       width:100%;
       height:40px;
@@ -139,28 +120,22 @@
       color:#e9fff9;
     }
 
-    /* ===== Layout: 좌4 : 우6 느낌 + 리스트 폭 해결 ===== */
+    /* Layout */
     .app{
+      height:calc(100vh - 70px - 74px); /* topbar + filtersRow */
       display:grid;
-      grid-template-columns: minmax(640px, 42vw) 1fr;   /* 좌측 더 넓게 */
-      min-height:calc(100vh - 62px);
+      grid-template-columns: minmax(680px, 44vw) 1fr; /* 좌측 넓힘 */
     }
-    @media (max-width: 1200px){
-      .app{grid-template-columns: minmax(600px, 46vw) 1fr;}
-    }
-    @media (max-width: 980px){
-      .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
-    }
+    @media (max-width: 1200px){ .app{grid-template-columns: minmax(620px, 48vw) 1fr;} }
+    @media (max-width: 980px){ .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr; height:auto;} }
 
     .panel{
       background:var(--panel);
       border-right:1px solid var(--line);
-      overflow:auto;
+      overflow:auto;         /* ★ 여기만 스크롤 */
       padding:14px;
     }
-    @media (max-width: 980px){
-      .panel{border-right:none; border-bottom:1px solid var(--line);}
-    }
+    @media (max-width: 980px){ .panel{border-right:none; border-bottom:1px solid var(--line);} }
 
     .card{
       background:linear-gradient(180deg, rgba(20,22,24,.9), rgba(16,18,20,.85));
@@ -169,7 +144,7 @@
       box-shadow:var(--shadow);
     }
 
-    /* 통계 1줄(알약형) */
+    /* stats one-line */
     .statsLine{
       display:flex; gap:10px; flex-wrap:wrap;
       padding:12px;
@@ -211,13 +186,10 @@
       color:var(--muted);
       font-size:12px;
     }
-    .chk{
-      display:flex; align-items:center; gap:8px;
-      padding:10px 0 0;
-    }
+    .chk{display:flex; align-items:center; gap:8px; padding:10px 0 0;}
     .chk input{transform:scale(1.1)}
 
-    /* ===== List + Pagination (9개 고정) ===== */
+    /* list */
     .listWrap{padding:12px;}
     .listHeader{
       display:flex; align-items:baseline; justify-content:space-between;
@@ -246,13 +218,8 @@
     }
     .item:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.35); }
 
-    .thumb{
-      width:100%;
-      aspect-ratio: 16 / 9;
-      background:#0d0f10;
-      position:relative;
-    }
-    .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .thumb{width:100%; aspect-ratio: 16/9; background:#0d0f10; position:relative;}
+    .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
     .thumb .fallback{
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
@@ -262,12 +229,7 @@
       font-size:12px;
     }
     .body{padding:10px 10px 12px;}
-    .cat{
-      font-size:11px;
-      color:var(--muted);
-      margin-bottom:6px;
-      display:flex; gap:6px; flex-wrap:wrap;
-    }
+    .cat{font-size:11px; color:var(--muted); margin-bottom:6px; display:flex; gap:6px; flex-wrap:wrap;}
     .tag{
       display:inline-flex; align-items:center;
       padding:3px 8px;
@@ -276,96 +238,52 @@
       border:1px solid rgba(255,255,255,.10);
       color:#dfe6f3;
     }
-    .name{
-      font-size:14px;
-      font-weight:1000;
-      color:#e9eef7;
-      line-height:1.22;
-      margin:0 0 6px;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-      min-height:34px;
-    }
-    .place{
-      font-size:12px;
-      color:var(--muted);
-      margin:0 0 10px;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-      min-height:32px;
-    }
-    .price{
-      display:flex; align-items:baseline; justify-content:space-between;
-      gap:8px;
-      padding-top:10px;
-      border-top:1px solid rgba(255,255,255,.06);
-    }
-    .price .p{ font-weight:1000; color:var(--mint); font-size:14px; white-space:nowrap; }
-    .price .u{ font-size:11px; color:var(--muted); white-space:nowrap; }
+    .name{font-size:14px; font-weight:1000; color:#e9eef7; line-height:1.22; margin:0 0 6px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;}
+    .place{font-size:12px; color:var(--muted); margin:0 0 10px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:32px;}
+    .price{display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding-top:10px; border-top:1px solid rgba(255,255,255,.06);}
+    .price .p{font-weight:1000; color:var(--mint); font-size:14px; white-space:nowrap;}
+    .price .u{font-size:11px; color:var(--muted); white-space:nowrap;}
 
-    .pager{
-      margin-top:12px;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .pager .pi{ color:var(--muted); font-size:12px; }
-    .pager .btn{ height:36px; }
-
-    /* ===== Map ===== */
-    .mapBox{ position:relative; background:#000; padding:10px; }
+    /* map */
+    .mapBox{position:relative; background:#000; padding:10px;}
     .mapInner{
       border-radius:18px;
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       box-shadow:var(--shadow);
+      height:100%;
     }
     #map{
       width:100%;
-      height:calc(100vh - 62px - 68px - 20px); /* topbar+filtersRow+padding */
+      height:100%;
       background:#0b0c0d;
     }
-    @media (max-width: 980px){ #map{height:520px} }
 
-    /* ===== Preview panel (House처럼: 마커 클릭 시 좌측 프리뷰) ===== */
-    .preview{
-      position:sticky;
-      top:10px;
-      margin-bottom:12px;
-      display:none;
-      padding:12px;
+    /* marker dot icon */
+    .mDot{
+      width:10px; height:10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.85);
+      border:2px solid rgba(0,0,0,.35);
+      box-shadow:0 0 0 0 rgba(162,222,204,0);
+      transform:translate(-5px,-5px);
     }
-    .previewRow{
-      display:grid;
-      grid-template-columns: 140px 1fr;
-      gap:12px;
-      align-items:start;
+    .mDot.hover{
+      width:16px; height:16px;
+      transform:translate(-8px,-8px);
+      background:rgba(162,222,204,.98);
+      box-shadow:0 0 0 8px rgba(162,222,204,.18);
+      border:2px solid rgba(0,0,0,.25);
     }
-    .pimg{
-      border-radius:14px;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      background:#0d0f10;
-      aspect-ratio: 16/9;
-    }
-    .pimg img{width:100%;height:100%;object-fit:cover;display:block;}
-    .pimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
-    .ptitle{font-weight:1000;color:#e9eef7;font-size:16px;line-height:1.2;margin:0 0 6px;}
-    .psub{color:var(--muted);font-size:12px;line-height:1.45;margin:0 0 10px;}
-    .pactions{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
-    .pactions .btn{height:36px;}
 
-    /* ===== Detail "page" (한 파일 내 페이지 전환) ===== */
+    /* detail overlay (hash route) */
     .detailOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.60);
       display:none;
-      z-index:99999; /* 지도 위 */
+      z-index:99999;
       padding:16px;
     }
     .detail{
@@ -458,7 +376,8 @@
         <select id="catHigh"></select>
       </div>
 
-      <div class="field">
+      <!-- 기본은 숨김: 상위만 운영(추천), 필요 시 고급 옵션에서 켜기 -->
+      <div class="field" id="catLowField" style="display:none;">
         <label>카테고리(하위)</label>
         <select id="catLow"></select>
       </div>
@@ -479,24 +398,7 @@
   </div>
 
   <div class="app">
-    <div class="panel">
-
-      <!-- 마커 클릭 프리뷰 (House처럼) -->
-      <div class="card preview" id="preview">
-        <div class="previewRow">
-          <div class="pimg" id="pimg"></div>
-          <div>
-            <div class="ptitle" id="ptitle"></div>
-            <div class="psub" id="psub"></div>
-            <div class="pactions">
-              <button class="btn primary" id="pDetail">상세 보기</button>
-              <button class="btn" id="pClose">닫기</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 통계 1줄 -->
+    <div class="panel" id="panel">
       <div class="card statsLine">
         <div class="statPills">
           <div class="sPill">전체 <b id="mAll">0</b></div>
@@ -511,6 +413,10 @@
               <input type="checkbox" id="onlyInView">
               <div>지도 범위만 보기 (현재 화면 안의 매체만)</div>
             </div>
+            <div class="chk">
+              <input type="checkbox" id="useLow">
+              <div>하위 카테고리 사용(권장: OFF)</div>
+            </div>
           </div>
         </details>
       </div>
@@ -518,7 +424,7 @@
       <div class="card listWrap">
         <div class="listHeader">
           <div class="h">리스트</div>
-          <div class="small"><span id="resultInfo">0</span>건 · 9개씩</div>
+          <div class="small"><span id="resultInfo">0</span>건 · 아래로 계속 표시</div>
         </div>
 
         <div class="grid" id="list"></div>
@@ -527,10 +433,8 @@
           조건에 맞는 항목이 없습니다. 필터를 완화하거나 검색어를 바꿔보세요.
         </div>
 
-        <div class="pager">
-          <button class="btn" id="prev">이전</button>
-          <div class="pi" id="pageInfo">1 / 1</div>
-          <button class="btn" id="next">다음</button>
+        <div id="moreHint" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
+          더 불러오는 중…
         </div>
       </div>
     </div>
@@ -542,7 +446,7 @@
     </div>
   </div>
 
-  <!-- Detail overlay (페이지 전환 느낌) -->
+  <!-- Detail overlay (hash route) -->
   <div class="detailOverlay" id="dOverlay">
     <div class="detail">
       <div class="detailHead">
@@ -575,7 +479,6 @@
           <div class="info">
             <div class="k">운영사/담당</div>
             <div class="v" id="dop">-</div>
-
             <div class="links" id="dlinks"></div>
           </div>
         </div>
@@ -586,7 +489,6 @@
 <script>
   const DATA_URL = "./data_public.json";
 
-  // 아임웹 분류 체계(표시용)
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -595,23 +497,24 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  // ========= 상태 =========
   let ALL = [];
   let map = null;
   let markers = null;
 
-  // 리스트 페이지네이션
-  const PAGE_SIZE = 9;
-  let curPage = 1;
-  let curFiltered = [];
+  // id -> marker
+  const markerByKey = new Map();
+  let hoverPulse = null;
 
-  // 프리뷰/상세 대상
-  let selected = null;
+  // 무한 스크롤 렌더
+  const BATCH = 36;        // 처음 로드
+  const STEP = 24;         // 추가 로드
+  let renderLimit = BATCH;
+  let curFiltered = [];
 
   // ========= DOM =========
   const $ = (id) => document.getElementById(id);
 
-  // ========= 유틸 =========
+  // ========= utils =========
   function uniq(arr){ return [...new Set(arr.filter(v=>v && String(v).trim() !== ""))]; }
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -634,91 +537,75 @@
   }
   function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
-  // ========= 분류: 원문값 우선 + 키워드 보정 =========
+  // ========= category normalize =========
+  function normalizeLow(raw){
+    const s = norm(raw);
+
+    // "전광판" 계열 (영문 포함)
+    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led"))
+      return "전광판";
+
+    if (s.includes("빌보드") || s.includes("billboard"))
+      return "빌보드";
+
+    if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("mediafa") || s.includes("facade") || s.includes("façade"))
+      return "외벽";
+
+    // 교통
+    if (s.includes("지하철") || s.includes("subway") || s.includes("metro")) return "지하철 광고";
+    if (s.includes("택시") || s.includes("taxi")) return "택시 광고";
+    if (s.includes("ktx")) return "KTX 광고";
+    if (s.includes("터미널") || s.includes("terminal")) return "터미널 광고";
+    if (s.includes("공항") || s.includes("airport") || s.includes("항공") || s.includes("기내") || s.includes("inflight")) return "공항 / 기내, 항공기 광고";
+    if (s.includes("쉘터") || s.includes("shelter") || s.includes("정류장")) return "버스 쉘터 광고";
+    if (s.includes("야립") || s.includes("도로")) return "주요 도로 야립 광고";
+    if (s.includes("차량") || s.includes("vehicle")) return "차량 광고";
+    if (s.includes("버스") || s.includes("bus")) return "버스광고";
+
+    // 쇼핑/생활/기타는 우선 빈 값으로 두고 상위만 사용
+    return "";
+  }
+
   function mapOriginalHigh(it){
+    // 가능한 원문 필드들을 최대한 활용 (공개용에서도 남아있을 가능성이 높은 것부터)
     const mg = norm(it.media_group);
     const cl = norm(it.category_low);
+    const title = norm(it.title);
+    const any = mg + " " + cl + " " + title;
 
-    // 원문에 “전광판/빌보드/외벽” 단서가 있으면 우선 반영
-    if (mg.includes("전광판") || cl.includes("전광판") || mg.includes("빌보드") || cl.includes("빌보드") || mg.includes("외벽") || cl.includes("외벽"))
+    // 전광판 계열 (영문 포함)
+    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽"))
       return "전광판 / 빌보드 / 외벽";
 
-    if (mg.includes("교통") || mg.includes("버스") || mg.includes("지하철") || mg.includes("택시") || mg.includes("ktx") || mg.includes("터미널") || mg.includes("공항"))
+    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport"))
       return "교통매체";
 
-    if (mg.includes("쇼핑몰") || mg.includes("마트") || mg.includes("대형") || mg.includes("백화점") || mg.includes("아울렛"))
+    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛"))
       return "복합 쇼핑몰 / 대형마트";
 
-    if (mg.includes("극장") || mg.includes("레저") || mg.includes("휴양"))
+    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트"))
       return "극장 / 레저 / 휴양 시설";
 
-    if (mg.includes("엘리베이터") || mg.includes("병원") || mg.includes("편의점") || mg.includes("약국") || mg.includes("캠퍼스") || mg.includes("식당") || mg.includes("뷰티") || mg.includes("드럭"))
+    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스"))
       return "생활 밀착형 매체";
 
     return "";
   }
 
   function assignTaxonomy(it){
-    // 1) 원문 분류값 우선
-    const origHigh = mapOriginalHigh(it);
-    if (origHigh){
-      // 하위는 원문 category_low가 TREE에 있으면 그대로, 없으면 키워드로 보정
-      const lows = CATEGORY_TREE.find(x=>x.high===origHigh)?.lows ?? [];
-      const origLow = (it.category_low || "").toString().trim();
-      if (origLow && lows.includes(origLow)) return { high: origHigh, low: origLow };
-      // fallthrough -> keyword
+    const high = mapOriginalHigh(it);
+
+    // 하위는 “기본 OFF”: 고급 옵션에서 켰을 때만 의미 있음
+    const raw = (it.category_low || it.media_group || it.title || "").toString();
+    const low = normalizeLow(raw);
+
+    // 전광판/빌보드/외벽 상위일 때 low를 강제 보정(전광판 6개 문제 핵심)
+    if (high === "전광판 / 빌보드 / 외벽"){
+      const l = low || normalizeLow(it.media_group) || normalizeLow(it.title);
+      return { high, low: l || "전광판" }; // 그래도 비어있으면 전광판으로 둠(과소집계 방지)
     }
 
-    // 2) 키워드 보정
-    const blob = norm([it.media_group, it.category_low, it.title, it.address].join(" "));
-    const hasAny = (keywords) => keywords.some(k => blob.includes(norm(k)));
-
-    if (hasAny(["전광판","빌보드","외벽","옥외전광판","led","미디어파사드","mediafaçade"])) {
-      const low =
-        blob.includes("외벽") || blob.includes("미디어파사드") ? "외벽" :
-        (blob.includes("빌보드") ? "빌보드" : "전광판");
-      return { high:"전광판 / 빌보드 / 외벽", low };
-    }
-
-    if (hasAny(["버스","지하철","택시","차량","ktx","터미널","공항","항공","기내","쉘터","정류장","도로","야립"])) {
-      let low = "버스광고";
-      if (hasAny(["지하철"])) low = "지하철 광고";
-      else if (hasAny(["택시"])) low = "택시 광고";
-      else if (hasAny(["ktx"])) low = "KTX 광고";
-      else if (hasAny(["터미널"])) low = "터미널 광고";
-      else if (hasAny(["공항","항공","기내"])) low = "공항 / 기내, 항공기 광고";
-      else if (hasAny(["쉘터","정류장"])) low = "버스 쉘터 광고";
-      else if (hasAny(["야립","도로"])) low = "주요 도로 야립 광고";
-      else if (hasAny(["차량"])) low = "차량 광고";
-      return { high:"교통매체", low };
-    }
-
-    if (hasAny(["쇼핑몰","복합","아울렛","백화점","마트","대형마트","트레이더스","이마트","롯데마트","홈플러스"])) {
-      const low = hasAny(["대형마트","마트","트레이더스","이마트","롯데마트","홈플러스"]) ? "대형마트" : "복합 쇼핑몰";
-      return { high:"복합 쇼핑몰 / 대형마트", low };
-    }
-
-    if (hasAny(["극장","cgv","메가박스","롯데시네마","레저","리조트","스키","워터파크","테마파크","휴양"])) {
-      let low = "레저";
-      if (hasAny(["극장","cgv","메가박스","롯데시네마"])) low = "극장";
-      else if (hasAny(["휴양","리조트"])) low = "휴양, 편의시설";
-      return { high:"극장 / 레저 / 휴양 시설", low };
-    }
-
-    if (hasAny(["엘리베이터","병원","편의점","약국","캠퍼스","대학교","학원","식당","주점","헤어","뷰티","드럭스토어","헬스","피트니스","필라테스","골프","운동"])) {
-      let low = "편의점";
-      if (hasAny(["엘리베이터"])) low = "엘리베이터 광고";
-      else if (hasAny(["병원"])) low = "병원";
-      else if (hasAny(["약국"])) low = "약국";
-      else if (hasAny(["캠퍼스","대학교","학원"])) low = "캠퍼스";
-      else if (hasAny(["식당","주점"])) low = "식당, 주점";
-      else if (hasAny(["헤어","뷰티"])) low = "헤어&뷰티살롱";
-      else if (hasAny(["드럭스토어"])) low = "드럭스토어";
-      else if (hasAny(["헬스","피트니스","필라테스","골프","운동"])) low = "운동시설";
-      return { high:"생활 밀착형 매체", low };
-    }
-
-    return { high:"", low:"" };
+    return { high, low };
   }
 
   function categoryHighOptions(){ return CATEGORY_TREE.map(x => x.high); }
@@ -759,7 +646,7 @@
   function getFilteredBase(){
     const q = $("q").value.trim().toLowerCase();
     const high = $("catHigh").value;
-    const low = $("catLow").value;
+    const low = $("useLow").checked ? $("catLow").value : "";
     const sido = $("sido").value;
     const sigungu = $("sigungu").value;
 
@@ -772,7 +659,12 @@
       });
     }
     if (high) arr = arr.filter(x => x._high === high);
-    if (low)  arr = arr.filter(x => x._low === low);
+
+    // 하위는 정규화된 값으로 비교 (전광판 6개 문제 해결 포인트)
+    if (low){
+      arr = arr.filter(x => (x._low || "") === low);
+    }
+
     if (sido) arr = arr.filter(x => x.sido === sido);
     if (sigungu) arr = arr.filter(x => x.sigungu === sigungu);
 
@@ -796,7 +688,38 @@
     return b.isValid() ? b : null;
   }
 
-  // ========= 지도 =========
+  // ========= marker icons =========
+  const normalIcon = L.divIcon({ className:"", html:`<div class="mDot"></div>`, iconSize:[0,0] });
+  const hoverIcon  = L.divIcon({ className:"", html:`<div class="mDot hover"></div>`, iconSize:[0,0] });
+
+  function highlightMarker(key){
+    const m = markerByKey.get(key);
+    if (!m) return;
+
+    m.setIcon(hoverIcon);
+    m.setZIndexOffset(9999);
+
+    if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
+    const ll = m.getLatLng();
+    hoverPulse = L.circleMarker(ll, {
+      radius: 22,
+      color: "#a2decc",
+      weight: 2,
+      fillColor: "#a2decc",
+      fillOpacity: 0.12
+    }).addTo(map);
+  }
+
+  function unhighlightMarker(key){
+    const m = markerByKey.get(key);
+    if (!m) return;
+    m.setIcon(normalIcon);
+    m.setZIndexOffset(0);
+
+    if (hoverPulse) { try { map.removeLayer(hoverPulse); } catch(e){} hoverPulse = null; }
+  }
+
+  // ========= map =========
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
@@ -821,41 +744,32 @@
     });
   }
 
-  function clearMarkers(){ markers.clearLayers(); }
+  function clearMarkers(){
+    markerByKey.clear();
+    markers.clearLayers();
+  }
+
+  function makeKey(it, idx){
+    // 공개용에서 id가 없을 수 있으니 안정키 생성
+    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
+    // title+lat+lng 조합
+    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+  }
+
   function renderMarkers(items){
     clearMarkers();
-    for (const it of items){
-      const m = L.marker([it.lat, it.lng]);
-      m.on("click", () => openPreview(it)); // 마커 클릭 → 프리뷰
+
+    items.forEach((it, idx) => {
+      const key = it._key;
+      const m = L.marker([it.lat, it.lng], { icon: normalIcon });
+      m.on("click", () => openDetail(it)); // 마커 클릭 -> 상세(요구: 클릭하면 페이지 느낌)
+      markerByKey.set(key, m);
       markers.addLayer(m);
-    }
+    });
   }
 
-  // ========= 프리뷰 =========
-  function openPreview(it){
-    selected = it;
-    $("preview").style.display = "block";
-
-    $("ptitle").textContent = it.title || "-";
-    $("psub").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""} · ${guessPlace(it)} · ${fmtWon(it.price, it.price_unit)}`;
-
-    const pimg = $("pimg");
-    pimg.innerHTML = it.thumb
-      ? `<img src="${it.thumb}" alt="">`
-      : `<div class="fallback">NO IMAGE</div>`;
-
-    // 지도 이동
-    map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
-  }
-  function closePreview(){
-    $("preview").style.display = "none";
-    selected = null;
-  }
-
-  // ========= 상세(페이지 전환 느낌) =========
+  // ========= detail (hash route) =========
   function openDetail(it){
-    selected = it;
-
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
 
@@ -877,32 +791,42 @@
 
     $("dOverlay").style.display = "block";
 
-    // URL 해시로 "페이지 이동 느낌" (새 파일 없이)
-    history.replaceState(null, "", `#item=${encodeURIComponent(it.id ?? it.title ?? "")}`);
+    // 고유 URL (정적에서 가능한 최선: 해시 라우팅)
+    location.hash = "item=" + encodeURIComponent(it._key);
   }
+
   function closeDetail(){
     $("dOverlay").style.display = "none";
-    history.replaceState(null, "", location.pathname);
+    // hash 제거
+    if (location.hash.startsWith("#item=")) history.replaceState(null, "", location.pathname);
   }
 
-  // ========= 리스트 =========
-  function renderListPage(items){
+  function openDetailByHash(){
+    if (!location.hash.startsWith("#item=")) return;
+    const key = decodeURIComponent(location.hash.replace("#item=", ""));
+    const it = ALL.find(x => x._key === key);
+    if (it) openDetail(it);
+  }
+
+  // ========= list (infinite) =========
+  function renderList(items){
+    $("resultInfo").textContent = items.length;
+
     const list = $("list");
     list.innerHTML = "";
+    renderLimit = BATCH;
 
-    const total = items.length;
-    $("resultInfo").textContent = total;
+    $("empty").style.display = items.length ? "none" : "block";
+    $("moreHint").style.display = "none";
 
-    const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    if (curPage > pageCount) curPage = pageCount;
-    if (curPage < 1) curPage = 1;
+    appendList(items);
+  }
 
-    $("pageInfo").textContent = `${curPage} / ${pageCount}`;
+  function appendList(items){
+    const list = $("list");
 
-    const start = (curPage - 1) * PAGE_SIZE;
-    const slice = items.slice(start, start + PAGE_SIZE);
-
-    $("empty").style.display = slice.length ? "none" : "block";
+    const slice = items.slice(0, renderLimit);
+    list.innerHTML = ""; // 항상 0~limit 렌더 (단순/안정)
 
     for (const it of slice){
       const el = document.createElement("div");
@@ -924,56 +848,81 @@
           </div>
         </div>
       `;
-      // 리스트 클릭 → 바로 상세로 (요구사항)
-      el.addEventListener("click", () => openDetail(it));
+
+      // hover -> marker 강조
+      el.addEventListener("mouseenter", () => highlightMarker(it._key));
+      el.addEventListener("mouseleave", () => unhighlightMarker(it._key));
+
+      // click -> 고유 페이지(해시) 상세
+      el.addEventListener("click", () => {
+        map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
+        openDetail(it);
+      });
+
       list.appendChild(el);
     }
 
-    $("prev").disabled = (curPage <= 1);
-    $("next").disabled = (curPage >= pageCount);
+    // 더 불러올게 남아있으면 힌트 표시
+    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
   }
 
-  // ========= 렌더 =========
+  function setupInfiniteScroll(){
+    const panel = $("panel");
+    panel.addEventListener("scroll", () => {
+      // 리스트 끝 근처면 더 로드
+      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
+      if (!nearBottom) return;
+      if (renderLimit >= curFiltered.length) return;
+
+      renderLimit = Math.min(curFiltered.length, renderLimit + STEP);
+      appendList(curFiltered);
+    }, { passive:true });
+  }
+
+  // ========= render =========
   function render(shouldFit){
     let base = getFilteredBase();
-    $("mAll").textContent = ALL.length;
 
-    // 검색/필터 적용 시 자동 이동
     if (shouldFit && base.length){
       const b = boundsOf(base);
       if (b) map.fitBounds(b, { padding:[60,60], maxZoom: 14 });
     }
 
-    // 지도 범위만 보기
     let finalItems = base;
     if ($("onlyInView").checked){
       const bounds = map.getBounds();
       finalItems = base.filter(x => bounds.contains([x.lat, x.lng]));
     }
 
+    $("mAll").textContent = ALL.length;
     $("mShow").textContent = finalItems.length;
-    $("mInView").textContent = countInView(base); // 범위는 base 기준
+    $("mInView").textContent = countInView(base);
 
     curFiltered = finalItems;
-    renderMarkers(finalItems);
 
-    // 9개 + pagination
-    renderListPage(finalItems);
+    renderMarkers(finalItems);
+    renderList(finalItems);
+
+    // hash가 있으면 상세 자동 오픈(공유 링크 느낌)
+    openDetailByHash();
   }
 
   // ========= init =========
   async function init(){
     buildMap();
+    setupInfiniteScroll();
 
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
 
-    ALL = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number")
-      .map(it => {
-        const t = assignTaxonomy(it);
-        return { ...it, _high: t.high, _low: t.low };
-      });
+    const pts = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = makeKey(it, idx);
+      return { ...it, _key: key, _high: t.high, _low: t.low };
+    });
 
     $("pillLoaded").textContent = ALL.length;
 
@@ -983,39 +932,56 @@
     setSigunguOptions();
 
     // events
-    $("catHigh").addEventListener("change", () => { setCatLowOptions(); curPage = 1; render(true); });
-    $("catLow").addEventListener("change", () => { curPage = 1; render(true); });
+    $("catHigh").addEventListener("change", () => {
+      if ($("useLow").checked){
+        $("catLow").value = "";
+        setCatLowOptions();
+      }
+      render(true);
+    });
 
-    $("sido").addEventListener("change", () => { setSigunguOptions(); curPage = 1; render(true); });
-    $("sigungu").addEventListener("change", () => { curPage = 1; render(true); });
+    $("catLow").addEventListener("change", () => render(true));
 
-    $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { curPage = 1; render(true); } });
+    $("sido").addEventListener("change", () => { setSigunguOptions(); render(true); });
+    $("sigungu").addEventListener("change", () => render(true));
 
-    $("apply").addEventListener("click", () => { curPage = 1; render(true); });
+    $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") render(true); });
+
+    $("apply").addEventListener("click", () => render(true));
+
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
-      setCatLowOptions();
       $("sido").value = "";
       setSigunguOptions();
       $("sigungu").value = "";
       $("onlyInView").checked = false;
-      curPage = 1;
-      closePreview();
+      $("useLow").checked = false;
+      $("catLowField").style.display = "none";
+      render(true);
       closeDetail();
+    });
+
+    $("onlyInView").addEventListener("change", () => render(false));
+
+    $("useLow").addEventListener("change", () => {
+      const on = $("useLow").checked;
+      $("catLowField").style.display = on ? "" : "none";
+      if (on){
+        setCatLowOptions();
+      }else{
+        if ($("catLow")) $("catLow").value = "";
+      }
       render(true);
     });
 
-    $("onlyInView").addEventListener("change", () => { curPage = 1; render(false); });
-
-    $("prev").addEventListener("click", () => { curPage--; render(false); });
-    $("next").addEventListener("click", () => { curPage++; render(false); });
-
-    $("pClose").addEventListener("click", closePreview);
-    $("pDetail").addEventListener("click", () => { if (selected) openDetail(selected); });
-
     $("dx").addEventListener("click", closeDetail);
     $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(); });
+
+    window.addEventListener("hashchange", () => {
+      if (location.hash.startsWith("#item=")) openDetailByHash();
+      else closeDetail();
+    });
 
     render(false);
   }
