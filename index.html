@@ -28,6 +28,8 @@
       --inputLine:rgba(255,255,255,.14);
       --inputText:#eef3ff;
       --inputPh:rgba(238,243,255,.45);
+
+      --topbarH:72px; /* JS가 실제 높이로 업데이트 */
     }
 
     *{box-sizing:border-box}
@@ -48,19 +50,19 @@
       position:sticky; top:0; z-index:6000;
       background:linear-gradient(180deg, rgba(12,13,14,.98), rgba(12,13,14,.85));
       border-bottom:1px solid var(--line);
-      padding:20px 16px;
+      padding:20px 16px; /* 공간은 유지 */
       display:flex;
-      align-items:center;         /* ★ 상하(세로) 중앙 */
+      align-items:center;
       justify-content:space-between;
       gap:12px;
     }
     .titleLeft{
-      font-size:30px;             /* 제목 크게 */
+      font-size:26px;      /* ★ 30 → 26 (3~4pt 다운) */
       font-weight:1000;
       letter-spacing:.2px;
       color:#e9eef7;
       line-height:1.08;
-      text-align:left;            /* ★ 좌측 */
+      text-align:left;
       white-space:nowrap;
     }
     .pill{
@@ -76,10 +78,12 @@
     }
     .pill b{color:var(--mint); font-weight:1000}
 
-    /* ===== FILTER BAR: 콤팩트 좌측 정렬 + 자동적용 ===== */
+    /* ===== FILTER BAR ===== */
     .filtersRow{
       flex:0 0 auto;
-      position:sticky; top:72px; z-index:5500;
+      position:sticky;
+      top:var(--topbarH);        /* ★ JS로 정확히 맞춤 → 공백/겹침 제거 */
+      z-index:5500;
       background:rgba(12,13,14,.92);
       backdrop-filter: blur(6px);
       border-bottom:1px solid var(--line);
@@ -120,7 +124,7 @@
       font-size:13px;
     }
 
-    /* ===== APP LAYOUT: 리스트 더 넓게 ===== */
+    /* ===== APP LAYOUT ===== */
     .app{
       flex:1 1 auto;
       min-height:0;
@@ -131,15 +135,17 @@
       .app{grid-template-columns: minmax(720px, 48vw) 1fr;}
     }
     @media (max-width: 980px){
-      .filtersRow{top:0;}
+      .filtersRow{position:relative; top:auto;}
       .topbar{position:relative;}
+      html, body{overflow:auto;}
+      body{overflow:auto;}
       .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
     }
 
     .panel{
       background:var(--panel);
       border-right:1px solid var(--line);
-      overflow:auto;           /* ★ 여기만 스크롤 */
+      overflow:auto;
       padding:14px;
       min-height:0;
     }
@@ -167,7 +173,7 @@
       align-items:center;
       justify-content:flex-start;
       border-radius:var(--radius);
-      background:rgba(10,12,14,.94);
+      background:rgba(10,12,14,.98); /* ★ 더 진하게 → 뒤 비침 감소 */
       border:1px solid rgba(255,255,255,.10);
       box-shadow:0 10px 28px rgba(0,0,0,.35);
       backdrop-filter: blur(6px);
@@ -207,10 +213,14 @@
       background:linear-gradient(180deg, rgba(18,20,22,.92), rgba(14,16,18,.88));
       overflow:hidden;
       cursor:pointer;
-      transition:transform .12s ease, border-color .12s ease;
+      transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease;
       min-height:308px;
     }
     .item:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.35); }
+    .item.isActive{
+      border-color:rgba(162,222,204,.55);
+      box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow);
+    }
 
     .thumb{width:100%; aspect-ratio: 16/9; background:#0d0f10; position:relative;}
     .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -260,7 +270,7 @@
     }
     #map{width:100%; height:100%; background:#0b0c0d;}
 
-    /* ===== MARKERS (링 없음 / 색만 변경) ===== */
+    /* ===== PIN ICONS ===== */
     .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
     .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 
@@ -271,6 +281,14 @@
     .marker-cluster-medium div{ background-color: rgba(255, 159, 67, 0.74) !important; color:#fff !important; font-weight:1000 !important; }
     .marker-cluster-large{ background-color: rgba(35, 205, 158, 0.35) !important; }
     .marker-cluster-large div{ background-color: rgba(35, 205, 158, 0.70) !important; color:#062b23 !important; font-weight:1000 !important; }
+
+    /* ★ 클러스터 하이라이트(호버/리스트 연동) */
+    .clusterHighlight{
+      outline: 3px solid rgba(162,222,204,.75);
+      outline-offset: 2px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 2px rgba(162,222,204,.25), 0 10px 24px rgba(0,0,0,.35);
+    }
 
     /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
@@ -450,14 +468,17 @@
   let map = null;
   let markers = null;
   const markerByKey = new Map();
+  const cardByKey = new Map();
 
   const BATCH = 36;
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
 
-  let currentOpenKey = null;        // ★ 현재 열린 아이템 키
-  let suppressHashHandler = false;  // ★ 해시 변경 루프 방지
+  let currentOpenKey = null;
+  let suppressHashHandler = false;
+
+  let highlightedClusterEl = null;
 
   const $ = (id) => document.getElementById(id);
   function addOption(sel, value, label){
@@ -543,7 +564,6 @@
     CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
 
-  // ===== 자동 적용(디바운스) =====
   let timer = null;
   function debounce(fn, ms){
     clearTimeout(timer);
@@ -574,7 +594,7 @@
     return b.isValid() ? b : null;
   }
 
-  /* ===== PIN ICONS ===== */
+  /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -613,17 +633,69 @@
     iconAnchor:[18,49]
   });
 
-  function highlightMarker(key){
-    const m = markerByKey.get(key);
-    if (!m) return;
-    m.setIcon(hoverIcon);
-    m.setZIndexOffset(9999);
+  function makeKey(it, idx){
+    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
+    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
   }
-  function unhighlightMarker(key){
+
+  function clearClusterHighlight(){
+    if (highlightedClusterEl){
+      highlightedClusterEl.classList.remove("clusterHighlight");
+      highlightedClusterEl = null;
+    }
+  }
+  function highlightClusterElement(el){
+    clearClusterHighlight();
+    if (!el) return;
+    el.classList.add("clusterHighlight");
+    highlightedClusterEl = el;
+  }
+
+  function highlightCard(key, doScroll){
+    const el = cardByKey.get(key);
+    if (!el) return;
+    el.classList.add("isActive");
+    if (doScroll){
+      el.scrollIntoView({ block:"center", behavior:"smooth" });
+    }
+  }
+  function unhighlightCard(key){
+    const el = cardByKey.get(key);
+    if (!el) return;
+    el.classList.remove("isActive");
+  }
+  function clearAllCardHighlights(){
+    for (const el of cardByKey.values()){
+      el.classList.remove("isActive");
+    }
+  }
+
+  function highlightMarkerOrClusterByKey(key){
+    clearClusterHighlight();
+    const m = markerByKey.get(key);
+    if (!m || !markers) return;
+
+    // visible parent가 marker면: 마커 하이라이트
+    const parent = markers.getVisibleParent(m);
+    if (!parent) return;
+
+    if (parent instanceof L.Marker && parent === m){
+      m.setIcon(hoverIcon);
+      m.setZIndexOffset(9999);
+      return;
+    }
+
+    // clustered 상태면: 해당 클러스터 DOM 하이라이트
+    if (parent && typeof parent.getElement === "function"){
+      highlightClusterElement(parent.getElement());
+    }
+  }
+  function unhighlightMarkerByKey(key){
     const m = markerByKey.get(key);
     if (!m) return;
     m.setIcon(normalIcon);
     m.setZIndexOffset(0);
+    clearClusterHighlight();
   }
 
   function buildMap(){
@@ -634,6 +706,15 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
+    rebuildClusterGroup(); // 최초 1회
+    map.on("moveend", () => render(false));
+  }
+
+  function rebuildClusterGroup(){
+    if (markers){
+      map.removeLayer(markers);
+    }
+
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
@@ -641,8 +722,28 @@
       maxClusterRadius: 52
     });
 
+    // ★ 클러스터 hover → 리스트 하이라이트 + 첫 카드로 스크롤
+    markers.on("clustermouseover", (e) => {
+      try{
+        const childMarkers = e.layer.getAllChildMarkers();
+        const keys = childMarkers
+          .map(mm => mm.__key)
+          .filter(Boolean);
+
+        clearAllCardHighlights();
+        if (keys.length){
+          keys.forEach(k => highlightCard(k, false));
+          highlightCard(keys[0], true);
+        }
+        highlightClusterElement(e.layer.getElement());
+      }catch(_){}
+    });
+    markers.on("clustermouseout", () => {
+      clearClusterHighlight();
+      clearAllCardHighlights();
+    });
+
     map.addLayer(markers);
-    map.on("moveend", () => render(false));
   }
 
   function clearMarkers(){
@@ -650,28 +751,34 @@
     markers.clearLayers();
   }
 
-  function makeKey(it, idx){
-    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
-  }
-
   function renderMarkers(items){
+    // ★ 핵심: 매번 클러스터 그룹을 재생성해서 “숫자 갱신 100% 강제”
+    rebuildClusterGroup();
     clearMarkers();
 
     const ms = [];
     for (const it of items){
       const m = L.marker([it.lat, it.lng], { icon: normalIcon });
+      m.__key = it._key;
+
       m.on("click", () => openDetail(it, true));
+      m.on("mouseover", () => {
+        highlightMarkerOrClusterByKey(it._key);
+        clearAllCardHighlights();
+        highlightCard(it._key, true);
+      });
+      m.on("mouseout", () => {
+        unhighlightMarkerByKey(it._key);
+        clearAllCardHighlights();
+      });
+
       markerByKey.set(it._key, m);
       ms.push(m);
     }
 
-    // ★ addLayers + refreshClusters로 “클러스터 숫자 갱신” 강제
     markers.addLayers(ms);
-    if (typeof markers.refreshClusters === "function") markers.refreshClusters();
   }
 
-  // ===== HASH ROUTING (루프 방지) =====
   function setHash(key){
     const next = "#item=" + encodeURIComponent(key);
     if (location.hash !== next){
@@ -718,8 +825,6 @@
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
-
-    // X로 닫을 때는 해시도 확실히 제거
     if (!fromHashChange) clearHash();
   }
 
@@ -739,6 +844,7 @@
 
     const list = $("list");
     list.innerHTML = "";
+    cardByKey.clear();
     renderLimit = BATCH;
 
     $("empty").style.display = items.length ? "none" : "block";
@@ -751,10 +857,13 @@
     const list = $("list");
     const slice = items.slice(0, renderLimit);
     list.innerHTML = "";
+    cardByKey.clear();
 
     for (const it of slice){
       const el = document.createElement("div");
       el.className = "item";
+      el.dataset.key = it._key;
+
       el.innerHTML = `
         <div class="thumb">
           ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
@@ -773,8 +882,17 @@
         </div>
       `;
 
-      el.addEventListener("mouseenter", () => highlightMarker(it._key));
-      el.addEventListener("mouseleave", () => unhighlightMarker(it._key));
+      cardByKey.set(it._key, el);
+
+      el.addEventListener("mouseenter", () => {
+        clearAllCardHighlights();
+        highlightCard(it._key, false);
+        highlightMarkerOrClusterByKey(it._key);
+      });
+      el.addEventListener("mouseleave", () => {
+        unhighlightCard(it._key);
+        unhighlightMarkerByKey(it._key);
+      });
       el.addEventListener("click", () => openDetail(it, true));
 
       list.appendChild(el);
@@ -798,7 +916,6 @@
   function render(shouldFit){
     const base = getFilteredBase();
 
-    // ★ 현재 열린 아이템이 필터에서 사라졌으면: 모달 닫고 해시 제거
     if (currentOpenKey){
       const exists = base.some(x => x._key === currentOpenKey);
       if (!exists) closeDetail(false);
@@ -819,20 +936,18 @@
       const bb = boundsOf(base);
       if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
     }
-
-    // ★ render()에서는 해시 기반 자동 오픈을 하지 않는다 (HUNG 루프 방지)
   }
 
-  // 상단 영역 휠 → 리스트로만 전달(원래 동작 유지)
-  function forwardWheelToPanel(el){
-    el.addEventListener("wheel", (e)=>{
-      const panel = $("panel");
-      panel.scrollTop += e.deltaY;
-      e.preventDefault();
-    }, { passive:false });
+  function updateStickyHeights(){
+    const topbar = $("topbar");
+    const h = topbar ? topbar.getBoundingClientRect().height : 72;
+    document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
   }
 
   async function init(){
+    updateStickyHeights();
+    window.addEventListener("resize", updateStickyHeights);
+
     buildMap();
     setupInfiniteScroll();
 
@@ -871,18 +986,11 @@
       if (location.hash.startsWith("#item=")){
         openDetailByHash();
       }else{
-        // 해시가 없어지면 모달만 닫는다(해시는 이미 없음)
         closeDetail(true);
       }
     });
 
-    forwardWheelToPanel($("topbar"));
-    forwardWheelToPanel($("filtersRow"));
-
-    // 1) 첫 렌더
     render(false);
-
-    // 2) 최초 로드시 해시가 있으면 그때만 열기
     openDetailByHash();
   }
 
