@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Frontier DOOH Map (HouseOFooH 823)</title>
+  <title>Frontier DOOH Map (v13 Stable UI Wide)</title>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -18,6 +18,7 @@
     :root{
       --bg:#07090c;
       --panel:#0c1016;
+      --panel2:#0f141c;
       --line:rgba(255,255,255,.10);
       --mint:#a2decc;
       --text:#e7eef7;
@@ -26,7 +27,9 @@
       --shadow:0 18px 48px rgba(0,0,0,.55);
       --radius:14px;
 
-      --panelW: 520px;     /* 좌측 패널 폭 */
+      /* ✅ 기본 패널 폭 */
+      --panelW: 520px;
+      --gutter: 14px;
       --topbarH: 58px;
     }
     *{box-sizing:border-box}
@@ -133,20 +136,35 @@
       margin-bottom:12px;
     }
 
-    .grid{display:grid;grid-template-columns:1fr;gap:10px;}
-    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+    }
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
     @media (max-width: 980px){
       .main{grid-template-columns: 1fr; grid-template-rows: auto 1fr;}
       .resizer{display:none;}
-      .panel{border-right:none;border-bottom:1px solid rgba(255,255,255,.08);}
+      .panel{
+        border-right:none;
+        border-bottom:1px solid rgba(255,255,255,.08);
+      }
     }
     @media (max-width: 520px){
       .row2{grid-template-columns:1fr;}
       .topbar .sub{display:none;}
     }
 
-    label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px 2px;}
+    label{
+      display:block;
+      font-size:12px;
+      color:var(--muted);
+      margin:0 0 6px 2px;
+    }
     input[type="text"], select{
       width:100%;
       padding:11px 12px;
@@ -207,11 +225,16 @@
       margin:4px 0;
     }
     .meta b{color:rgba(162,222,204,.95)}
-    .meta .warn{color:rgba(255,255,255,.72)}
-    .meta .bad{color:var(--danger);font-weight:900}
 
-    .list{margin-top:10px;}
-    .list h2{margin:0 0 10px;font-size:13px;color:rgba(231,238,247,.90);letter-spacing:.2px;}
+    .list{
+      margin-top:10px;
+    }
+    .list h2{
+      margin:0 0 10px;
+      font-size:13px;
+      color:rgba(231,238,247,.90);
+      letter-spacing:.2px;
+    }
     .item{
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.02);
@@ -221,7 +244,11 @@
       cursor:pointer;
       transition: transform .12s ease, border-color .12s ease, background .12s ease;
     }
-    .item:hover{transform: translateY(-1px);border-color: rgba(162,222,204,.32);background:rgba(162,222,204,.06);}
+    .item:hover{
+      transform: translateY(-1px);
+      border-color: rgba(162,222,204,.32);
+      background:rgba(162,222,204,.06);
+    }
     .item .t{font-weight:900;font-size:13.7px;line-height:1.25}
     .item .s{color:rgba(231,238,247,.70);font-size:12.5px;margin-top:6px;line-height:1.25}
     .item .k{margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;}
@@ -233,8 +260,11 @@
       color:rgba(231,238,247,.78);
       background:rgba(0,0,0,.18);
     }
-    .tag.mint{border-color: rgba(162,222,204,.30);color: rgba(162,222,204,.95);background: rgba(162,222,204,.08);}
-    .tag.bad{border-color: rgba(255,107,107,.38);color: rgba(255,107,107,.95);background: rgba(255,107,107,.08);}
+    .tag.mint{
+      border-color: rgba(162,222,204,.30);
+      color: rgba(162,222,204,.95);
+      background: rgba(162,222,204,.08);
+    }
 
     .loading{
       position:absolute; inset:0;
@@ -317,7 +347,9 @@
       grid-template-columns: 1fr 1fr;
       gap:12px;
     }
-    @media (max-width: 720px){ .modal .body{grid-template-columns:1fr} }
+    @media (max-width: 720px){
+      .modal .body{grid-template-columns:1fr}
+    }
     .kv{
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.20);
@@ -360,26 +392,37 @@
           <div class="grid">
             <div>
               <label>검색 (title / subtitle / address / id)</label>
-              <input id="q" type="text" placeholder="예: 강남, 삼성역, CGV, 36936…" />
+              <input id="q" type="text" placeholder="예: 강남, 삼성역, CGV, 10023…" />
             </div>
 
             <div class="row2">
               <div>
                 <label>media_group</label>
-                <select id="mediaGroup"><option value="">전체</option></select>
+                <select id="mediaGroup">
+                  <option value="">전체</option>
+                </select>
               </div>
               <div>
                 <label>sido</label>
-                <select id="sido"><option value="">전체</option></select>
+                <select id="sido">
+                  <option value="">전체</option>
+                </select>
               </div>
             </div>
 
             <div class="toggles">
-              <label class="chk" title="좌표가 있는 항목만 대상으로 한국 밖 좌표를 제외합니다. (좌표 없는 항목은 리스트에는 남겨둠)">
+              <label class="chk" title="대한민국(대략 bbox) 밖 좌표를 기본 제외합니다.">
                 <input id="onlyKorea" type="checkbox" checked />
                 이상치 제외(한국 밖)
               </label>
-              <label class="chk" title="상태값에 REVIEW/NEEDED/LOWCONF 같은 키워드가 있을 때만 표시">
+
+              <!-- ✅ NEW: map bounds only -->
+              <label class="chk" title="지금 화면(지도 범위) 안에 있는 매체만 표시합니다. (줌/이동하면 즉시 갱신)">
+                <input id="boundsOnly" type="checkbox" />
+                지도 범위만 보기
+              </label>
+
+              <label class="chk" title="상태값(예: REVIEW 필요) 항목만 보고 싶을 때 사용하세요.">
                 <input id="needsReview" type="checkbox" />
                 REVIEW 필요만
               </label>
@@ -392,15 +435,14 @@
 
             <div class="meta">
               <div class="line"><span>전체 로드</span><span><b id="totalCount">—</b></span></div>
-              <div class="line"><span>현재 표시(리스트)</span><span><b id="shownCount">—</b></span></div>
-              <div class="line"><span>좌표 있음(마커)</span><span><b id="geoCount">—</b></span></div>
-              <div class="line"><span>좌표 없음</span><span class="warn" id="noGeoCount">—</span></div>
+              <div class="line"><span>현재 표시</span><span><b id="shownCount">—</b></span></div>
+              <div class="line"><span>현재 범위(지도)</span><span><b id="inBoundsCount">—</b></span></div>
             </div>
           </div>
         </div>
 
         <div class="section list">
-          <h2>리스트 (최대 200개 표시)</h2>
+          <h2>리스트 (최대 160개 표시)</h2>
           <div id="list"></div>
         </div>
       </aside>
@@ -433,8 +475,11 @@
   </div>
 
   <script>
-    // ====== 데이터 경로 ======
-    // 같은 repo 루트에 JSON이 있으니 상대경로로 둡니다.
+    // ==============================
+    // Single-File Map App
+    // + NEW: boundsOnly (viewport filter)
+    // ==============================
+
     const DATA_URL = "./data_house_kor_single_fixed_merged.json";
 
     // Korea bbox (대략)
@@ -446,6 +491,9 @@
     let tileLayer = null;
     let cluster = null;
 
+    // applyFilters 중 map 이동 이벤트 재호출 방지
+    let applying = false;
+
     const $ = (id) => document.getElementById(id);
     const ui = {
       pillStatus: $("pillStatus"),
@@ -453,13 +501,13 @@
       mediaGroup: $("mediaGroup"),
       sido: $("sido"),
       onlyKorea: $("onlyKorea"),
+      boundsOnly: $("boundsOnly"),
       needsReview: $("needsReview"),
       apply: $("apply"),
       reset: $("reset"),
       totalCount: $("totalCount"),
       shownCount: $("shownCount"),
-      geoCount: $("geoCount"),
-      noGeoCount: $("noGeoCount"),
+      inBoundsCount: $("inBoundsCount"),
       list: $("list"),
       dataUrlLabel: $("dataUrlLabel"),
       loading: $("loading"),
@@ -497,9 +545,14 @@
       if (v === null || v === undefined) return "";
       return String(v);
     }
+
     function normStr(v){
-      return safeText(v).replace(/\u00A0/g, " ").replace(/\s+/g, " ").trim();
+      return safeText(v)
+        .replace(/\u00A0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     }
+
     function escapeHTML(s){
       return String(s)
         .replaceAll("&","&amp;")
@@ -509,54 +562,32 @@
         .replaceAll("'","&#039;");
     }
 
-    function toNum(v){
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
+    function normalizeLatLng(lat, lng){
+      let la = Number(lat);
+      let ln = Number(lng);
+      if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
 
-    // ✅ 좌표 “여러 형태” 자동 인식
-    function getLatLng(it){
-      // 1) lat/lng
-      let lat = toNum(it?.lat);
-      let lng = toNum(it?.lng);
-
-      // 2) latitude/longitude
-      if (lat === null) lat = toNum(it?.latitude);
-      if (lng === null) lng = toNum(it?.longitude);
-
-      // 3) location.{lat,lon,lng}
-      if ((lat === null || lng === null) && it?.location){
-        const L = it.location;
-        if (lat === null) lat = toNum(L.lat ?? L.latitude);
-        if (lng === null) lng = toNum(L.lng ?? L.lon ?? L.longitude);
+      // (lat/lng 뒤바뀜 보정)
+      if (Math.abs(la) > 90 && Math.abs(ln) <= 90){
+        const tmp = la; la = ln; ln = tmp;
       }
-
-      // 4) coordinates: [lng,lat] or [lat,lng] (예외)
-      if ((lat === null || lng === null) && Array.isArray(it?.coordinates) && it.coordinates.length >= 2){
-        const a = toNum(it.coordinates[0]);
-        const b = toNum(it.coordinates[1]);
-        // 보통 [lng,lat]
-        if (a !== null && b !== null){
-          // a가 120~140대면 lng로 보고 b를 lat
-          if (Math.abs(a) > 90 && Math.abs(b) <= 90){ lng = a; lat = b; }
-          else if (Math.abs(b) > 90 && Math.abs(a) <= 90){ lng = b; lat = a; }
-        }
-      }
-
-      if (lat === null || lng === null) return null;
-
-      // lat/lng 뒤바뀜 보정
-      if (Math.abs(lat) > 90 && Math.abs(lng) <= 90){
-        const tmp = lat; lat = lng; lng = tmp;
-      }
-
-      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-      return {lat, lng};
+      if (la < -90 || la > 90 || ln < -180 || ln > 180) return null;
+      return { lat: la, lng: ln };
     }
 
     function inKorea(lat, lng){
       return lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat &&
              lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng;
+    }
+
+    function ensureLL(it){
+      if (Number.isFinite(it.__lat) && Number.isFinite(it.__lng)) return true;
+      const ll = normalizeLatLng(it.lat, it.lng);
+      if (!ll) return false;
+      it.__lat = ll.lat;
+      it.__lng = ll.lng;
+      it.__inKorea = inKorea(ll.lat, ll.lng);
+      return true;
     }
 
     function buildOptions(selectEl, values){
@@ -635,6 +666,15 @@
 
       map.setView([36.5, 127.8], 7);
 
+      map.whenReady(() => safeInvalidate());
+
+      // ✅ boundsOnly가 켜져 있으면 지도 이동/줌 시 자동 갱신
+      map.on("moveend zoomend", () => {
+        if (!ui.boundsOnly.checked) return;
+        if (applying) return;
+        applyFilters();
+      });
+
       const wrap = document.querySelector(".map-wrap");
       if (window.ResizeObserver && wrap){
         const ro = new ResizeObserver(() => safeInvalidate());
@@ -642,7 +682,10 @@
       } else {
         window.addEventListener("resize", () => safeInvalidate(), { passive:true });
       }
-      document.addEventListener("visibilitychange", () => { if (!document.hidden) safeInvalidate(); });
+
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) safeInvalidate();
+      });
       window.addEventListener("focus", () => safeInvalidate());
     }
 
@@ -652,6 +695,7 @@
       const addr = safeText(it.address || "");
       const mg = safeText(it.__mg || it.media_group || "");
       const si = safeText(it.__sido || it.sido || "");
+      const tier = safeText(it.confidence_tier || it.confidence || "");
       return `
         <div style="min-width:240px;line-height:1.35">
           <div style="font-weight:900;margin-bottom:6px">${escapeHTML(title)}</div>
@@ -659,21 +703,16 @@
           ${addr ? `<div style="opacity:.85;margin-bottom:8px">${escapeHTML(addr)}</div>` : ""}
           <div style="font-size:12px;opacity:.85">
             ${mg ? `<span>그룹: <b>${escapeHTML(mg)}</b></span><br/>` : ""}
-            ${si ? `<span>시도: <b>${escapeHTML(si)}</b></span>` : ""}
+            ${si ? `<span>시도: <b>${escapeHTML(si)}</b></span><br/>` : ""}
+            ${tier ? `<span>티어: <b>${escapeHTML(tier)}</b></span>` : ""}
           </div>
         </div>
       `;
     }
 
     function buildMarker(it){
-      const ll = getLatLng(it);
-      if (!ll) return null;
-
-      it.__lat = ll.lat;
-      it.__lng = ll.lng;
-      it.__inKorea = inKorea(ll.lat, ll.lng);
-
-      const m = L.marker([ll.lat, ll.lng], { title: safeText(it.title || it.name || "") });
+      if (!ensureLL(it)) return null;
+      const m = L.marker([it.__lat, it.__lng], { title: safeText(it.title || it.name || "") });
       m.bindPopup(markerPopupHTML(it), { maxWidth: 380 });
       m.on("click", () => openModal(it));
       return m;
@@ -689,8 +728,8 @@
         ["media_group", it.__mg ?? it.media_group],
         ["sido", it.__sido ?? it.sido],
         ["address", it.address],
-        ["lat", it.__lat ?? it.lat ?? it.location?.lat ?? it.latitude],
-        ["lng", it.__lng ?? it.lng ?? it.location?.lon ?? it.location?.lng ?? it.longitude],
+        ["lat", it.__lat ?? it.lat],
+        ["lng", it.__lng ?? it.lng],
         ["confidence_score", it.confidence_score],
         ["confidence_tier", it.confidence_tier],
         ["verified_status", it.verified_status],
@@ -708,11 +747,16 @@
         `;
       }).join("");
 
-      const ll = getLatLng(it);
+      const lat = it.__lat ?? Number(it.lat);
+      const lng = it.__lng ?? Number(it.lng);
       const q = encodeURIComponent(safeText(it.title || it.name || "Frontier DOOH"));
 
-      const kakao = ll ? `https://map.kakao.com/link/map/${q},${ll.lat},${ll.lng}` : null;
-      const google = ll ? `https://www.google.com/maps?q=${ll.lat},${ll.lng}` : null;
+      const kakao = (Number.isFinite(lat) && Number.isFinite(lng))
+        ? `https://map.kakao.com/link/map/${q},${lat},${lng}` : null;
+
+      const google = (Number.isFinite(lat) && Number.isFinite(lng))
+        ? `https://www.google.com/maps?q=${lat},${lng}` : null;
+
       const srcUrl = it.source_url ? String(it.source_url) : null;
 
       const links = [];
@@ -733,34 +777,27 @@
       for (const it of items){
         it.__mg = normStr(it.media_group);
         it.__sido = normStr(it.sido);
-
-        // haystack에 여러 키를 넣어 검색을 안정화
+        // lat/lng 캐시는 ensureLL에서
         it.__haystack = [
-          it.id, it.national_id, it.title, it.name, it.subtitle, it.address,
-          it.__mg, it.__sido,
+          it.id, it.national_id, it.title, it.subtitle, it.address, it.__mg, it.__sido
         ].map(safeText).join(" ");
       }
     }
 
-    function fillFilterDropdowns(items){
-      const groups = new Set();
-      const sidos = new Set();
-      for (const it of items){
-        const mg = normStr(it.__mg ?? it.media_group);
-        const si = normStr(it.__sido ?? it.sido);
-        if (mg) groups.add(mg);
-        if (si) sidos.add(si);
-      }
-      buildOptions(ui.mediaGroup, [...groups].sort((a,b)=>a.localeCompare(b,"ko")));
-      buildOptions(ui.sido, [...sidos].sort((a,b)=>a.localeCompare(b,"ko")));
-    }
-
     function applyFilters(){
+      if (applying) return;
+      applying = true;
+
       const q = normStr(ui.q.value).toLowerCase();
       const mg = normStr(ui.mediaGroup.value);
       const si = normStr(ui.sido.value);
       const onlyK = ui.onlyKorea.checked;
+      const boundsOnly = ui.boundsOnly.checked;
       const reviewOnly = ui.needsReview.checked;
+
+      const bounds = (boundsOnly && map) ? map.getBounds() : null;
+
+      let inBoundsCounter = 0;
 
       filtered = raw.filter(it => {
         const itMg = normStr(it.__mg ?? it.media_group);
@@ -781,55 +818,60 @@
           if (!hay.includes(q)) return false;
         }
 
-        // ✅ 핵심 수정:
-        // onlyKorea 체크 시 "좌표가 있는 항목"만 한국 bbox 밖이면 제외.
-        // 좌표가 없는 항목은 리스트에는 남겨둔다(=0 방지).
-        if (onlyK){
-          const ll = getLatLng(it);
-          if (ll && !inKorea(ll.lat, ll.lng)) return false;
+        // 좌표 유효성 + Korea 이상치 필터
+        if (!ensureLL(it)) return false;
+        if (onlyK && !it.__inKorea) return false;
+
+        // ✅ boundsOnly: 현재 지도 범위 내만
+        if (bounds){
+          const inside = bounds.contains([it.__lat, it.__lng]);
+          if (!inside) return false;
+          inBoundsCounter++;
         }
+
         return true;
       });
+
+      // boundsOnly가 꺼져 있으면 “현재 범위”는 표시만 (대략: 현재 표시=전체표시)
+      ui.inBoundsCount.textContent = bounds ? String(inBoundsCounter) : String(filtered.length);
 
       renderMapMarkers(filtered);
       renderList(filtered);
 
       ui.shownCount.textContent = String(filtered.length);
-
-      // 좌표 통계
-      let geo = 0, nogeo = 0;
-      for (const it of filtered){
-        if (getLatLng(it)) geo++; else nogeo++;
-      }
-      ui.geoCount.textContent = String(geo);
-      ui.noGeoCount.textContent = String(nogeo);
-
       safeInvalidate();
+
+      applying = false;
     }
 
     function renderMapMarkers(items){
       if (!map || !cluster) return;
+
       cluster.clearLayers();
 
       const markers = [];
-      let geo = 0;
-      let koreaGeo = 0;
+      let valid = 0;
+      let koreaValid = 0;
 
       for (const it of items){
         const m = buildMarker(it);
         if (!m) continue;
-        geo++;
-        if (it.__inKorea) koreaGeo++;
+        valid++;
+        if (it.__inKorea) koreaValid++;
         markers.push(m);
       }
-
       if (markers.length) cluster.addLayers(markers);
 
-      // 지도 자동 맞춤: 마커가 있을 때만
+      // ✅ boundsOnly가 켜져 있으면 "지도가 튕기지 않게" 자동 fitBounds를 하지 않음
+      if (ui.boundsOnly.checked){
+        setTimeout(() => safeInvalidate(), 60);
+        return;
+      }
+
+      // 기존 로직: 전체 표시 시에는 한국/전체 bounds로 보기 좋게 맞춤
       if (markers.length){
-        // 한국 좌표가 충분하면 한국 bbox로
-        const preferKorea = (koreaGeo >= 10 && koreaGeo / Math.max(geo,1) >= 0.7);
-        if (ui.onlyKorea.checked || preferKorea){
+        const shouldPreferKorea = (koreaValid >= 10 && koreaValid / Math.max(valid,1) >= 0.7);
+        if (ui.onlyKorea.checked || shouldPreferKorea){
           const sw = L.latLng(KOREA_BBOX.minLat, KOREA_BBOX.minLng);
           const ne = L.latLng(KOREA_BBOX.maxLat, KOREA_BBOX.maxLng);
           map.fitBounds(L.latLngBounds(sw, ne), { padding:[28,28], animate:false });
@@ -840,18 +882,14 @@
           } catch(e){}
         }
       } else {
-        // 마커가 없으면 기본 뷰
         map.setView([36.5, 127.8], 7);
-        toast(`<span class="bad">지도 마커가 0개</span><br/>
-              좌표 필드명이 다를 수 있습니다.<br/>
-              (좌표는 데이터에 있는데 코드가 못 읽는 경우)`, 6500);
       }
 
-      setTimeout(() => safeInvalidate(), 80);
+      setTimeout(() => safeInvalidate(), 60);
     }
 
     function renderList(items){
-      const max = 200;
+      const max = 160;
       const show = items.slice(0, max);
 
       if (!show.length){
@@ -867,19 +905,17 @@
         const addr = escapeHTML(safeText(it.address || ""));
         const mg = escapeHTML(normStr(it.__mg ?? it.media_group));
         const si = escapeHTML(normStr(it.__sido ?? it.sido));
+        const tier = escapeHTML(safeText(it.confidence_tier || ""));
         const status = escapeHTML(safeText(it.status || it.verified_status || ""));
-
-        const ll = getLatLng(it);
-        const geoTag = ll ? `<span class="tag mint">좌표 OK</span>` : `<span class="tag bad">좌표 없음</span>`;
 
         return `
           <div class="item" data-id="${escapeHTML(safeText(it.id || ""))}">
             <div class="t">${title}</div>
             <div class="s">${sub ? sub + "<br/>" : ""}${addr}</div>
             <div class="k">
-              ${geoTag}
               ${mg ? `<span class="tag mint">${mg}</span>` : ""}
               ${si ? `<span class="tag">${si}</span>` : ""}
+              ${tier ? `<span class="tag">${tier}</span>` : ""}
               ${status ? `<span class="tag">${status}</span>` : ""}
             </div>
           </div>
@@ -892,14 +928,28 @@
           const it = raw.find(x => safeText(x.id) === id) || items.find(x => safeText(x.id) === id);
           if (!it) return;
 
-          const ll = getLatLng(it);
-          if (ll && map){
-            map.setView([ll.lat, ll.lng], Math.max(map.getZoom(), 14), { animate:false });
+          if (ensureLL(it) && map){
+            map.setView([it.__lat, it.__lng], Math.max(map.getZoom(), 14), { animate:false });
             setTimeout(() => safeInvalidate(), 60);
           }
           openModal(it);
         });
       });
+    }
+
+    function fillFilterDropdowns(items){
+      const groups = new Set();
+      const sidos = new Set();
+      for (const it of items){
+        const mg = normStr(it.__mg ?? it.media_group);
+        const si = normStr(it.__sido ?? it.sido);
+        if (mg) groups.add(mg);
+        if (si) sidos.add(si);
+      }
+      const gArr = [...groups].sort((a,b) => a.localeCompare(b, "ko"));
+      const sArr = [...sidos].sort((a,b) => a.localeCompare(b, "ko"));
+      buildOptions(ui.mediaGroup, gArr);
+      buildOptions(ui.sido, sArr);
     }
 
     async function loadData(){
@@ -918,8 +968,6 @@
         }
 
         const json = await res.json();
-
-        // ✅ 배열이든 {items:[]}든 둘 다 대응
         const items = Array.isArray(json) ? json : (json.items || []);
         raw = Array.isArray(items) ? items : [];
 
@@ -944,6 +992,7 @@
       ui.mediaGroup.value = "";
       ui.sido.value = "";
       ui.onlyKorea.checked = true;
+      ui.boundsOnly.checked = false;
       ui.needsReview.checked = false;
       applyFilters();
     }
@@ -952,6 +1001,11 @@
     ui.sido.addEventListener("change", applyFilters);
     ui.onlyKorea.addEventListener("change", applyFilters);
     ui.needsReview.addEventListener("change", applyFilters);
+
+    // ✅ boundsOnly 토글: 켜는 순간 바로 “현재 지도 범위” 기준으로 필터 적용
+    ui.boundsOnly.addEventListener("change", () => {
+      applyFilters();
+    });
 
     let qTimer = null;
     ui.q.addEventListener("input", () => {
@@ -962,7 +1016,6 @@
     ui.apply.addEventListener("click", applyFilters);
     ui.reset.addEventListener("click", resetUI);
 
-    // 패널 리사이즈
     (function initResizer(){
       let dragging = false;
 
