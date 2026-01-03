@@ -111,17 +111,19 @@
     option{background:#0c0e10; color:#ffffff;}
     .q{ width:min(420px, 92vw); }
     .cat{ width:260px; }
+
+    /* (1) 초기화 버튼: 조금 더 크게 + 민트 테두리 */
     .btn{
-      height:40px;
+      height:44px;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
+      border:1px solid rgba(162,222,204,.60);
       background:rgba(255,255,255,.06);
       color:var(--text);
       font-weight:1000;
       cursor:pointer;
-      padding:0 14px;
+      padding:0 16px;
       white-space:nowrap;
-      font-size:13px;
+      font-size:14px;
     }
 
     /* ===== (1) 검색 입력 텍스트 흰색 강제 (우선순위 충돌 방지) ===== */
@@ -389,7 +391,7 @@
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
       <input id="q" class="q" type="text" placeholder="검색 (예: 강남, 대구, 병원, 엘리베이터…)" />
-      <select id="catHigh" class="cat" aria-label="카테고리"></select>
+      <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
   </div>
@@ -573,7 +575,7 @@
   function setCatHighOptions(){
     const sel = $("catHigh");
     sel.innerHTML = "";
-    addOption(sel, "", "카테고리 (전체)");
+    addOption(sel, "", "매체 카테고리 (전체)");
     CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
 
@@ -583,18 +585,41 @@
     timer = setTimeout(fn, ms);
   }
 
+  /* (2) 검색 정규화: 공백/기호 제거 + 숫자 제거 매칭(동 단위 검색 보강) */
+  function searchNorm(s){
+    return (s ?? "")
+      .toString()
+      .toLowerCase()
+      .replace(/\s+/g,"")
+      .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
+  }
+  function stripDigits(s){
+    return (s ?? "").toString().replace(/[0-9]/g,"");
+  }
+
   function getFilteredBase(){
-    const q = $("q").value.trim().toLowerCase();
+    const qRaw = $("q").value.trim();
     const high = $("catHigh").value;
 
     let arr = ALL;
 
-    if (q){
+    if (qRaw){
+      const qn = searchNorm(qRaw);
+      const qnd = stripDigits(qn);
+
       arr = arr.filter(x=>{
-        const blob = `${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""}`.toLowerCase();
-        return blob.includes(q);
+        const blob = searchNorm(`${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""}`);
+        if (qn && blob.includes(qn)) return true;
+
+        /* 동/리/가 등 주소에서 숫자 끼임(역삼1동 등) 대비 */
+        if (qnd){
+          const blobNd = stripDigits(blob);
+          if (blobNd.includes(qnd)) return true;
+        }
+        return false;
       });
     }
+
     if (high) arr = arr.filter(x => x._high === high);
     return arr;
   }
@@ -709,6 +734,21 @@
     clearClusterHighlight();
   }
 
+  /* (3) 핀 hover 시, 해당 카드가 아직 렌더되지 않았으면 리스트를 확장 렌더 */
+  function ensureCardVisible(key){
+    if (cardByKey.has(key)) return;
+
+    const idx = curInView.findIndex(x => x._key === key);
+    if (idx < 0) return;
+
+    if (idx < renderLimit) return;
+
+    let next = renderLimit;
+    while (next <= idx) next += STEP;
+    renderLimit = Math.min(curInView.length, next);
+    appendList(curInView);
+  }
+
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
@@ -740,8 +780,9 @@
           .map(mm => mm.__key)
           .filter(Boolean);
 
-        clearAllCardHighlights();
         if (keys.length){
+          ensureCardVisible(keys[0]);
+          clearAllCardHighlights();
           keys.forEach(k => highlightCard(k, false));
           highlightCard(keys[0], true);
         }
@@ -774,6 +815,7 @@
       m.on("mouseover", () => {
         highlightMarkerOrClusterByKey(it._key);
         clearAllCardHighlights();
+        ensureCardVisible(it._key);
         highlightCard(it._key, true);
       });
       m.on("mouseout", () => {
