@@ -26,10 +26,10 @@
 
       --inputBg:#0c0e10;
       --inputLine:rgba(255,255,255,.14);
-      --inputText:#ffffff;                 /* ★ (1) 입력 글자 흰색 */
+      --inputText:#ffffff;
       --inputPh:rgba(255,255,255,.45);
 
-      --topbarH:72px; /* JS가 실제 높이로 업데이트 */
+      --topbarH:72px;
     }
 
     *{box-sizing:border-box}
@@ -44,11 +44,24 @@
       min-height:0;
     }
 
-    /* ===== TOPBAR: 좌측 정렬 + 세로 중앙 ===== */
+    /* map drag UX */
+    .leaflet-container{cursor:grab;}
+    .leaflet-dragging .leaflet-container{cursor:grabbing;}
+
+    /* 브라우저 기본 드래그/선택 방지(드래그 꼬임 완화) */
+    .leaflet-marker-icon, .leaflet-marker-icon *{
+      user-select:none;
+      -webkit-user-select:none;
+      -webkit-user-drag:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .leaflet-marker-icon svg{ pointer-events:none; }
+
+    /* ===== TOPBAR ===== */
     .topbar{
       flex:0 0 auto;
       position:sticky; top:0; z-index:6000;
-      background:#0c0d0e;                  /* ★ (2) 완전 불투명 */
+      background:#0c0d0e;
       border-bottom:1px solid var(--line);
       padding:20px 16px;
       display:flex;
@@ -84,7 +97,7 @@
       position:sticky;
       top:var(--topbarH);
       z-index:5500;
-      background:#0c0d0e;                  /* ★ (2) 완전 불투명: 리스트 비침 차단 */
+      background:#0c0d0e;
       border-bottom:1px solid var(--line);
       padding:12px 16px;
     }
@@ -103,7 +116,7 @@
       border-radius:12px;
       border:1px solid var(--inputLine);
       background:var(--inputBg);
-      color:var(--inputText);              /* ★ (1) 입력 글자 흰색 */
+      color:var(--inputText);
       outline:none;
       font-size:14px;
     }
@@ -112,7 +125,7 @@
     .q{ width:min(420px, 92vw); }
     .cat{ width:260px; }
 
-    /* (1) 초기화 버튼: 조금 더 크게 + 민트 테두리 */
+    /* 초기화 버튼: 가로 체감 1.5배 + 민트 테두리 */
     .btn{
       height:44px;
       border-radius:12px;
@@ -121,12 +134,13 @@
       color:var(--text);
       font-weight:1000;
       cursor:pointer;
-      padding:0 16px;
+      padding:0 26px;
+      min-width:124px;
       white-space:nowrap;
       font-size:14px;
     }
 
-    /* ===== (1) 검색 입력 텍스트 흰색 강제 (우선순위 충돌 방지) ===== */
+    /* 검색 입력 텍스트 흰색 강제 */
     #q{ color:#fff !important; caret-color:#fff !important; }
     #q::placeholder{ color:rgba(255,255,255,.45) !important; }
     #q:-webkit-autofill{
@@ -158,7 +172,7 @@
       background:var(--panel);
       border-right:1px solid var(--line);
       overflow:auto;
-      padding:0;                           /* ★ (2) panel padding 제거(허공/비침 줄이기) */
+      padding:0;
       min-height:0;
     }
     @media (max-width: 980px){
@@ -177,15 +191,15 @@
       position:sticky;
       top:0;
       z-index:4000;
-      margin:0;                            /* ★ (2) 위쪽 빈 공간 제거 */
+      margin:0;
       padding:12px 14px 12px;
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
       justify-content:flex-start;
-      border-radius:0;                     /* ★ (2) 패널 상단에 딱 붙게 */
-      background:#0b0c0d;                  /* ★ (2) 완전 불투명 */
+      border-radius:0;
+      background:#0b0c0d;
       border-bottom:1px solid rgba(255,255,255,.10);
       box-shadow:0 10px 28px rgba(0,0,0,.35);
     }
@@ -202,7 +216,7 @@
     .sPill b{color:var(--mint); font-weight:1000}
 
     /* ===== LIST ===== */
-    .listWrap{padding:14px;}               /* 카드 안쪽 패딩은 유지 */
+    .listWrap{padding:14px;}
     .listHeader{
       display:flex; align-items:baseline; justify-content:space-between;
       gap:10px; margin-bottom:10px;
@@ -300,18 +314,32 @@
       box-shadow: 0 0 0 2px rgba(162,222,204,.25), 0 10px 24px rgba(0,0,0,.35);
     }
 
+    /* 클러스터 말풍선 */
+    .leaflet-tooltip.clusterTip{
+      background:rgba(0,0,0,.85);
+      border:1px solid rgba(162,222,204,.55);
+      color:#e9fff9;
+      font-weight:1000;
+      padding:6px 10px;
+      border-radius:10px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35);
+    }
+    .leaflet-tooltip.clusterTip:before{
+      border-top-color: rgba(0,0,0,.85);
+    }
+
     /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.60);
       display:none;
       z-index:99999;
-      padding:20px;                        /* 약간 여유 */
+      padding:20px;
     }
     .detail{
-      width:min(1600px, 96vw);             /* ★ (3) 모달 폭 더 확대 */
-      height:min(92vh, 920px);             /* ★ (3) 모달 세로 체감 2배 */
-      max-height:min(92vh, 920px);         /* 안정적으로 제한 */
+      width:min(1600px, 96vw);
+      height:min(92vh, 920px);
+      max-height:min(92vh, 920px);
       overflow:auto;
       margin:0 auto;
       border-radius:18px;
@@ -342,7 +370,7 @@
     .detailBody{
       padding:16px 16px 18px;
       display:grid;
-      grid-template-columns: 1.35fr 1fr;  /* ★ (3) 넓어진 폭에 맞춰 이미지 비중 확대 */
+      grid-template-columns: 1.35fr 1fr;
       gap:14px;
     }
     @media (max-width: 920px){ .detailBody{grid-template-columns:1fr;} }
@@ -351,8 +379,8 @@
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:#0d0f10;
-      aspect-ratio:auto;                   /* ★ (3) 고정 비율 해제 */
-      height:min(52vh, 520px);             /* ★ (3) 이미지 영역 height로 크게 */
+      aspect-ratio:auto;
+      height:min(52vh, 520px);
     }
     @media (max-width: 920px){
       .dimg{ height:min(46vh, 460px); }
@@ -495,6 +523,12 @@
 
   let highlightedClusterEl = null;
 
+  /* 지도 드래그/줌 중 hover 개입 방지(드래그 꼬임 완화) */
+  let isMapInteracting = false;
+
+  /* 클러스터 말풍선 */
+  let clusterTip = null;
+
   const $ = (id) => document.getElementById(id);
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -502,7 +536,63 @@
     o.textContent = label ?? value;
     sel.appendChild(o);
   }
-  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
+
+  /* 검색 정규화(공백/기호 제거) */
+  function searchNorm(s){
+    return (s ?? "")
+      .toString()
+      .toLowerCase()
+      .replace(/\s+/g,"")
+      .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
+  }
+  function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
+
+  /* 토큰 변형: 동/구/시 등 + 도로(로/길/대로) 대응 */
+  function stripAdminSuffix(t){
+    return (t ?? "").toString().replace(/(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/,"");
+  }
+  function stripRoadSuffix(t){
+    return (t ?? "").toString().replace(/(대로|로|길)$/,"");
+  }
+  function tokenVariants(tok){
+    const raw = (tok ?? "").toString().trim();
+    if (!raw) return [];
+
+    const t0 = searchNorm(raw);
+    const t1 = stripDigits(t0);
+    const vars = new Set();
+
+    if (t0) vars.add(t0);
+    if (t1) vars.add(t1);
+
+    const a0 = stripAdminSuffix(t1);
+    if (a0 && a0 !== t1) vars.add(a0);
+
+    const r0 = stripRoadSuffix(t1);
+    if (r0 && r0 !== t1) vars.add(r0);
+
+    /* 사용자가 'XX동' 검색할 때, 로/길/대로로도 잡히게 */
+    if (/[동리가면읍구군시도]$/.test(raw)){
+      const base = a0 || stripAdminSuffix(t1) || t1;
+      if (base){
+        vars.add(base);
+        vars.add(base + "로");
+        vars.add(base + "길");
+        vars.add(base + "대로");
+      }
+    }
+
+    /* 반대로 'XX로' 입력 시 동/기타도 잡히게(보조) */
+    if (/(대로|로|길)$/.test(raw)){
+      const base = r0 || stripRoadSuffix(t1) || t1;
+      if (base){
+        vars.add(base);
+        vars.add(base + "동");
+      }
+    }
+
+    return Array.from(vars).filter(v => v && v.length >= 2);
+  }
 
   function fmtWon(price, unit){
     const s = (price ?? "").toString();
@@ -517,6 +607,8 @@
     const toks = addr.split(" ").filter(Boolean);
     return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
   }
+
+  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
   function normalizeLow(raw){
     const s = norm(raw);
@@ -585,16 +677,36 @@
     timer = setTimeout(fn, ms);
   }
 
-  /* (2) 검색 정규화: 공백/기호 제거 + 숫자 제거 매칭(동 단위 검색 보강) */
-  function searchNorm(s){
-    return (s ?? "")
-      .toString()
-      .toLowerCase()
-      .replace(/\s+/g,"")
-      .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
-  }
-  function stripDigits(s){
-    return (s ?? "").toString().replace(/[0-9]/g,"");
+  function makeSearchBlob(it){
+    const parts = [];
+    const add = (v) => {
+      if (typeof v !== "string") return;
+      const s = v.trim();
+      if (!s) return;
+      parts.push(s);
+    };
+
+    add(it.title);
+    add(it.address);
+    add(it._high);
+    add(it._low);
+
+    const commonKeys = [
+      "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
+      "sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong",
+      "region_1","region_2","region_3"
+    ];
+    for (const k of commonKeys) add(it[k]);
+
+    for (const [k, v] of Object.entries(it)){
+      if (typeof v !== "string") continue;
+      const lk = String(k).toLowerCase();
+      if (lk.includes("thumb") || lk.includes("image") || lk.includes("img")) continue;
+      if (lk.includes("url") || lk.includes("link") || lk.includes("api")) continue;
+      add(v);
+    }
+
+    return searchNorm(parts.join(" "));
   }
 
   function getFilteredBase(){
@@ -604,19 +716,14 @@
     let arr = ALL;
 
     if (qRaw){
-      const qn = searchNorm(qRaw);
-      const qnd = stripDigits(qn);
-
+      const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
       arr = arr.filter(x=>{
-        const blob = searchNorm(`${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""}`);
-        if (qn && blob.includes(qn)) return true;
-
-        /* 동/리/가 등 주소에서 숫자 끼임(역삼1동 등) 대비 */
-        if (qnd){
-          const blobNd = stripDigits(blob);
-          if (blobNd.includes(qnd)) return true;
-        }
-        return false;
+        const blob = x._blob || "";
+        return tokens.every(tok=>{
+          const vars = tokenVariants(tok);
+          if (!vars.length) return true;
+          return vars.some(v => blob.includes(v));
+        });
       });
     }
 
@@ -734,7 +841,7 @@
     clearClusterHighlight();
   }
 
-  /* (3) 핀 hover 시, 해당 카드가 아직 렌더되지 않았으면 리스트를 확장 렌더 */
+  /* 핀 hover 시, 해당 카드가 아직 렌더되지 않았으면 리스트를 확장 렌더 */
   function ensureCardVisible(key){
     if (cardByKey.has(key)) return;
 
@@ -749,6 +856,25 @@
     appendList(curInView);
   }
 
+  function showClusterTip(latlng){
+    if (!map) return;
+    if (!clusterTip){
+      clusterTip = L.tooltip({
+        permanent:false,
+        direction:"top",
+        offset:[0,-12],
+        opacity:0.95,
+        className:"clusterTip"
+      });
+    }
+    clusterTip.setLatLng(latlng).setContent("클릭해서 확대");
+    map.openTooltip(clusterTip);
+  }
+  function hideClusterTip(){
+    if (!map || !clusterTip) return;
+    map.closeTooltip(clusterTip);
+  }
+
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
@@ -756,6 +882,12 @@
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
+
+    map.on("dragstart", ()=>{ isMapInteracting = true; });
+    map.on("dragend",   ()=>{ isMapInteracting = false; });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; });
+    map.on("zoomend",   ()=>{ isMapInteracting = false; });
+    window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
 
     rebuildClusterGroup();
     map.on("moveend", () => render(false));
@@ -773,25 +905,18 @@
       maxClusterRadius: 52
     });
 
+    /* 클러스터: 리스트 스크롤/하이라이트 금지, 말풍선만 */
     markers.on("clustermouseover", (e) => {
       try{
-        const childMarkers = e.layer.getAllChildMarkers();
-        const keys = childMarkers
-          .map(mm => mm.__key)
-          .filter(Boolean);
-
-        if (keys.length){
-          ensureCardVisible(keys[0]);
-          clearAllCardHighlights();
-          keys.forEach(k => highlightCard(k, false));
-          highlightCard(keys[0], true);
+        if (typeof e.layer.getElement === "function"){
+          highlightClusterElement(e.layer.getElement());
         }
-        highlightClusterElement(e.layer.getElement());
+        showClusterTip(e.latlng || e.layer.getLatLng());
       }catch(_){}
     });
     markers.on("clustermouseout", () => {
       clearClusterHighlight();
-      clearAllCardHighlights();
+      hideClusterTip();
     });
 
     map.addLayer(markers);
@@ -812,13 +937,17 @@
       m.__key = it._key;
 
       m.on("click", () => openDetail(it, true));
+
       m.on("mouseover", () => {
+        if (isMapInteracting) return;
+        hideClusterTip();
         highlightMarkerOrClusterByKey(it._key);
         clearAllCardHighlights();
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
       });
       m.on("mouseout", () => {
+        if (isMapInteracting) return;
         unhighlightMarkerByKey(it._key);
         clearAllCardHighlights();
       });
@@ -1010,7 +1139,9 @@
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
       const key = makeKey(it, idx);
-      return { ...it, _key: key, _high: t.high, _low: t.low };
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      row._blob = makeSearchBlob(row);
+      return row;
     });
 
     $("pillLoaded").textContent = ALL.length;
