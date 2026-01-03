@@ -2,1174 +2,1058 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Frontier 전국 DOOH DB – Web Map MVP</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Frontier DOOH 전국 DB</title>
 
-  <!-- Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-  <script defer src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <style>
     :root{
       --bg:#0b0c0d;
       --panel:#0f1011;
-      --panel2:#0c0d0e;
-      --line:rgba(255,255,255,.10);
-      --text:#cfd8e3;
-      --muted:rgba(207,216,227,.72);
+      --text:#d8dde6;
+      --muted:#9aa6b2;
+      --line:rgba(255,255,255,.08);
       --mint:#a2decc;
-      --mint2:rgba(162,222,204,.18);
-      --shadow:0 18px 60px rgba(0,0,0,.55);
+
+      --shadow:0 12px 30px rgba(0,0,0,.45);
+      --radius:16px;
+
+      --inputBg:#0c0e10;
+      --inputLine:rgba(255,255,255,.14);
+      --inputText:#ffffff;
+      --inputPh:rgba(255,255,255,.45);
+
+      --topbarH:72px; /* JS가 실제 높이로 업데이트 */
     }
 
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
+    *{box-sizing:border-box}
+    html, body{height:100%; overflow:hidden;}
     body{
       margin:0;
-      background:radial-gradient(900px 450px at 15% 10%, rgba(162,222,204,.10), transparent 60%),
-                 radial-gradient(900px 450px at 85% 0%, rgba(162,222,204,.07), transparent 55%),
-                 var(--bg);
+      background:var(--bg);
       color:var(--text);
-      font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif;
-      overflow:hidden;
+      font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
-    /* Top header */
-    .top{
+    /* ===== TOPBAR ===== */
+    .topbar{
+      flex:0 0 auto;
+      position:sticky; top:0; z-index:6000;
+      background:#0c0d0e;
+      border-bottom:1px solid var(--line);
+      padding:20px 16px;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      padding:14px 16px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(to bottom, rgba(15,16,17,.92), rgba(15,16,17,.78));
-      backdrop-filter: blur(10px);
     }
-    .title{
-      display:flex;
-      align-items:baseline;
-      gap:10px;
-      min-width:0;
-    }
-    .title h1{
-      font-size:14px;
-      margin:0;
-      font-weight:700;
+    .titleLeft{
+      font-size:26px;
+      font-weight:1000;
       letter-spacing:.2px;
+      color:#e9eef7;
+      line-height:1.08;
+      text-align:left;
       white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
     }
     .pill{
-      font-size:12px;
-      padding:6px 10px;
-      border:1px solid rgba(162,222,204,.35);
-      background:rgba(162,222,204,.08);
-      color:rgba(255,255,255,.92);
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 12px;
       border-radius:999px;
-      box-shadow:0 0 0 1px rgba(162,222,204,.08) inset, 0 0 24px rgba(162,222,204,.10);
-      white-space:nowrap;
-    }
-
-    /* Filter bar */
-    .filters{
-      position:sticky;
-      top:0;
-      z-index:30;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 16px;
-      border-bottom:1px solid var(--line);
-      background:linear-gradient(to bottom, rgba(12,13,14,.92), rgba(12,13,14,.78));
-      backdrop-filter: blur(10px);
-    }
-    .filters .field{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      min-width:0;
-    }
-    .filters label{
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:0 8px 18px rgba(0,0,0,.25);
       font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
+      color:#e9eef7;
+      flex:0 0 auto;
+    }
+    .pill b{color:var(--mint); font-weight:1000}
+
+    /* ===== FILTER BAR ===== */
+    .filtersRow{
+      flex:0 0 auto;
+      position:sticky;
+      top:var(--topbarH);
+      z-index:5500;
+      background:#0c0d0e;
+      border-bottom:1px solid var(--line);
+      padding:12px 16px;
+    }
+    .filtersInner{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-start;
+      max-width:1100px;
     }
 
-    /* Inputs (A: 강제 흰색) */
-    .filters input[type="text"],
-    .filters select{
-      height:38px;
+    input[type="text"], select{
+      height:40px;
       padding:0 12px;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.04);
-      color:#fff;
+      border:1px solid var(--inputLine);
+      background:var(--inputBg);
+      color:var(--inputText);
       outline:none;
+      font-size:14px;
     }
-    .filters select{ padding-right:34px; }
-    .filters input[type="text"]:focus,
-    .filters select:focus{
-      border-color:rgba(162,222,204,.55);
-      box-shadow:0 0 0 3px rgba(162,222,204,.12);
+    input[type="text"]::placeholder{color:var(--inputPh)}
+    option{background:#0c0e10; color:#ffffff;}
+    .q{ width:min(420px, 92vw); }
+    .cat{ width:260px; }
+    .btn{
+      height:40px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      font-weight:1000;
+      cursor:pointer;
+      padding:0 14px;
+      white-space:nowrap;
+      font-size:13px;
     }
 
-    /* ★ 요청 A: #q 입력 텍스트 흰색 확실히 */
+    /* ===== (A) 검색 입력 텍스트 흰색 "확정" ===== */
     #q{
-      width:min(560px, 44vw);
       color:#fff !important;
       caret-color:#fff !important;
-      -webkit-text-fill-color:#fff !important; /* 일부 브라우저/오토필 대비 */
+      -webkit-text-fill-color:#fff !important;
     }
     #q::placeholder{
       color:rgba(255,255,255,.45) !important;
     }
 
-    /* 혹시 더 강한 CSS가 덮어쓰는 경우 대비(스코프 강화) */
-    .filters input,
-    .filters textarea{
-      color:#fff !important;
-      caret-color:#fff !important;
-      -webkit-text-fill-color:#fff !important;
-    }
-
-    .btn{
-      height:38px;
-      padding:0 12px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.04);
-      color:#fff;
-      cursor:pointer;
-      transition: transform .08s ease, border-color .15s ease, background .15s ease;
-      white-space:nowrap;
-    }
-    .btn:hover{
-      border-color:rgba(162,222,204,.55);
-      background:rgba(162,222,204,.08);
-    }
-    .btn:active{ transform: translateY(1px); }
-
-    /* Layout */
+    /* ===== APP LAYOUT ===== */
     .app{
-      height:calc(100% - 56px); /* top header height-ish */
-      display:flex;
-      flex-direction:column;
-    }
-    .main{
-      height:100%;
-      display:grid;
-      grid-template-columns: 520px 1fr;
-      gap:0;
+      flex:1 1 auto;
       min-height:0;
+      display:grid;
+      grid-template-columns: minmax(820px, 45vw) 1fr;
     }
-    @media (max-width: 1080px){
-      .main{ grid-template-columns: 420px 1fr; }
-      #q{ width:min(460px, 40vw); }
+    @media (max-width: 1250px){
+      .app{grid-template-columns: minmax(720px, 48vw) 1fr;}
     }
-    @media (max-width: 860px){
-      body{ overflow:auto; }
-      .app{ height:auto; }
-      .main{
-        grid-template-columns: 1fr;
-        grid-template-rows: 56vh auto;
-      }
+    @media (max-width: 980px){
+      .filtersRow{position:relative; top:auto;}
+      .topbar{position:relative;}
+      html, body{overflow:auto;}
+      body{overflow:auto;}
+      .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
     }
 
-    /* Left panel */
     .panel{
-      background:linear-gradient(to bottom, rgba(15,16,17,.82), rgba(15,16,17,.92));
+      background:var(--panel);
       border-right:1px solid var(--line);
-      min-height:0;
-      display:flex;
-      flex-direction:column;
-    }
-    .panelInner{
-      min-height:0;
       overflow:auto;
-      padding:12px 12px 18px;
-      position:relative;
+      padding:0;
+      min-height:0;
     }
-
-    /* Stats sticky */
-    .statsSticky{
-      position:sticky;
-      bottom:0;
-      z-index:10;
-      margin:12px 0 0;
-      padding:10px 10px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(12,13,14,.78);
-      backdrop-filter: blur(10px);
-      border-radius:14px;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      box-shadow: 0 0 0 1px rgba(162,222,204,.06) inset;
-    }
-    .stat{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      min-width:0;
-    }
-    .stat .k{ font-size:11px; color:rgba(255,255,255,.62); }
-    .stat .v{ font-size:13px; font-weight:700; color:#fff; }
-
-    /* Cards grid */
-    .cards{
-      display:grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap:10px;
-    }
-    @media (max-width: 1080px){
-      .cards{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-    }
-    @media (max-width: 860px){
-      .cards{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-    }
-    @media (max-width: 520px){
-      .cards{ grid-template-columns: 1fr; }
+    @media (max-width: 980px){
+      .panel{border-right:none; border-bottom:1px solid var(--line);}
     }
 
     .card{
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.03);
-      border-radius:16px;
-      overflow:hidden;
-      cursor:pointer;
-      transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease;
-      box-shadow: 0 0 0 1px rgba(162,222,204,.00) inset;
-    }
-    .card:hover{
-      transform: translateY(-2px);
-      border-color:rgba(162,222,204,.40);
-      box-shadow: 0 0 0 1px rgba(162,222,204,.10) inset, 0 10px 34px rgba(0,0,0,.45);
-    }
-    .card.is-hovered{
-      border-color:rgba(162,222,204,.72) !important;
-      box-shadow: 0 0 0 1px rgba(162,222,204,.18) inset, 0 0 26px rgba(162,222,204,.18);
+      background:linear-gradient(180deg, rgba(20,22,24,.9), rgba(16,18,20,.85));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
     }
 
-    .thumb{
-      height:108px;
-      background:
-        radial-gradient(120px 70px at 20% 30%, rgba(162,222,204,.22), transparent 60%),
-        radial-gradient(140px 90px at 80% 0%, rgba(162,222,204,.14), transparent 62%),
-        rgba(255,255,255,.04);
+    /* ===== STATS ===== */
+    .statsSticky{
+      position:sticky;
+      top:0;
+      z-index:4000;
+      margin:0;
+      padding:12px 14px 12px;
       display:flex;
-      align-items:center;
-      justify-content:center;
-      position:relative;
-    }
-    .thumb img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:block;
-    }
-    .thumb .noimg{
-      font-size:12px;
-      color:rgba(255,255,255,.65);
-      padding:6px 10px;
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:999px;
-      background:rgba(0,0,0,.18);
-      backdrop-filter: blur(6px);
-    }
-
-    .meta{
-      padding:10px 10px 12px;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-    }
-    .badgeRow{
-      display:flex;
-      gap:6px;
+      gap:10px;
       flex-wrap:wrap;
       align-items:center;
+      justify-content:flex-start;
+      border-radius:0;
+      background:#0b0c0d;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      box-shadow:0 10px 28px rgba(0,0,0,.35);
     }
-    .badge{
-      font-size:11px;
-      padding:4px 8px;
+    .sPill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:8px 10px;
       border-radius:999px;
-      border:1px solid rgba(162,222,204,.30);
-      background:rgba(162,222,204,.10);
-      color:rgba(255,255,255,.92);
-      max-width:100%;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.22);
+      font-size:13px;
+      color:var(--muted);
       white-space:nowrap;
+    }
+    .sPill b{color:var(--mint); font-weight:1000}
+
+    /* ===== LIST ===== */
+    .listWrap{padding:14px;}
+    .listHeader{
+      display:flex; align-items:baseline; justify-content:space-between;
+      gap:10px; margin-bottom:10px;
+    }
+    .listHeader .h{font-weight:1000; color:#e9eef7; font-size:16px;}
+    .listHeader .small{color:var(--muted); font-size:12px;}
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+    }
+    @media (max-width: 1200px){ .grid{grid-template-columns: repeat(2, 1fr);} }
+    @media (max-width: 520px){ .grid{grid-template-columns: 1fr;} }
+
+    .item{
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg, rgba(18,20,22,.92), rgba(14,16,18,.88));
       overflow:hidden;
-      text-overflow:ellipsis;
+      cursor:pointer;
+      transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+      min-height:308px;
+    }
+    .item:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.35); }
+    .item.isActive{
+      border-color:rgba(162,222,204,.55);
+      box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow);
+    }
+
+    .thumb{width:100%; aspect-ratio: 16/9; background:#0d0f10; position:relative;}
+    .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .thumb .fallback{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,.35);
+      font-weight:1000;
+      letter-spacing:.4px;
+      font-size:12px;
+    }
+
+    .body{padding:10px 10px 12px;}
+    .catRow{font-size:12px; color:var(--muted); margin-bottom:8px; display:flex; gap:6px; flex-wrap:wrap;}
+    .tag{
+      display:inline-flex; align-items:center;
+      padding:3px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
+      color:#dfe6f3;
     }
     .name{
-      font-size:13px;
-      font-weight:700;
-      color:#fff;
-      line-height:1.25;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-      min-height:32px;
+      font-size:15px; font-weight:1000; color:#e9eef7; line-height:1.24; margin:0 0 6px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:36px;
     }
-    .sub{
-      font-size:12px;
-      color:rgba(255,255,255,.70);
-      line-height:1.25;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-      min-height:30px;
+    .place{
+      font-size:13px; color:var(--muted); margin:0 0 10px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:34px;
     }
     .price{
-      margin-top:2px;
-      font-size:12px;
-      color:rgba(255,255,255,.82);
+      display:flex; align-items:baseline; justify-content:space-between; gap:8px;
+      padding-top:10px; border-top:1px solid rgba(255,255,255,.06);
     }
-    .price .mint{ color:var(--mint); font-weight:700; }
+    .price .p{font-weight:1000; color:var(--mint); font-size:15px; white-space:nowrap;}
+    .price .u{font-size:12px; color:var(--muted); white-space:nowrap;}
 
-    /* Map */
-    .mapWrap{
-      position:relative;
-      min-height:0;
-      background:rgba(0,0,0,.30);
-    }
-    #map{
+    /* ===== MAP ===== */
+    .mapBox{position:relative; background:#000; padding:10px; min-height:0;}
+    .mapInner{
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:var(--shadow);
       height:100%;
-      width:100%;
+      min-height:0;
     }
-    .mapHint{
-      position:absolute;
-      top:12px;
-      right:12px;
-      z-index:500;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(12,13,14,.70);
-      backdrop-filter: blur(10px);
-      box-shadow: 0 0 0 1px rgba(162,222,204,.06) inset;
-      font-size:12px;
-      color:rgba(255,255,255,.78);
-      max-width: 320px;
-    }
-    .mapHint b{ color:#fff; }
+    #map{width:100%; height:100%; background:#0b0c0d;}
 
-    /* Modal (B: 가로/세로 확대 + 이미지 영역 높이 고정) */
+    /* ===== PIN ICONS ===== */
+    .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
+    .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
+
+    /* ===== CLUSTER COLORS ===== */
+    .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.40) !important; }
+    .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.70) !important; color:#fff !important; font-weight:1000 !important; }
+    .marker-cluster-medium{ background-color: rgba(255, 159, 67, 0.42) !important; }
+    .marker-cluster-medium div{ background-color: rgba(255, 159, 67, 0.74) !important; color:#fff !important; font-weight:1000 !important; }
+    .marker-cluster-large{ background-color: rgba(35, 205, 158, 0.35) !important; }
+    .marker-cluster-large div{ background-color: rgba(35, 205, 158, 0.70) !important; color:#062b23 !important; font-weight:1000 !important; }
+
+    .clusterHighlight{
+      outline: 3px solid rgba(162,222,204,.75);
+      outline-offset: 2px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 2px rgba(162,222,204,.25), 0 10px 24px rgba(0,0,0,.35);
+    }
+
+    /* ===== (B) DETAIL OVERLAY: 모달 가로/세로 크게 ===== */
     .detailOverlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.62);
-      z-index:1000;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.60);
       display:none;
+      z-index:99999;
+
+      /* 요청 반영 */
+      padding:12px;
       align-items:center;
       justify-content:center;
-      padding:12px; /* ★ 요청: padding 12px */
     }
-    .detailOverlay.open{ display:flex; }
+    .detailOverlay.isOpen{ display:flex; }
 
     .detail{
-      width:min(1600px, 96vw);           /* ★ 가로 더 확대 */
-      height:min(92vh, 920px);           /* ★ 세로 체감 크게 */
+      /* 요청 반영: 거의 화면 꽉 */
+      width:min(1600px, 96vw);
+      height:min(92vh, 920px);
       max-height:92vh;
+
+      margin:0 auto;
       border-radius:18px;
-      border:1px solid rgba(255,255,255,.14);
-      background:linear-gradient(to bottom, rgba(15,16,17,.94), rgba(12,13,14,.94));
-      box-shadow: var(--shadow), 0 0 0 1px rgba(162,222,204,.07) inset;
-      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+      background:linear-gradient(180deg, rgba(16,18,20,.98), rgba(10,12,14,.94));
+      box-shadow:0 22px 60px rgba(0,0,0,.65);
+
+      /* 핵심: 세로 체감 크게 만들기 */
       display:flex;
       flex-direction:column;
+      overflow:hidden; /* 내부에서만 스크롤 */
     }
 
-    .detailTop{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
+    .detailHead{
+      flex:0 0 auto;
+      position:sticky; top:0;
+      background:rgba(16,18,20,.96);
+      border-bottom:1px solid rgba(255,255,255,.08);
+      padding:14px 16px;
+      display:flex; align-items:flex-start; justify-content:space-between;
       gap:12px;
-      padding:12px 14px;
-      border-bottom:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.18);
-      backdrop-filter: blur(8px);
+      z-index:2;
     }
-    .detailTop .left{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-      min-width:0;
-    }
-    .detailTop .t{
-      font-size:14px;
-      font-weight:800;
-      color:#fff;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .detailTop .s{
-      font-size:12px;
-      color:rgba(255,255,255,.70);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .closeBtn{
-      height:34px;
-      padding:0 10px;
+    .detailHead .t{font-weight:1000;color:#e9eef7;font-size:22px;margin:0;}
+    .detailHead .s{color:var(--muted);font-size:12px;line-height:1.4;margin-top:4px;}
+    .x{
+      width:44px; height:44px;
       border-radius:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
       color:#fff;
       cursor:pointer;
-    }
-    .closeBtn:hover{
-      border-color:rgba(162,222,204,.55);
-      background:rgba(162,222,204,.08);
+      font-weight:1000;
+      flex:0 0 auto;
     }
 
     .detailBody{
-      flex:1;
+      /* 요청 반영 */
+      flex:1 1 auto;
       min-height:0;
+      overflow:auto;
+
+      padding:16px 16px 18px;
       display:grid;
-      grid-template-columns: 1.25fr 1fr; /* ★ 요청: 1.25fr 1fr */
-      gap:0;
+      grid-template-columns: 1.25fr 1fr;
+      gap:14px;
     }
-    @media (max-width: 980px){
-      .detail{
-        height:min(92vh, 980px);
-      }
-      .detailBody{
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;
-      }
-    }
+    @media (max-width: 920px){ .detailBody{grid-template-columns:1fr;} }
 
     .dimg{
-      border-right:1px solid rgba(255,255,255,.10);
-      background:
-        radial-gradient(240px 120px at 18% 20%, rgba(162,222,204,.18), transparent 60%),
-        rgba(255,255,255,.03);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:12px;
-      min-height:0;
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      background:#0d0f10;
 
-      /* ★ 요청: aspect-ratio 제거 + 고정 높이 */
+      /* 요청 반영: aspect-ratio 제거 + 고정 높이 */
       aspect-ratio:auto;
       height:min(52vh, 520px);
     }
-    @media (max-width: 980px){
-      .dimg{
-        border-right:none;
-        border-bottom:1px solid rgba(255,255,255,.10);
-        height:min(40vh, 420px);
-      }
+    @media (max-width: 920px){
+      .dimg{ height:min(40vh, 420px); }
     }
 
-    .dimg img{
-      width:100%;
-      height:100%;
-      object-fit:cover;
+    .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
+    .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
+
+    .info{
+      border:1px solid rgba(255,255,255,.08);
       border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      display:block;
-      box-shadow: 0 0 0 1px rgba(162,222,204,.05) inset;
+      background:rgba(0,0,0,.20);
+      padding:12px;
+      margin-bottom:10px;
     }
-    .dimg .noimgBig{
-      font-size:13px;
-      color:rgba(255,255,255,.74);
-      padding:8px 12px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.18);
-    }
-
-    .dinfo{
-      min-height:0;
-      overflow:auto;
-      padding:14px;
-    }
-    .grid2{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-    @media (max-width: 520px){
-      .grid2{ grid-template-columns: 1fr; }
-    }
-    .kv{
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.03);
-      border-radius:14px;
-      padding:10px 10px;
-    }
-    .kv .k{
-      font-size:11px;
-      color:rgba(255,255,255,.62);
-      margin-bottom:4px;
-    }
-    .kv .v{
-      font-size:13px;
-      color:#fff;
-      line-height:1.35;
-      word-break:keep-all;
-    }
-    .kv .v.mint{ color:var(--mint); font-weight:800; }
-
-    .desc{
-      margin-top:10px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.03);
-      border-radius:14px;
-      padding:12px 12px;
-      color:rgba(255,255,255,.80);
-      line-height:1.55;
-      font-size:13px;
-      white-space:pre-wrap;
-    }
-
-    /* Leaflet tweaks (dark vibe) */
-    .leaflet-control-attribution{ display:none; }
-    .leaflet-control-zoom a{
-      background:rgba(12,13,14,.75) !important;
-      color:#fff !important;
-      border:1px solid rgba(255,255,255,.12) !important;
-      backdrop-filter: blur(10px);
-    }
-
-    /* Marker hover glow (mint) */
-    .marker-mint{
-      filter: drop-shadow(0 0 8px rgba(162,222,204,.55)) drop-shadow(0 0 18px rgba(162,222,204,.22));
-    }
-
-    /* Loading / empty */
-    .empty{
-      margin:10px 2px 2px;
-      padding:14px 12px;
-      border:1px dashed rgba(255,255,255,.18);
-      border-radius:14px;
-      color:rgba(255,255,255,.70);
-      font-size:13px;
+    .info .k{font-size:12px;color:var(--muted);margin-bottom:6px;}
+    .info .v{font-size:14px;color:#e9eef7;font-weight:900;line-height:1.35;word-break:keep-all;}
+    .links{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+    .links a{
+      text-decoration:none;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid rgba(162,222,204,.30);
+      background:rgba(162,222,204,.12);
+      color:#e9fff9;
+      font-weight:1000;
+      font-size:12px;
     }
   </style>
 </head>
 
 <body>
-  <div class="top">
-    <div class="title">
-      <h1>Frontier 전국 DOOH DB – 웹 지도 MVP</h1>
-      <div class="pill" id="loadedPill">Loaded: …</div>
-    </div>
-    <div class="pill" style="border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.04);box-shadow:none;color:rgba(255,255,255,.75);">
-      Static (GitHub Pages)
+  <div class="topbar" id="topbar">
+    <div class="titleLeft">Frontier DOOH 전국 DB</div>
+    <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
+  </div>
+
+  <div class="filtersRow" id="filtersRow">
+    <div class="filtersInner">
+      <input id="q" class="q" type="text" placeholder="검색 (예: 강남, 대구, 병원, 엘리베이터…)" />
+      <select id="catHigh" class="cat" aria-label="카테고리"></select>
+      <button class="btn" id="reset">초기화</button>
     </div>
   </div>
 
   <div class="app">
-    <div class="filters">
-      <div class="field" style="flex:1; min-width:0;">
-        <label for="q">검색</label>
-        <input id="q" type="text" placeholder="매체명/장소/주소 등 검색" autocomplete="off" spellcheck="false" />
+    <div class="panel" id="panel">
+      <div class="statsSticky">
+        <div class="sPill">전체 <b id="mAll">0</b></div>
+        <div class="sPill">필터 <b id="mFilter">0</b></div>
+        <div class="sPill">현재범위 <b id="mInView">0</b></div>
       </div>
 
-      <div class="field">
-        <label for="catHigh">카테고리</label>
-        <select id="catHigh">
-          <option value="">전체</option>
-        </select>
-      </div>
+      <div class="card listWrap">
+        <div class="listHeader">
+          <div class="h">리스트</div>
+          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위)</div>
+        </div>
 
-      <button class="btn" id="resetBtn">초기화</button>
+        <div class="grid" id="list"></div>
+
+        <div id="empty" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
+          조건에 맞는 항목이 없습니다. 검색어/카테고리를 바꿔보세요.
+        </div>
+
+        <div id="moreHint" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
+          더 불러오는 중…
+        </div>
+      </div>
     </div>
 
-    <div class="main">
-      <!-- Left -->
-      <aside class="panel">
-        <div class="panelInner" id="panelScroll">
-          <div class="cards" id="cards"></div>
-          <div id="sentinel" style="height:14px;"></div>
-          <div id="emptyBox" class="empty" style="display:none;">검색/필터 결과가 없습니다.</div>
-
-          <div class="statsSticky">
-            <div class="stat">
-              <div class="k">전체</div>
-              <div class="v" id="statTotal">-</div>
-            </div>
-            <div class="stat">
-              <div class="k">필터 결과</div>
-              <div class="v" id="statFiltered">-</div>
-            </div>
-            <div class="stat">
-              <div class="k">현재 범위(inView)</div>
-              <div class="v" id="statInView">-</div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Right -->
-      <section class="mapWrap">
+    <div class="mapBox">
+      <div class="mapInner">
         <div id="map"></div>
-        <div class="mapHint">
-          <b>Tip</b><br>
-          리스트 카드 hover → 지도 마커 민트 하이라이트<br>
-          지도 마커 hover → 리스트 카드 glow/스크롤<br>
-          클릭 → 해시 모달 <span style="color:var(--mint);font-weight:700;">#item=...</span>
-        </div>
-      </section>
+      </div>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="detailOverlay" id="detailOverlay" aria-hidden="true">
-    <div class="detail" role="dialog" aria-modal="true" aria-label="상세">
-      <div class="detailTop">
-        <div class="left">
-          <div class="t" id="dtTitle">-</div>
-          <div class="s" id="dtSub">-</div>
+  <div class="detailOverlay" id="dOverlay">
+    <div class="detail">
+      <div class="detailHead">
+        <div style="min-width:0;">
+          <div class="t" id="dt"></div>
+          <div class="s" id="ds"></div>
         </div>
-        <button class="closeBtn" id="closeBtn">닫기 (Esc)</button>
+        <button class="x" id="dx">✕</button>
       </div>
 
       <div class="detailBody">
-        <div class="dimg" id="dtImgWrap"></div>
-        <div class="dinfo">
-          <div class="grid2">
-            <div class="kv">
-              <div class="k">카테고리</div>
-              <div class="v" id="dtCat">-</div>
-            </div>
-            <div class="kv">
-              <div class="k">가격</div>
-              <div class="v mint" id="dtPrice">-</div>
-            </div>
-            <div class="kv">
-              <div class="k">장소</div>
-              <div class="v" id="dtPlace">-</div>
-            </div>
-            <div class="kv">
-              <div class="k">주소/상세 위치</div>
-              <div class="v" id="dtAddr">-</div>
-            </div>
+        <div class="dimg" id="dimg"></div>
+
+        <div>
+          <div class="info">
+            <div class="k">카테고리</div>
+            <div class="v" id="dcat">-</div>
           </div>
 
-          <div class="desc" id="dtDesc" style="display:none;"></div>
+          <div class="info">
+            <div class="k">가격</div>
+            <div class="v" id="dprice">-</div>
+          </div>
+
+          <div class="info">
+            <div class="k">주소</div>
+            <div class="v" id="daddr">-</div>
+          </div>
+
+          <div class="info">
+            <div class="k">운영사/담당</div>
+            <div class="v" id="dop">-</div>
+            <div class="links" id="dlinks"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <script>
-    // =============== Config ===============
-    const DATA_URL = "data_public.json";
-    const MINT = "#a2decc";
+<script>
+  const DATA_URL = "./data_public.json";
 
-    // =============== State ===============
-    let raw = [];
-    let filtered = [];
-    let renderCursor = 0;
-    const PAGE_SIZE = 60;
+  const CATEGORY_TREE = [
+    { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
+    { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
+    { high:"복합 쇼핑몰 / 대형마트", lows:["복합 쇼핑몰","대형마트"] },
+    { high:"극장 / 레저 / 휴양 시설", lows:["극장","레저","휴양, 편의시설"] },
+    { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
+  ];
 
-    let map, cluster;
-    const markerById = new Map();   // id -> marker
-    const itemById = new Map();     // id -> item
-    const cardElById = new Map();   // id -> element
+  let ALL = [];
+  let map = null;
+  let markers = null;
+  const markerByKey = new Map();
+  const cardByKey = new Map();
 
-    let activeHoverId = null;
+  const BATCH = 36;
+  const STEP  = 24;
+  let renderLimit = BATCH;
+  let curInView = [];
 
-    // =============== Helpers ===============
-    function safeStr(v){ return (v === null || v === undefined) ? "" : String(v); }
-    function norm(s){ return safeStr(s).trim().toLowerCase(); }
+  let currentOpenKey = null;
+  let suppressHashHandler = false;
 
-    function pickId(item, idx){
-      return safeStr(item.public_id || item.id || item.uid || item.key || item._id || ("idx_" + idx));
+  let highlightedClusterEl = null;
+
+  /* ===== 성능용 상태: 필터 결과(base)는 저장하고, moveend에서는 리스트만 갱신 ===== */
+  let currentBase = []; // 검색/카테고리 반영된 "전체(지도용)" 목록
+
+  const $ = (id) => document.getElementById(id);
+
+  function addOption(sel, value, label){
+    const o = document.createElement("option");
+    o.value = value;
+    o.textContent = label ?? value;
+    sel.appendChild(o);
+  }
+  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
+
+  function fmtWon(price, unit){
+    const s = (price ?? "").toString();
+    const n = parseInt(s.replace(/[^\d]/g,""), 10);
+    if (!n || isNaN(n)) return "문의";
+    const won = n.toLocaleString("ko-KR") + "원";
+    const u = (unit ?? "").toString().trim();
+    return u ? `${won} / ${u}` : won;
+  }
+  function guessPlace(item){
+    const addr = (item.address || "").trim();
+    const toks = addr.split(" ").filter(Boolean);
+    return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
+  }
+
+  function normalizeLow(raw){
+    const s = norm(raw);
+    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led"))
+      return "전광판";
+    if (s.includes("빌보드") || s.includes("billboard")) return "빌보드";
+    if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("facade") || s.includes("façade")) return "외벽";
+    if (s.includes("지하철") || s.includes("subway") || s.includes("metro")) return "지하철 광고";
+    if (s.includes("택시") || s.includes("taxi")) return "택시 광고";
+    if (s.includes("ktx")) return "KTX 광고";
+    if (s.includes("터미널") || s.includes("terminal")) return "터미널 광고";
+    if (s.includes("공항") || s.includes("airport") || s.includes("항공") || s.includes("기내") || s.includes("inflight")) return "공항 / 기내, 항공기 광고";
+    if (s.includes("쉘터") || s.includes("shelter") || s.includes("정류장")) return "버스 쉘터 광고";
+    if (s.includes("야립") || s.includes("도로")) return "주요 도로 야립 광고";
+    if (s.includes("차량") || s.includes("vehicle")) return "차량 광고";
+    if (s.includes("버스") || s.includes("bus")) return "버스광고";
+    return "";
+  }
+
+  function mapOriginalHigh(it){
+    const mg = norm(it.media_group);
+    const cl = norm(it.category_low);
+    const title = norm(it.title);
+    const any = mg + " " + cl + " " + title;
+
+    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽"))
+      return "전광판 / 빌보드 / 외벽";
+
+    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport"))
+      return "교통매체";
+
+    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛"))
+      return "복합 쇼핑몰 / 대형마트";
+
+    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트"))
+      return "극장 / 레저 / 휴양 시설";
+
+    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스"))
+      return "생활 밀착형 매체";
+
+    return "";
+  }
+
+  function assignTaxonomy(it){
+    const high = mapOriginalHigh(it);
+    const raw = (it.category_low || it.media_group || it.title || "").toString();
+    const low = normalizeLow(raw);
+
+    if (high === "전광판 / 빌보드 / 외벽"){
+      const l = low || normalizeLow(it.media_group) || normalizeLow(it.title);
+      return { high, low: l || "전광판" };
     }
+    return { high, low };
+  }
 
-    function pickLatLng(item){
-      const lat = Number(item.lat ?? item.latitude ?? item.y);
-      const lng = Number(item.lng ?? item.lon ?? item.longitude ?? item.x);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-      return [lat, lng];
-    }
+  function setCatHighOptions(){
+    const sel = $("catHigh");
+    sel.innerHTML = "";
+    addOption(sel, "", "카테고리 (전체)");
+    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
+  }
 
-    function pickCatHigh(item){
-      return safeStr(item.catHigh || item.category_high || item.categoryHigh || item.cat_high || item.media_group || item.group || "").trim();
-    }
+  let timer = null;
+  function debounce(fn, ms){
+    clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  }
 
-    function pickName(item){
-      return safeStr(item.name || item.media_name || item.title || item.media || item.asset_name || "이름 없음").trim();
-    }
+  function getFilteredBase(){
+    const q = $("q").value.trim().toLowerCase();
+    const high = $("catHigh").value;
 
-    function pickPlace(item){
-      return safeStr(item.place || item.location || item.venue || item.site || item.mall || item.station || "").trim();
-    }
+    let arr = ALL;
 
-    function pickAddr(item){
-      return safeStr(item.addr || item.address || item.address_road || item.road_address || item.address_jibun || "").trim();
-    }
-
-    function pickPrice(item){
-      return safeStr(item.price || item.cost || item.rate || item.unit_price || "").trim();
-    }
-
-    function pickImg(item){
-      return safeStr(item.img || item.image || item.image_url || item.thumbnail || item.thumb || "").trim();
-    }
-
-    function buildSearchHay(item){
-      const parts = [
-        pickName(item),
-        pickPlace(item),
-        pickAddr(item),
-        pickCatHigh(item),
-        safeStr(item.city || item.sido || item.sigungu || item.region || ""),
-      ];
-      return norm(parts.join(" "));
-    }
-
-    function setLoadedPill(n){
-      document.getElementById("loadedPill").textContent = "Loaded: " + n;
-    }
-
-    // =============== UI Elements ===============
-    const elQ = document.getElementById("q");
-    const elCat = document.getElementById("catHigh");
-    const elReset = document.getElementById("resetBtn");
-    const elCards = document.getElementById("cards");
-    const elSentinel = document.getElementById("sentinel");
-    const elEmpty = document.getElementById("emptyBox");
-    const elPanelScroll = document.getElementById("panelScroll");
-
-    const elStatTotal = document.getElementById("statTotal");
-    const elStatFiltered = document.getElementById("statFiltered");
-    const elStatInView = document.getElementById("statInView");
-
-    // Modal els
-    const overlay = document.getElementById("detailOverlay");
-    const closeBtn = document.getElementById("closeBtn");
-    const dtTitle = document.getElementById("dtTitle");
-    const dtSub = document.getElementById("dtSub");
-    const dtImgWrap = document.getElementById("dtImgWrap");
-    const dtCat = document.getElementById("dtCat");
-    const dtPrice = document.getElementById("dtPrice");
-    const dtPlace = document.getElementById("dtPlace");
-    const dtAddr = document.getElementById("dtAddr");
-    const dtDesc = document.getElementById("dtDesc");
-
-    // =============== Map ===============
-    function initMap(){
-      map = L.map("map", { zoomControl:true });
-
-      // Dark-friendly tiles (OpenStreetMap standard; 필요시 교체 가능)
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19
-      }).addTo(map);
-
-      cluster = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        chunkedLoading: true
+    if (q){
+      arr = arr.filter(x=>{
+        const blob = `${x.title||""} ${x.address||""} ${x._high||""} ${x._low||""}`.toLowerCase();
+        return blob.includes(q);
       });
-      map.addLayer(cluster);
+    }
+    if (high) arr = arr.filter(x => x._high === high);
+    return arr;
+  }
 
-      // Default view: Korea-ish
-      map.setView([36.4, 127.9], 7);
+  function boundsOf(items){
+    const pts = items.slice(0, 600);
+    if (!pts.length) return null;
+    const b = L.latLngBounds([]);
+    for (const it of pts) b.extend([it.lat, it.lng]);
+    return b.isValid() ? b : null;
+  }
 
-      map.on("moveend", () => {
-        updateInViewCount(); // 성능: moveend에서는 "재생성" 안 함
-      });
+  /* ===== ICONS ===== */
+  function pinSvg(fill, stroke){
+    return `
+      <div class="pinWrap">
+        <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2" />
+          <circle cx="15" cy="15" r="6" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.92"/>
+        </svg>
+      </div>
+    `;
+  }
+  function pinSvgHover(fill, stroke){
+    return `
+      <div class="pinHover">
+        <svg width="36" height="50" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2.5" />
+          <circle cx="15" cy="15" r="6.5" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.8" fill="#ffffff" opacity="0.95"/>
+        </svg>
+      </div>
+    `;
+  }
+
+  const normalIcon = L.divIcon({
+    className:"",
+    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
+    iconSize:[30,42],
+    iconAnchor:[15,41]
+  });
+  const hoverIcon  = L.divIcon({
+    className:"",
+    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
+    iconSize:[36,50],
+    iconAnchor:[18,49]
+  });
+
+  function makeKey(it, idx){
+    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
+    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+  }
+
+  function clearClusterHighlight(){
+    if (highlightedClusterEl){
+      highlightedClusterEl.classList.remove("clusterHighlight");
+      highlightedClusterEl = null;
+    }
+  }
+  function highlightClusterElement(el){
+    clearClusterHighlight();
+    if (!el) return;
+    el.classList.add("clusterHighlight");
+    highlightedClusterEl = el;
+  }
+
+  function highlightCard(key, doScroll){
+    const el = cardByKey.get(key);
+    if (!el) return;
+    el.classList.add("isActive");
+    if (doScroll){
+      el.scrollIntoView({ block:"center", behavior:"smooth" });
+    }
+  }
+  function unhighlightCard(key){
+    const el = cardByKey.get(key);
+    if (!el) return;
+    el.classList.remove("isActive");
+  }
+  function clearAllCardHighlights(){
+    for (const el of cardByKey.values()){
+      el.classList.remove("isActive");
+    }
+  }
+
+  function highlightMarkerOrClusterByKey(key){
+    clearClusterHighlight();
+    const m = markerByKey.get(key);
+    if (!m || !markers) return;
+
+    const parent = markers.getVisibleParent(m);
+    if (!parent) return;
+
+    if (parent instanceof L.Marker && parent === m){
+      m.setIcon(hoverIcon);
+      m.setZIndexOffset(9999);
+      return;
     }
 
-    function clearMarkers(){
-      markerById.clear();
-      cluster.clearLayers();
+    if (parent && typeof parent.getElement === "function"){
+      highlightClusterElement(parent.getElement());
+    }
+  }
+  function unhighlightMarkerByKey(key){
+    const m = markerByKey.get(key);
+    if (!m) return;
+    m.setIcon(normalIcon);
+    m.setZIndexOffset(0);
+    clearClusterHighlight();
+  }
+
+  function buildMap(){
+    map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    buildClusterGroupOnce();
+
+    /* ===== 성능: moveend에서는 "리스트(inView)만" 갱신 ===== */
+    map.on("moveend", () => updateInViewAndList());
+
+    // 초기 1회
+    updateInViewAndList();
+  }
+
+  function buildClusterGroupOnce(){
+    if (markers){
+      map.removeLayer(markers);
     }
 
-    function rebuildMarkers(){
-      clearMarkers();
+    markers = L.markerClusterGroup({
+      showCoverageOnHover:false,
+      spiderfyOnMaxZoom:true,
+      disableClusteringAtZoom: 18,
+      maxClusterRadius: 52
+    });
 
-      for (const item of filtered){
-        const ll = pickLatLng(item);
-        if (!ll) continue;
+    markers.on("clustermouseover", (e) => {
+      try{
+        const childMarkers = e.layer.getAllChildMarkers();
+        const keys = childMarkers.map(mm => mm.__key).filter(Boolean);
 
-        const id = item.__id;
-        const marker = L.marker(ll, { title: pickName(item) });
-
-        marker.on("mouseover", () => {
-          hoverCard(id, true);
-        });
-        marker.on("mouseout", () => {
-          hoverCard(id, false);
-        });
-        marker.on("click", () => {
-          location.hash = "#item=" + encodeURIComponent(id);
-        });
-
-        markerById.set(id, marker);
-        cluster.addLayer(marker);
-      }
-
-      updateInViewCount();
-    }
-
-    function mintMarker(id, on){
-      const m = markerById.get(id);
-      if (!m) return;
-      const iconEl = m.getElement();
-      if (!iconEl) return;
-      if (on) iconEl.classList.add("marker-mint");
-      else iconEl.classList.remove("marker-mint");
-    }
-
-    // =============== List / Cards ===============
-    function resetList(){
-      renderCursor = 0;
-      elCards.innerHTML = "";
-      cardElById.clear();
-    }
-
-    function makeCard(item){
-      const id = item.__id;
-      const cat = pickCatHigh(item) || "미분류";
-      const name = pickName(item);
-      const place = pickPlace(item);
-      const addr = pickAddr(item);
-      const price = pickPrice(item);
-      const img = pickImg(item);
-
-      const card = document.createElement("div");
-      card.className = "card";
-      card.dataset.id = id;
-
-      const thumb = document.createElement("div");
-      thumb.className = "thumb";
-      if (img){
-        const im = document.createElement("img");
-        im.src = img;
-        im.alt = name;
-        im.loading = "lazy";
-        im.referrerPolicy = "no-referrer";
-        im.onerror = () => {
-          thumb.innerHTML = "";
-          const ni = document.createElement("div");
-          ni.className = "noimg";
-          ni.textContent = "NO IMAGE";
-          thumb.appendChild(ni);
-        };
-        thumb.appendChild(im);
-      }else{
-        const ni = document.createElement("div");
-        ni.className = "noimg";
-        ni.textContent = "NO IMAGE";
-        thumb.appendChild(ni);
-      }
-
-      const meta = document.createElement("div");
-      meta.className = "meta";
-
-      const badgeRow = document.createElement("div");
-      badgeRow.className = "badgeRow";
-      const badge = document.createElement("div");
-      badge.className = "badge";
-      badge.textContent = cat;
-      badgeRow.appendChild(badge);
-
-      const nm = document.createElement("div");
-      nm.className = "name";
-      nm.textContent = name;
-
-      const sb = document.createElement("div");
-      sb.className = "sub";
-      sb.textContent = (place || addr || "-");
-
-      const pr = document.createElement("div");
-      pr.className = "price";
-      if (price){
-        pr.innerHTML = `<span class="mint">${escapeHtml(price)}</span>`;
-      }else{
-        pr.innerHTML = `<span style="color:rgba(255,255,255,.62);">가격 정보 없음</span>`;
-      }
-
-      meta.appendChild(badgeRow);
-      meta.appendChild(nm);
-      meta.appendChild(sb);
-      meta.appendChild(pr);
-
-      card.appendChild(thumb);
-      card.appendChild(meta);
-
-      card.addEventListener("mouseenter", () => hoverCard(id, true));
-      card.addEventListener("mouseleave", () => hoverCard(id, false));
-      card.addEventListener("click", () => {
-        location.hash = "#item=" + encodeURIComponent(id);
-      });
-
-      cardElById.set(id, card);
-      return card;
-    }
-
-    function renderNext(){
-      const end = Math.min(renderCursor + PAGE_SIZE, filtered.length);
-      for (let i = renderCursor; i < end; i++){
-        const card = makeCard(filtered[i]);
-        elCards.appendChild(card);
-      }
-      renderCursor = end;
-
-      elEmpty.style.display = (filtered.length === 0) ? "block" : "none";
-    }
-
-    function hoverCard(id, on){
-      const el = cardElById.get(id);
-      if (!el) return;
-
-      if (on){
-        activeHoverId = id;
-        el.classList.add("is-hovered");
-        mintMarker(id, true);
-
-        // Scroll into view (gentle)
-        const rect = el.getBoundingClientRect();
-        const pr = elPanelScroll.getBoundingClientRect();
-        if (rect.top < pr.top + 8 || rect.bottom > pr.bottom - 8){
-          el.scrollIntoView({ block:"nearest", behavior:"smooth" });
+        clearAllCardHighlights();
+        if (keys.length){
+          keys.forEach(k => highlightCard(k, false));
+          highlightCard(keys[0], true);
         }
-      }else{
-        if (activeHoverId === id) activeHoverId = null;
-        el.classList.remove("is-hovered");
-        mintMarker(id, false);
-      }
-    }
+        highlightClusterElement(e.layer.getElement());
+      }catch(_){}
+    });
+    markers.on("clustermouseout", () => {
+      clearClusterHighlight();
+      clearAllCardHighlights();
+    });
 
-    // =============== Filter / Search ===============
-    function buildCategoryOptions(){
-      const set = new Set();
-      for (const it of raw){
-        const c = pickCatHigh(it);
-        if (c) set.add(c);
-      }
-      const cats = Array.from(set).sort((a,b)=>a.localeCompare(b,"ko"));
-      elCat.innerHTML = `<option value="">전체</option>` + cats.map(c => `<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join("");
-    }
+    map.addLayer(markers);
+  }
 
-    function applyFilter(){
-      const q = norm(elQ.value);
-      const cat = safeStr(elCat.value).trim();
+  function clearMarkers(){
+    markerByKey.clear();
+    markers.clearLayers();
+  }
 
-      filtered = raw.filter(it => {
-        if (cat){
-          const c = pickCatHigh(it);
-          if (c !== cat) return false;
-        }
-        if (q){
-          return it.__hay.includes(q);
-        }
-        return true;
+  /* ===== 마커는 "필터/검색 변경 시에만" 재구성 ===== */
+  function renderMarkers(items){
+    clearMarkers();
+
+    const ms = [];
+    for (const it of items){
+      const m = L.marker([it.lat, it.lng], { icon: normalIcon });
+      m.__key = it._key;
+
+      m.on("click", () => openDetail(it, true));
+      m.on("mouseover", () => {
+        highlightMarkerOrClusterByKey(it._key);
+        clearAllCardHighlights();
+        highlightCard(it._key, true);
+      });
+      m.on("mouseout", () => {
+        unhighlightMarkerByKey(it._key);
+        clearAllCardHighlights();
       });
 
-      // stats
-      elStatTotal.textContent = raw.length.toLocaleString();
-      elStatFiltered.textContent = filtered.length.toLocaleString();
-
-      resetList();
-      // 새 필터 결과에서만 마커 재구성 (moveend에서 재생성 금지)
-      rebuildMarkers();
-      renderNext();
+      markerByKey.set(it._key, m);
+      ms.push(m);
     }
 
-    // =============== In-view Count (map bounds) ===============
-    function updateInViewCount(){
-      if (!map) return;
-      const b = map.getBounds();
-      let count = 0;
-      for (const it of filtered){
-        const ll = pickLatLng(it);
-        if (!ll) continue;
-        if (b.contains(ll)) count++;
-      }
-      elStatInView.textContent = count.toLocaleString();
+    markers.addLayers(ms);
+  }
+
+  function setHash(key){
+    const next = "#item=" + encodeURIComponent(key);
+    if (location.hash !== next){
+      suppressHashHandler = true;
+      location.hash = next;
+      setTimeout(()=>{ suppressHashHandler = false; }, 0);
     }
+  }
+  function clearHash(){
+    if (!location.hash.startsWith("#item=")) return;
+    suppressHashHandler = true;
+    location.hash = "";
+    setTimeout(()=>{ suppressHashHandler = false; }, 0);
+  }
 
-    // =============== Hash Modal ===============
-    function openModal(id){
-      const item = itemById.get(id);
-      if (!item) return;
+  function openDetail(it, sethash){
+    currentOpenKey = it._key;
 
-      const cat = pickCatHigh(item) || "미분류";
-      const name = pickName(item);
-      const place = pickPlace(item);
-      const addr = pickAddr(item);
-      const price = pickPrice(item);
-      const img = pickImg(item);
+    $("dt").textContent = it.title || "-";
+    $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
 
-      dtTitle.textContent = name;
-      dtSub.textContent = place || addr || "-";
-      dtCat.textContent = cat;
-      dtPlace.textContent = place || "-";
-      dtAddr.textContent = addr || "-";
-      dtPrice.textContent = price || "가격 정보 없음";
+    $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
+    $("dprice").textContent = fmtWon(it.price, it.price_unit);
+    $("daddr").textContent = it.address || "-";
+    $("dop").textContent = it.operator || "문의";
 
-      // Optional description (있으면 표시)
-      const desc = safeStr(item.desc || item.description || item.note || item.memo || "").trim();
-      if (desc){
-        dtDesc.style.display = "block";
-        dtDesc.textContent = desc;
-      }else{
-        dtDesc.style.display = "none";
-        dtDesc.textContent = "";
-      }
+    $("dimg").innerHTML = it.thumb
+      ? `<img src="${it.thumb}" alt="">`
+      : `<div class="fallback">NO IMAGE</div>`;
 
-      dtImgWrap.innerHTML = "";
-      if (img){
-        const im = document.createElement("img");
-        im.src = img;
-        im.alt = name;
-        im.referrerPolicy = "no-referrer";
-        im.onerror = () => {
-          dtImgWrap.innerHTML = `<div class="noimgBig">NO IMAGE</div>`;
-        };
-        dtImgWrap.appendChild(im);
-      }else{
-        dtImgWrap.innerHTML = `<div class="noimgBig">NO IMAGE</div>`;
-      }
+    const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
+    const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
+    $("dlinks").innerHTML = `
+      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
+      <a href="${google}" target="_blank" rel="noopener">구글맵</a>
+    `;
 
-      overlay.classList.add("open");
-      overlay.setAttribute("aria-hidden", "false");
+    const ov = $("dOverlay");
+    ov.classList.add("isOpen");
 
-      // map focus
-      const ll = pickLatLng(item);
-      if (ll && map){
-        map.panTo(ll, { animate:true, duration:0.35 });
-      }
-    }
+    map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
 
-    function closeModal(){
-      overlay.classList.remove("open");
-      overlay.setAttribute("aria-hidden", "true");
-    }
+    if (sethash) setHash(it._key);
+  }
 
-    function parseHash(){
-      const h = location.hash || "";
-      const m = h.match(/#item=([^&]+)/);
-      return m ? decodeURIComponent(m[1]) : null;
-    }
+  function closeDetail(fromHashChange){
+    const ov = $("dOverlay");
+    ov.classList.remove("isOpen");
+    currentOpenKey = null;
+    if (!fromHashChange) clearHash();
+  }
 
-    function onHashChange(){
-      const id = parseHash();
-      if (!id){
-        closeModal();
-        return;
-      }
-      openModal(id);
-    }
+  function openDetailByHash(){
+    if (!location.hash.startsWith("#item=")) return;
+    const key = decodeURIComponent(location.hash.replace("#item=", ""));
+    if (currentOpenKey === key && $("dOverlay").classList.contains("isOpen")) return;
 
-    // Overlay interactions
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay){
-        location.hash = "";
-      }
-    });
-    closeBtn.addEventListener("click", () => location.hash = "");
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && overlay.classList.contains("open")){
-        location.hash = "";
-      }
-    });
+    const it = ALL.find(x => x._key === key);
+    if (!it) return;
 
-    // =============== Infinite scroll (panel) ===============
-    const io = new IntersectionObserver((entries) => {
-      for (const ent of entries){
-        if (ent.isIntersecting){
-          if (renderCursor < filtered.length){
-            renderNext();
-          }
-        }
-      }
-    }, { root: elPanelScroll, threshold: 0.1 });
-    io.observe(elSentinel);
+    openDetail(it, false);
+  }
 
-    // =============== Events ===============
-    let tmr = null;
-    elQ.addEventListener("input", () => {
-      // small debounce
-      clearTimeout(tmr);
-      tmr = setTimeout(applyFilter, 120);
-    });
-    elCat.addEventListener("change", applyFilter);
-    elReset.addEventListener("click", () => {
-      elQ.value = "";
-      elCat.value = "";
-      applyFilter();
-      // 포커스 다시
-      elQ.focus();
-    });
+  function renderList(items){
+    $("resultInfo").textContent = items.length;
 
-    window.addEventListener("hashchange", onHashChange);
+    const list = $("list");
+    list.innerHTML = "";
+    cardByKey.clear();
+    renderLimit = BATCH;
 
-    // =============== HTML escape (safe) ===============
-    function escapeHtml(s){
-      return String(s)
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#039;");
-    }
-    function escapeHtmlAttr(s){
-      return escapeHtml(s).replaceAll("\n"," ");
-    }
+    $("empty").style.display = items.length ? "none" : "block";
+    $("moreHint").style.display = "none";
 
-    // =============== Boot ===============
-    async function boot(){
-      initMap();
+    appendList(items);
+  }
 
-      const res = await fetch(DATA_URL, { cache:"no-store" });
-      const data = await res.json();
+  function appendList(items){
+    const list = $("list");
+    const slice = items.slice(0, renderLimit);
+    list.innerHTML = "";
+    cardByKey.clear();
 
-      raw = Array.isArray(data) ? data : (data.items || data.data || []);
-      raw = raw.map((it, idx) => {
-        const obj = it || {};
-        obj.__id = pickId(obj, idx);
-        obj.__hay = buildSearchHay(obj);
-        return obj;
+    for (const it of slice){
+      const el = document.createElement("div");
+      el.className = "item";
+      el.dataset.key = it._key;
+
+      el.innerHTML = `
+        <div class="thumb">
+          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
+        </div>
+        <div class="body">
+          <div class="catRow">
+            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
+            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
+          </div>
+          <div class="name">${it.title || "-"}</div>
+          <div class="place">${guessPlace(it)}</div>
+          <div class="price">
+            <div class="p">${fmtWon(it.price, it.price_unit)}</div>
+            <div class="u">${it.price_unit ? it.price_unit : ""}</div>
+          </div>
+        </div>
+      `;
+
+      cardByKey.set(it._key, el);
+
+      el.addEventListener("mouseenter", () => {
+        clearAllCardHighlights();
+        highlightCard(it._key, false);
+        highlightMarkerOrClusterByKey(it._key);
       });
+      el.addEventListener("mouseleave", () => {
+        unhighlightCard(it._key);
+        unhighlightMarkerByKey(it._key);
+      });
+      el.addEventListener("click", () => openDetail(it, true));
 
-      // maps
-      itemById.clear();
-      for (const it of raw) itemById.set(it.__id, it);
-
-      setLoadedPill(raw.length);
-      buildCategoryOptions();
-
-      // stats init
-      elStatTotal.textContent = raw.length.toLocaleString();
-
-      applyFilter();
-
-      // hash open if any
-      onHashChange();
+      list.appendChild(el);
     }
 
-    // wait for leaflet scripts (defer)
-    window.addEventListener("load", () => {
-      boot().catch(err => {
-        console.error(err);
-        setLoadedPill("ERROR");
-        elEmpty.style.display = "block";
-        elEmpty.textContent = "데이터 로딩 실패. 콘솔(F12) 확인.";
-      });
+    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
+  }
+
+  function setupInfiniteScroll(){
+    const panel = $("panel");
+    panel.addEventListener("scroll", () => {
+      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
+      if (!nearBottom) return;
+      if (renderLimit >= curInView.length) return;
+
+      renderLimit = Math.min(curInView.length, renderLimit + STEP);
+      appendList(curInView);
+    }, { passive:true });
+  }
+
+  /* ===== 핵심: moveend에서는 여기만 호출 ===== */
+  function updateInViewAndList(){
+    if (!map) return;
+
+    // 모달 열려 있을 때, 필터 결과에서 사라지면 닫기(기존 동작 유지)
+    if (currentOpenKey){
+      const exists = currentBase.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    const b = map.getBounds();
+    const inView = currentBase.filter(x => b.contains([x.lat, x.lng]));
+    curInView = inView;
+
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = currentBase.length;
+    $("mInView").textContent = inView.length;
+
+    renderList(inView);
+  }
+
+  /* ===== 필터/검색 변경 시에만: base 갱신 + 마커 재구성 + 리스트 갱신 ===== */
+  function applyFilterAndMaybeFit(shouldFit){
+    currentBase = getFilteredBase();
+
+    // 마커/클러스터 재구성은 여기서만 수행
+    renderMarkers(currentBase);
+
+    // 리스트(inView) 갱신
+    updateInViewAndList();
+
+    if (shouldFit && currentBase.length){
+      const bb = boundsOf(currentBase);
+      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
+    }
+  }
+
+  function updateStickyHeights(){
+    const topbar = $("topbar");
+    const h = topbar ? topbar.getBoundingClientRect().height : 72;
+    document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
+  }
+
+  async function init(){
+    updateStickyHeights();
+    window.addEventListener("resize", updateStickyHeights);
+
+    buildMap();
+    setupInfiniteScroll();
+
+    const res = await fetch(DATA_URL, { cache:"no-store" });
+    const json = await res.json();
+    const items = Array.isArray(json) ? json : (json.items || []);
+    const pts = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = makeKey(it, idx);
+      return { ...it, _key: key, _high: t.high, _low: t.low };
     });
-  </script>
+
+    $("pillLoaded").textContent = ALL.length;
+
+    setCatHighOptions();
+
+    $("catHigh").addEventListener("change", () => applyFilterAndMaybeFit(true));
+    $("q").addEventListener("input", () => debounce(()=>applyFilterAndMaybeFit(true), 220));
+    $("q").addEventListener("keydown", (e)=>{ if (e.key === "Enter") applyFilterAndMaybeFit(true); });
+
+    $("reset").addEventListener("click", () => {
+      $("q").value = "";
+      $("catHigh").value = "";
+      closeDetail(false);
+      applyFilterAndMaybeFit(true);
+      $("q").focus();
+    });
+
+    $("dx").addEventListener("click", () => closeDetail(false));
+    $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
+
+    window.addEventListener("hashchange", () => {
+      if (suppressHashHandler) return;
+
+      if (location.hash.startsWith("#item=")){
+        openDetailByHash();
+      }else{
+        closeDetail(true);
+      }
+    });
+
+    // 최초 1회: base + 마커 + 리스트
+    applyFilterAndMaybeFit(false);
+    openDetailByHash();
+  }
+
+  init();
+</script>
 </body>
 </html>
