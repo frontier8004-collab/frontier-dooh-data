@@ -418,7 +418,7 @@
 
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
-      <input id="q" class="q" type="text" placeholder="검색 (예: 강남, 대구, 병원, 엘리베이터…)" />
+      <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 오송역, 공항, KTX, 터미널, 버스쉘터, 전광판…)" />
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
@@ -571,7 +571,6 @@
     const r0 = stripRoadSuffix(t1);
     if (r0 && r0 !== t1) vars.add(r0);
 
-    /* 사용자가 'XX동' 검색할 때, 로/길/대로로도 잡히게 */
     if (/[동리가면읍구군시도]$/.test(raw)){
       const base = a0 || stripAdminSuffix(t1) || t1;
       if (base){
@@ -582,7 +581,6 @@
       }
     }
 
-    /* 반대로 'XX로' 입력 시 동/기타도 잡히게(보조) */
     if (/(대로|로|길)$/.test(raw)){
       const base = r0 || stripRoadSuffix(t1) || t1;
       if (base){
@@ -709,6 +707,42 @@
     return searchNorm(parts.join(" "));
   }
 
+  /* ====== 동일 좌표(겹침) 펼치기 ====== */
+  function coordKey(lat, lng){
+    return Number(lat).toFixed(6) + "," + Number(lng).toFixed(6);
+  }
+  function metersToLat(m){ return m / 111320; }
+  function metersToLng(m, lat){
+    const r = Math.cos((lat * Math.PI) / 180);
+    return m / (111320 * Math.max(0.2, r));
+  }
+  function applyOverlapJitter(items){
+    const groups = new Map();
+    for (const it of items){
+      const k = coordKey(it.lat, it.lng);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    }
+
+    for (const arr of groups.values()){
+      if (arr.length <= 1) continue;
+
+      // 중심(원 좌표) 기준으로 아주 미세한 스파이럴 배치(수 m 단위)
+      const base = 7;      // meters
+      const step = 6;      // meters
+      for (let i=0; i<arr.length; i++){
+        const it = arr[i];
+        const a = i * 1.85;                 // angle
+        const r = base + step * Math.sqrt(i);
+        const dx = r * Math.cos(a);         // meters (east)
+        const dy = r * Math.sin(a);         // meters (north)
+
+        it._latDisp = it.lat + metersToLat(dy);
+        it._lngDisp = it.lng + metersToLng(dx, it.lat);
+      }
+    }
+  }
+
   function getFilteredBase(){
     const qRaw = $("q").value.trim();
     const high = $("catHigh").value;
@@ -735,7 +769,11 @@
     const pts = items.slice(0, 600);
     if (!pts.length) return null;
     const b = L.latLngBounds([]);
-    for (const it of pts) b.extend([it.lat, it.lng]);
+    for (const it of pts){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      b.extend([la, ln]);
+    }
     return b.isValid() ? b : null;
   }
 
@@ -933,7 +971,10 @@
 
     const ms = [];
     for (const it of items){
-      const m = L.marker([it.lat, it.lng], { icon: normalIcon });
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+
+      const m = L.marker([la, ln], { icon: normalIcon });
       m.__key = it._key;
 
       m.on("click", () => openDetail(it, true));
@@ -989,6 +1030,7 @@
       ? `<img src="${it.thumb}" alt="">`
       : `<div class="fallback">NO IMAGE</div>`;
 
+    /* 외부 지도 링크는 원 좌표(lat/lng) 유지 */
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
     $("dlinks").innerHTML = `
@@ -997,7 +1039,11 @@
     `;
 
     $("dOverlay").style.display = "block";
-    map.setView([it.lat, it.lng], Math.max(map.getZoom(), 15));
+
+    /* 모달 열릴 때 지도는 ‘표시 좌표’ 기준으로 중앙 맞춤 */
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    map.setView([la, ln], Math.max(map.getZoom(), 15));
 
     if (sethash) setHash(it._key);
   }
@@ -1102,7 +1148,13 @@
     }
 
     const b = map.getBounds();
-    const inView = base.filter(x => b.contains([x.lat, x.lng]));
+
+    /* inView도 ‘표시 좌표’ 기준으로 계산(지도/리스트 일치) */
+    const inView = base.filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
     curInView = inView;
 
     $("mAll").textContent = ALL.length;
@@ -1143,6 +1195,9 @@
       row._blob = makeSearchBlob(row);
       return row;
     });
+
+    /* 동일 좌표 겹침 펼치기(오송역 등) */
+    applyOverlapJitter(ALL);
 
     $("pillLoaded").textContent = ALL.length;
 
