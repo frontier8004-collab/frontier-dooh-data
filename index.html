@@ -48,7 +48,7 @@
     .leaflet-container{cursor:grab;}
     .leaflet-dragging .leaflet-container{cursor:grabbing;}
 
-    /* 브라우저 기본 드래그/선택 방지(드래그 꼬임 완화) */
+    /* 브라우저 기본 드래그/선택 방지 */
     .leaflet-marker-icon, .leaflet-marker-icon *{
       user-select:none;
       -webkit-user-select:none;
@@ -140,14 +140,54 @@
       font-size:14px;
     }
 
-    /* 검색 입력 텍스트 흰색 강제 */
+    /* 검색 입력 텍스트/placeholder 흰색 강제 */
     #q{ color:#fff !important; caret-color:#fff !important; }
-    #q::placeholder{ color:rgba(255,255,255,.45) !important; }
+    #q::placeholder{ color:#fff !important; }
     #q:-webkit-autofill{
       -webkit-text-fill-color:#fff !important;
       caret-color:#fff !important;
       box-shadow:0 0 0 1000px var(--inputBg) inset !important;
       border:1px solid var(--inputLine) !important;
+    }
+
+    /* 검색어 제안 박스 */
+    .qWrap{ position:relative; display:inline-block; }
+    #qSuggest{
+      position:absolute;
+      top:44px;
+      left:0;
+      width:100%;
+      display:none;
+      max-height:260px;
+      overflow:auto;
+      background:rgba(12,14,16,.98);
+      border:1px solid rgba(162,222,204,.38);
+      border-radius:12px;
+      box-shadow:0 18px 44px rgba(0,0,0,.55);
+      z-index:9000;
+      padding:6px;
+    }
+    .qSugItem{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      border:1px solid transparent;
+      color:#e9eef7;
+      font-size:13px;
+      line-height:1.2;
+    }
+    .qSugItem small{
+      color:var(--muted);
+      font-size:11px;
+      white-space:nowrap;
+    }
+    .qSugItem:hover{
+      background:rgba(162,222,204,.10);
+      border-color:rgba(162,222,204,.25);
     }
 
     /* ===== APP LAYOUT ===== */
@@ -328,6 +368,23 @@
       border-top-color: rgba(0,0,0,.85);
     }
 
+    /* 핀 hover 작은 정보 툴팁 */
+    .leaflet-tooltip.pinTipWrap{
+      background:rgba(0,0,0,.88);
+      border:1px solid rgba(255,255,255,.12);
+      color:#e9eef7;
+      border-radius:12px;
+      box-shadow:0 16px 40px rgba(0,0,0,.55);
+      padding:10px 12px;
+    }
+    .leaflet-tooltip.pinTipWrap:before{
+      border-top-color: rgba(0,0,0,.88);
+    }
+    .pinTip .pt{font-weight:1000;font-size:13px;line-height:1.2;}
+    .pinTip .ps{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.2;}
+    .pinTip .pp{font-size:12px;color:var(--mint);font-weight:1000;margin-top:6px;line-height:1.2;}
+    .pinTip .pc{font-size:11px;color:rgba(255,255,255,.70);margin-top:6px;line-height:1.2;}
+
     /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
       position:fixed; inset:0;
@@ -418,7 +475,10 @@
 
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
-      <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 오송역, 공항, KTX, 터미널, 버스쉘터, 전광판…)" />
+      <div class="qWrap">
+        <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 오송역, 공항, KTX, 터미널, 버스쉘터, 전광판…)" />
+        <div id="qSuggest" role="listbox" aria-label="검색어 제안"></div>
+      </div>
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
@@ -523,11 +583,17 @@
 
   let highlightedClusterEl = null;
 
-  /* 지도 드래그/줌 중 hover 개입 방지(드래그 꼬임 완화) */
+  /* 지도 드래그/줌 중 hover 개입 방지 */
   let isMapInteracting = false;
 
   /* 클러스터 말풍선 */
   let clusterTip = null;
+
+  /* 검색 제안 */
+  let qFocused = false;
+  const QUICK_SUGGEST = [
+    "강남역","고속터미널","오송역","인천공항","김포공항","KTX","터미널","버스쉘터","지하철","택시","전광판","빌보드"
+  ];
 
   const $ = (id) => document.getElementById(id);
   function addOption(sel, value, label){
@@ -535,6 +601,12 @@
     o.value = value;
     o.textContent = label ?? value;
     sel.appendChild(o);
+  }
+
+  function escapeHtml(s){
+    return (s ?? "").toString()
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   }
 
   /* 검색 정규화(공백/기호 제거) */
@@ -546,6 +618,32 @@
       .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
   }
   function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
+
+  /* 초성(Chosung) */
+  const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  function isHangulSyllableCode(c){
+    const code = c.charCodeAt(0);
+    return code >= 0xAC00 && code <= 0xD7A3;
+  }
+  function isCompatConsonant(c){
+    const code = c.charCodeAt(0);
+    return (code >= 0x3131 && code <= 0x314E); // ㄱ~ㅎ
+  }
+  function chosungify(str){
+    const s = (str ?? "").toString();
+    let out = "";
+    for (let i=0; i<s.length; i++){
+      const ch = s[i];
+      if (isHangulSyllableCode(ch)){
+        const code = ch.charCodeAt(0) - 0xAC00;
+        const idx = Math.floor(code / 588);
+        out += CHO[idx] || "";
+      }else if (isCompatConsonant(ch)){
+        out += ch;
+      }
+    }
+    return out;
+  }
 
   /* 토큰 변형: 동/구/시 등 + 도로(로/길/대로) 대응 */
   function stripAdminSuffix(t){
@@ -675,7 +773,7 @@
     timer = setTimeout(fn, ms);
   }
 
-  function makeSearchBlob(it){
+  function makeSearchText(it){
     const parts = [];
     const add = (v) => {
       if (typeof v !== "string") return;
@@ -704,7 +802,7 @@
       add(v);
     }
 
-    return searchNorm(parts.join(" "));
+    return parts.join(" ");
   }
 
   /* ====== 동일 좌표(겹침) 펼치기 ====== */
@@ -727,20 +825,28 @@
     for (const arr of groups.values()){
       if (arr.length <= 1) continue;
 
-      // 중심(원 좌표) 기준으로 아주 미세한 스파이럴 배치(수 m 단위)
-      const base = 7;      // meters
-      const step = 6;      // meters
+      const base = 7;   // meters
+      const step = 6;   // meters
       for (let i=0; i<arr.length; i++){
         const it = arr[i];
-        const a = i * 1.85;                 // angle
+        const a = i * 1.85;
         const r = base + step * Math.sqrt(i);
-        const dx = r * Math.cos(a);         // meters (east)
-        const dy = r * Math.sin(a);         // meters (north)
+        const dx = r * Math.cos(a);
+        const dy = r * Math.sin(a);
 
         it._latDisp = it.lat + metersToLat(dy);
         it._lngDisp = it.lng + metersToLng(dx, it.lat);
       }
     }
+  }
+
+  function tokenMatchItem(tok, it){
+    const vars = tokenVariants(tok);
+    const cs  = chosungify(tok);
+    if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
+    if (!vars.length) return true;
+    const blob = it._blob || "";
+    return vars.some(v => blob.includes(v));
   }
 
   function getFilteredBase(){
@@ -751,14 +857,7 @@
 
     if (qRaw){
       const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
-      arr = arr.filter(x=>{
-        const blob = x._blob || "";
-        return tokens.every(tok=>{
-          const vars = tokenVariants(tok);
-          if (!vars.length) return true;
-          return vars.some(v => blob.includes(v));
-        });
-      });
+      arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
     }
 
     if (high) arr = arr.filter(x => x._high === high);
@@ -853,6 +952,13 @@
     }
   }
 
+  function clearAllMarkerHighlights(){
+    for (const m of markerByKey.values()){
+      try{ m.setIcon(normalIcon); m.setZIndexOffset(0); }catch(_){}
+    }
+    clearClusterHighlight();
+  }
+
   function highlightMarkerOrClusterByKey(key){
     clearClusterHighlight();
     const m = markerByKey.get(key);
@@ -913,6 +1019,20 @@
     map.closeTooltip(clusterTip);
   }
 
+  function pinTipHtml(it){
+    const title = escapeHtml(it.title || "-");
+    const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
+    const price = escapeHtml(fmtWon(it.price, it.price_unit));
+    return `
+      <div class="pinTip" data-key="${escapeHtml(it._key)}">
+        <div class="pt">${title}</div>
+        <div class="ps">${cat}</div>
+        <div class="pp">${price}</div>
+        <div class="pc">클릭해서 상세보기</div>
+      </div>
+    `;
+  }
+
   function buildMap(){
     map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
 
@@ -921,11 +1041,17 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    map.on("dragstart", ()=>{ isMapInteracting = true; });
+    map.on("dragstart", ()=>{ isMapInteracting = true; clearAllMarkerHighlights(); clearAllCardHighlights(); hideClusterTip(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; clearAllMarkerHighlights(); clearAllCardHighlights(); hideClusterTip(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
     window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
+
+    map.getContainer().addEventListener("mouseleave", ()=>{
+      clearAllMarkerHighlights();
+      clearAllCardHighlights();
+      hideClusterTip();
+    }, { passive:true });
 
     rebuildClusterGroup();
     map.on("moveend", () => render(false));
@@ -943,7 +1069,7 @@
       maxClusterRadius: 52
     });
 
-    /* 클러스터: 리스트 스크롤/하이라이트 금지, 말풍선만 */
+    /* 클러스터: 리스트 스크롤 금지, 말풍선만 */
     markers.on("clustermouseover", (e) => {
       try{
         if (typeof e.layer.getElement === "function"){
@@ -977,6 +1103,27 @@
       const m = L.marker([la, ln], { icon: normalIcon });
       m.__key = it._key;
 
+      /* 핀 hover 작은 툴팁(클릭 가능) */
+      m.bindTooltip(pinTipHtml(it), {
+        direction:"top",
+        offset:[0,-10],
+        opacity:0.96,
+        className:"pinTipWrap",
+        interactive:true
+      });
+
+      m.on("tooltipopen", () => {
+        const tt = m.getTooltip && m.getTooltip();
+        const el = tt && tt.getElement ? tt.getElement() : null;
+        if (el && !el.__bound){
+          el.__bound = true;
+          el.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            openDetail(it, true);
+          });
+        }
+      });
+
       m.on("click", () => openDetail(it, true));
 
       m.on("mouseover", () => {
@@ -987,7 +1134,15 @@
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
       });
+
       m.on("mouseout", () => {
+        if (isMapInteracting) return;
+        if (m.isTooltipOpen && m.isTooltipOpen()) return; /* 툴팁 위로 이동 중이면 유지 */
+        unhighlightMarkerByKey(it._key);
+        clearAllCardHighlights();
+      });
+
+      m.on("tooltipclose", () => {
         if (isMapInteracting) return;
         unhighlightMarkerByKey(it._key);
         clearAllCardHighlights();
@@ -1040,7 +1195,7 @@
 
     $("dOverlay").style.display = "block";
 
-    /* 모달 열릴 때 지도는 ‘표시 좌표’ 기준으로 중앙 맞춤 */
+    /* 지도는 표시 좌표 기준으로 중앙 */
     const la = (it._latDisp ?? it.lat);
     const ln = (it._lngDisp ?? it.lng);
     map.setView([la, ln], Math.max(map.getZoom(), 15));
@@ -1139,6 +1294,91 @@
     }, { passive:true });
   }
 
+  /* ===== 검색 제안 ===== */
+  function showSuggest(items){
+    const box = $("qSuggest");
+    if (!box) return;
+    if (!items || !items.length){
+      box.style.display = "none";
+      box.innerHTML = "";
+      return;
+    }
+    box.innerHTML = "";
+    for (const it of items){
+      const row = document.createElement("div");
+      row.className = "qSugItem";
+      row.setAttribute("role","option");
+      row.dataset.value = it.value;
+      row.innerHTML = `<div>${escapeHtml(it.value)}</div><small>${escapeHtml(it.hint || "")}</small>`;
+      row.addEventListener("mousedown", (e)=>{ e.preventDefault(); }); // blur 방지
+      row.addEventListener("click", ()=>{
+        $("q").value = it.value;
+        box.style.display = "none";
+        render(true);
+      });
+      box.appendChild(row);
+    }
+    box.style.display = "block";
+  }
+
+  function matchText(q, text){
+    const qn = searchNorm(q);
+    const tn = searchNorm(text);
+    if (qn && tn.includes(qn)) return true;
+
+    const qcs = chosungify(q);
+    const tcs = chosungify(text);
+    if (qcs && tcs && tcs.includes(qcs)) return true;
+
+    return false;
+  }
+
+  function updateSuggest(base){
+    const qRaw = $("q").value.trim();
+    if (!qFocused){
+      $("qSuggest").style.display = "none";
+      return;
+    }
+
+    if (!qRaw){
+      const sug = QUICK_SUGGEST.map(v => ({ value:v, hint:"추천" }));
+      showSuggest(sug.slice(0, 10));
+      return;
+    }
+
+    const out = [];
+    const seen = new Set();
+
+    /* 1) 카테고리 제안 */
+    const catPool = [];
+    for (const x of CATEGORY_TREE){
+      catPool.push(x.high);
+      for (const low of (x.lows||[])) catPool.push(low);
+    }
+    for (const c of catPool){
+      if (seen.has(c)) continue;
+      if (matchText(qRaw, c)){
+        seen.add(c);
+        out.push({ value:c, hint:"카테고리" });
+        if (out.length >= 10) break;
+      }
+    }
+
+    /* 2) 결과 항목에서 제목 제안 */
+    const sample = (base || []).slice(0, 220);
+    for (const it of sample){
+      const t = (it.title || "").trim();
+      if (!t) continue;
+      if (seen.has(t)) continue;
+      if (!matchText(qRaw, t) && !tokenMatchItem(qRaw, it)) continue;
+      seen.add(t);
+      out.push({ value:t, hint:"매체명" });
+      if (out.length >= 10) break;
+    }
+
+    showSuggest(out.slice(0, 10));
+  }
+
   function render(shouldFit){
     const base = getFilteredBase();
 
@@ -1149,7 +1389,7 @@
 
     const b = map.getBounds();
 
-    /* inView도 ‘표시 좌표’ 기준으로 계산(지도/리스트 일치) */
+    /* inView도 표시 좌표 기준 */
     const inView = base.filter(x => {
       const la = (x._latDisp ?? x.lat);
       const ln = (x._lngDisp ?? x.lng);
@@ -1163,6 +1403,8 @@
 
     renderMarkers(base);
     renderList(inView);
+
+    updateSuggest(base);
 
     if (shouldFit && base.length){
       const bb = boundsOf(base);
@@ -1192,11 +1434,12 @@
       const t = assignTaxonomy(it);
       const key = makeKey(it, idx);
       const row = { ...it, _key: key, _high: t.high, _low: t.low };
-      row._blob = makeSearchBlob(row);
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._chosung = chosungify(row._blobText);
       return row;
     });
 
-    /* 동일 좌표 겹침 펼치기(오송역 등) */
     applyOverlapJitter(ALL);
 
     $("pillLoaded").textContent = ALL.length;
@@ -1204,12 +1447,29 @@
     setCatHighOptions();
 
     $("catHigh").addEventListener("change", () => render(true));
-    $("q").addEventListener("input", () => debounce(()=>render(true), 220));
-    $("q").addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
+
+    const q = $("q");
+    const qBox = $("qSuggest");
+    q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(getFilteredBase()); });
+    q.addEventListener("blur", ()=>{
+      qFocused = false;
+      setTimeout(()=>{ qBox.style.display = "none"; }, 140);
+    });
+
+    document.addEventListener("click", (e)=>{
+      const wrap = q.parentElement;
+      if (!wrap.contains(e.target)){
+        qBox.style.display = "none";
+      }
+    });
+
+    q.addEventListener("input", () => debounce(()=>render(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
+      $("qSuggest").style.display = "none";
       closeDetail(false);
       render(true);
     });
