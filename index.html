@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.10</title>
+  <title>Frontier DOOH 전국 DB v1.1.11</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -55,9 +55,9 @@
     }
     .leaflet-marker-icon svg{ pointer-events:none; }
 
-    /* 타일 톤(프론티어 다크에 자연스럽게) */
+    /* 지도 톤: "너무 어두운 다크" -> "중간" */
     .leaflet-tile-pane{
-      filter: saturate(1.12) contrast(1.06) brightness(0.96);
+      filter: saturate(1.08) contrast(1.05) brightness(0.90);
     }
 
     /* ===== TOPBAR ===== */
@@ -160,6 +160,24 @@
 
     /* 검색어 제안 박스 */
     .qWrap{ position:relative; display:inline-block; }
+    .qWrap .q{ padding-right:44px; } /* 돋보기 공간 */
+    .qGo{
+      position:absolute;
+      right:6px;
+      top:6px;
+      width:32px;
+      height:32px;
+      border-radius:10px;
+      border:1px solid rgba(162,222,204,.40);
+      background:rgba(162,222,204,.10);
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .qGo:hover{ background:rgba(162,222,204,.16); }
+    .qGo svg{ width:16px; height:16px; fill:rgba(233,255,249,.92); }
+
     #qSuggest{
       position:absolute;
       top:44px;
@@ -580,14 +598,19 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.10</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.11</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
       <div class="qWrap">
-        <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 홍대, 전광판 …)" />
+        <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 홍대, 오송역 …)" />
+        <button id="qGo" class="qGo" type="button" aria-label="검색 실행" title="검색 실행">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12 6 6 0 010-12z"/>
+          </svg>
+        </button>
         <div id="qSuggest" role="listbox" aria-label="검색어 제안"></div>
       </div>
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
@@ -705,12 +728,20 @@
   /* 검색 제안 */
   let qFocused = false;
   const QUICK_SUGGEST = ["강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
-  let SUG_POOL = [];  // {term,hint,count,_norm,_cs,_jamo}
-  let SUG_META = new Map(); // term -> {hint,count}
+  let SUG_POOL = [];
+  let SUG_META = new Map();
 
   /* 마커 상태 */
   let hoverKey = null;
   let activeMiniKey = null;
+
+  /* 미니팝업 close 제어 */
+  let miniCloseTimer = null;
+  let hoveredPopupKey = null;
+
+  /* 검색 auto-fit 취소 토큰 */
+  let autoFitToken = 0;
+  let isAutoFitting = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -949,7 +980,6 @@
   }
 
   function applyOverlapJitter(items){
-    // 동일/근접 좌표 + 동일 주소군을 더 넓게 펼침 (스파이더 라인 없이 “각 핀”을 쓰기 위함)
     const CELL = 1e-4; // ~11m
     const groups = new Map();
 
@@ -968,8 +998,8 @@
       const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
 
       const n = arr.length;
-      const base = 16;                   // meters
-      const step = Math.min(34, 12 + n); // 더 많은 군집일수록 더 크게
+      const base = 16;
+      const step = Math.min(34, 12 + n);
       const maxR = Math.min(220, 70 + n * 10);
 
       for (let i=0;i<arr.length;i++){
@@ -981,7 +1011,7 @@
         }
 
         const j = i - 1;
-        const a = j * 2.3999632297; // golden angle
+        const a = j * 2.3999632297;
         const r = Math.min(maxR, base + step * Math.sqrt(j));
         const dx = r * Math.cos(a);
         const dy = r * Math.sin(a);
@@ -998,7 +1028,6 @@
 
     const blob = it._blob || "";
 
-    // 초성 검색은 "ㄱㄴㄷ" 같이 자음만 입력했을 때만 허용 (오송역 같은 완전한 단어에 초성매칭이 섞이면 오탐 폭증)
     const isChosungQuery = /^[ㄱ-ㅎ]+$/.test(raw);
     if (isChosungQuery){
       const cs = chosungify(raw);
@@ -1006,15 +1035,12 @@
       return false;
     }
 
-    // 정규화 포함
     const qn = searchNorm(raw);
     if (qn && blob.includes(qn)) return true;
 
-    // 자모(prefix/contains): "호" -> "ㅎㅗ"로 "홍대" 매칭
     const qj = toJamo(raw);
     if (qj && it._jamo && it._jamo.includes(qj)) return true;
 
-    // 변형 토큰(도로/행정 접미 제거 등)
     const vars = tokenVariants(raw);
     if (vars.length && vars.some(v => blob.includes(v))) return true;
 
@@ -1087,9 +1113,10 @@
     iconAnchor:[18,49]
   });
 
+  /* ★ 중요: key는 무조건 유니크(행 인덱스 기반) */
   function makeKey(it, idx){
-    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+    const idPart = (it.id != null && String(it.id).trim() !== "") ? (":id=" + String(it.id).trim()) : "";
+    return "k:" + idx + idPart;
   }
 
   function clearClusterHighlight(){
@@ -1153,7 +1180,6 @@
     const idx = curInView.findIndex(x => x._key === key);
     if (idx < 0) return;
 
-    // 해당 카드가 아직 렌더링 전(무한스크롤 뒤쪽)이라면, 그 지점까지 "추가 렌더"만 수행 (리스트 전체 리렌더/회전 금지)
     if (idx < renderedCount) return;
 
     let next = renderLimit;
@@ -1200,6 +1226,17 @@
     clearClusterHighlight();
   }
 
+  function scheduleMiniClose(key, delay=140){
+    clearTimeout(miniCloseTimer);
+    miniCloseTimer = setTimeout(() => {
+      if (!activeMiniKey) return;
+      if (activeMiniKey !== key) return;
+      if (hoverKey === key) return;          // 아직 마커 위
+      if (hoveredPopupKey === key) return;   // 팝업 위
+      closeMiniPopup();
+    }, delay);
+  }
+
   function miniPopupHtml(it){
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
@@ -1233,7 +1270,6 @@
     }
     setActiveMiniKey(it._key);
 
-    // “리스트 회전/자동 스크롤”은 제거: 하이라이트만
     ensureCardVisible(it._key);
     clearAllCardHighlights();
     highlightCard(it._key);
@@ -1241,6 +1277,28 @@
     try{
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
+    }catch(_){}
+  }
+
+  function attachPopupHoverEvents(marker, key){
+    try{
+      const pop = marker.getPopup();
+      const el = pop && pop.getElement ? pop.getElement() : null;
+      if (!el) return;
+
+      // 기존 이벤트 중복을 피하려고 flag
+      if (el.__hoverBound) return;
+      el.__hoverBound = true;
+
+      el.addEventListener("mouseenter", () => {
+        hoveredPopupKey = key;
+        clearTimeout(miniCloseTimer);
+      }, { passive:true });
+
+      el.addEventListener("mouseleave", () => {
+        hoveredPopupKey = null;
+        scheduleMiniClose(key, 120);
+      }, { passive:true });
     }catch(_){}
   }
 
@@ -1269,22 +1327,26 @@
         offset: L.point(0, -86)
       });
 
-      // hover: 미니모달 + 민트 + 리스트 하이라이트
+      m.on("popupopen", () => attachPopupHoverEvents(m, it._key));
+
       m.on("mouseover", () => {
         if (isMapInteracting) return;
+        clearTimeout(miniCloseTimer);
+        hoveredPopupKey = null;
+
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
         openMiniPopupFor(it, m);
       });
 
-      // mouseout: “사라짐” 방지 (팝업은 유지), hover 상태만 정리
       m.on("mouseout", () => {
         if (isMapInteracting) return;
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
+        // 마커에서 나가면, 팝업까지 완전히 나갔을 때 자동 닫힘
+        scheduleMiniClose(it._key, 160);
       });
 
-      // 클릭: 핀도 미니모달과 동일하게 “상세보기”로 진입
       m.on("click", (ev) => {
         try{
           if (ev && ev.originalEvent){
@@ -1403,10 +1465,14 @@
     cardByKey.set(it._key, el);
 
     el.addEventListener("mouseenter", () => {
+      clearTimeout(miniCloseTimer);
       clearAllCardHighlights();
       highlightCard(it._key);
       setHoverKey(it._key);
       highlightClusterOnlyByKey(it._key);
+
+      // 리스트 hover 시에도 미니팝업을 원하면 여기서 열 수 있지만,
+      // 현재는 "리스트 hover = 하이라이트/민트만" 유지.
     });
     el.addEventListener("mouseleave", () => {
       unhighlightCard(it._key);
@@ -1494,7 +1560,7 @@
   }
 
   function buildSuggestPool(){
-    const mapT = new Map(); // term -> {term,hint,count}
+    const mapT = new Map();
 
     const add = (term, hint) => {
       const t = (term ?? "").toString().trim();
@@ -1622,6 +1688,12 @@
     }
   }
 
+  function cancelAutoFit(){
+    autoFitToken++;
+    isAutoFitting = false;
+    try{ map.stop(); }catch(_){}
+  }
+
   function fullRender(shouldFit){
     const qRaw = $("q").value.trim();
     const base = getFilteredBase();
@@ -1636,16 +1708,25 @@
     $("mFilter").textContent = base.length;
 
     renderMarkers(base);
-
     viewportUpdate();
     updateSuggest();
 
-    // 검색 시 “바로 핀 과확대” 방지: 결과가 2개 이상이면 maxZoom을 낮춰 클러스터 단계 유지
     if (shouldFit && base.length){
       const bb = boundsOf(base);
       if (bb){
+        const token = ++autoFitToken;
+        isAutoFitting = true;
+
         const maxZ = (qRaw && base.length > 1) ? 13 : 16;
         map.flyToBounds(bb, { padding:[60,60], maxZoom:maxZ, duration:0.65 });
+
+        const done = () => {
+          if (token === autoFitToken) isAutoFitting = false;
+          map.off("moveend", done);
+          map.off("zoomend", done);
+        };
+        map.on("moveend", done);
+        map.on("zoomend", done);
       }
     }
   }
@@ -1654,13 +1735,6 @@
     const topbar = $("topbar");
     const h = topbar ? topbar.getBoundingClientRect().height : 72;
     document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
-  }
-
-  function setCatHighOptions(){
-    const sel = $("catHigh");
-    sel.innerHTML = "";
-    addOption(sel, "", "매체 카테고리 (전체)");
-    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
 
   function clearClusterHint(){
@@ -1680,7 +1754,7 @@
       className:"clusterHint"
     })
     .setLatLng(latlng)
-    .setContent("클러스터 클릭해서 확대")
+    .setContent("클릭해서 확대")   /* ★ '클러스터' 제거 */
     .addTo(map);
   }
 
@@ -1721,27 +1795,24 @@
   }
 
   function buildMap(){
-    // zoomControl:false (커스텀 컨트롤로 대체)
     map = L.map("map", { zoomControl:false }).setView([36.5, 127.9], 7);
 
-    // CARTO dark basemap (토큰 없이 사용 가능, 표기/약관 준수 필요) :contentReference[oaicite:1]{index=1}
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    /* ★ OSM Standard (라벨 가독/밝기 중간) */
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
-      subdomains: "abcd",
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
     buildZoomControl();
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
-      spiderfyOnMaxZoom:false,          // “드래곤볼 튀는/줄” 연출 자체를 없앰
-      disableClusteringAtZoom: 17,      // 여기까지 들어가면 핀으로 분리
+      spiderfyOnMaxZoom:false,
+      disableClusteringAtZoom: 17,
       maxClusterRadius: 56,
-      zoomToBoundsOnClick:false         // 우리가 직접 “더 깊게” 줌 처리
+      zoomToBoundsOnClick:false
     });
 
-    // 클러스터 hover: 하이라이트 + “클릭 안내”
     markers.on("clustermouseover", (e) => {
       try{
         const el = e.layer && e.layer.getElement ? e.layer.getElement() : null;
@@ -1757,8 +1828,10 @@
       clearClusterHint();
     });
 
-    // 클러스터 클릭: “한 번에” 더 깊게 확대 (추가 확대 강요 제거)
     markers.on("clusterclick", (e) => {
+      /* ★ 핵심: 검색 auto-fit 중이면 즉시 취소(분리→복귀 1회 현상 제거) */
+      if (isAutoFitting) cancelAutoFit();
+
       isClusterAction = true;
       clearClusterHint();
       closeMiniPopup();
@@ -1771,7 +1844,6 @@
         map.fitBounds(bb, { padding:[90,90], maxZoom: 17, animate:true, duration:0.55 });
       }
 
-      // 애니메이션 중 리스트/DOM 갱신으로 “사라짐/튀는” 부작용 방지: 잠깐 지연 후 1회만 갱신
       setTimeout(() => {
         isClusterAction = false;
         viewportUpdate();
@@ -1780,9 +1852,9 @@
 
     map.addLayer(markers);
 
-    map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("dragstart", ()=>{ isMapInteracting = true; cancelAutoFit(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; cancelAutoFit(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
 
     map.on("click", ()=>{ closeMiniPopup(); clearClusterHint(); });
@@ -1796,7 +1868,6 @@
       clearClusterHint();
     }, { passive:true });
 
-    // moveend: 클러스터 확대 애니메이션 중에는 skip (사라짐/튀는 부작용 방지)
     map.on("moveend", () => {
       if (isClusterAction) return;
       viewportUpdate();
@@ -1810,7 +1881,6 @@
     buildMap();
     setupInfiniteScroll();
 
-    // 팝업 클릭 -> 상세 모달
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -1829,7 +1899,6 @@
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
 
-    // 좌표 이상치 방어: KR bounding box
     const pts = items.filter(x => {
       if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
       if (x.lat < 32.0 || x.lat > 39.8) return false;
@@ -1874,6 +1943,12 @@
 
     q.addEventListener("input", () => debounce(()=>fullRender(true), 90));
     q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") fullRender(true); });
+
+    /* 돋보기 버튼: 검색 확정 */
+    $("qGo").addEventListener("click", () => {
+      qBox.style.display = "none";
+      fullRender(true);
+    });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
