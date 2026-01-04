@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.7</title>
+  <title>Frontier DOOH 전국 DB v1.1.8</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,9 +11,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
-  <!-- Autosuggest / ranking (open-source) -->
-  <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
 
   <style>
     :root{
@@ -54,7 +51,6 @@
       user-select:none;
       -webkit-user-select:none;
       -webkit-user-drag:none;
-      -webkit-user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
     .leaflet-marker-icon svg{ pointer-events:none; }
@@ -165,7 +161,7 @@
       left:0;
       width:100%;
       display:none;
-      max-height:280px;
+      max-height:260px;
       overflow:auto;
       background:rgba(12,14,16,.98);
       border:1px solid rgba(162,222,204,.38);
@@ -176,7 +172,7 @@
     }
     .qSugItem{
       display:flex;
-      align-items:flex-start;
+      align-items:center;
       justify-content:space-between;
       gap:10px;
       padding:10px 10px;
@@ -187,38 +183,10 @@
       font-size:13px;
       line-height:1.2;
     }
-    .qSugItem .left{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-      min-width:0;
-    }
-    .qSugItem b{
-      font-weight:1000;
-      font-size:13px;
-      color:#e9eef7;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:100%;
-      display:block;
-    }
     .qSugItem small{
       color:var(--muted);
       font-size:11px;
-      line-height:1.2;
-      display:block;
       white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      max-width:100%;
-    }
-    .qSugItem .score{
-      color:rgba(162,222,204,.85);
-      font-size:11px;
-      white-space:nowrap;
-      flex:0 0 auto;
-      padding-top:2px;
     }
     .qSugItem:hover{
       background:rgba(162,222,204,.10);
@@ -374,47 +342,15 @@
     .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
     .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 
-    /* ===== STACK PIN ===== */
-    .stackWrap{filter: drop-shadow(0 8px 14px rgba(0,0,0,.55));}
-    .stackPin{
-      width:42px; height:42px;
-      border-radius:999px;
-      display:flex; align-items:center; justify-content:center;
-      font-weight:1000;
-      font-size:13px;
-      letter-spacing:.2px;
-      border:2px solid rgba(255,255,255,.85);
-      background:rgba(42,158,255,0.92);
-      color:#fff;
-      position:relative;
-    }
-    .stackPin.mint{
-      background:rgba(162,222,204,0.98);
-      color:#062b23;
-      border-color:rgba(0,0,0,.25);
-    }
-    .stackPin:after{
-      content:"";
-      position:absolute;
-      width:10px; height:10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.92);
-      bottom:-3px; left:50%;
-      transform:translateX(-50%) rotate(45deg);
-      filter:drop-shadow(0 4px 8px rgba(0,0,0,.35));
-      opacity:.35;
-    }
-
     /* ===== CLUSTER COLORS: 파랑 통일 ===== */
     .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
-
     .marker-cluster-medium{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-medium div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
-
     .marker-cluster-large{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-large div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
 
+    /* hover/active 시: 클러스터 자체 민트로 */
     .clusterHighlight{
       outline:none !important;
       outline-offset:0 !important;
@@ -428,7 +364,7 @@
       font-weight:1000 !important;
     }
 
-    /* ===== POPUP (미니모달) ===== */
+    /* ===== PIN CLICK POPUP (미니팝업) ===== */
     .leaflet-popup.pinPopWrap{ margin-bottom:0; }
     .leaflet-popup.pinPopWrap .leaflet-popup-content-wrapper{
       background:rgba(0,0,0,.90);
@@ -445,8 +381,8 @@
     }
     .leaflet-popup.pinPopWrap .leaflet-popup-content{
       margin:0;
-      min-width:320px;
-      max-width:420px;
+      min-width:300px;
+      max-width:360px;
     }
 
     .pinPopCard{
@@ -496,127 +432,6 @@
       padding:8px 10px;
       font-size:12px;
       white-space:nowrap;
-    }
-
-    /* ===== STACK/CLUSTER LIST INSIDE POPUP ===== */
-    .popList{
-      padding:10px 10px 12px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .popHead{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-    }
-    .popHead .ttl{
-      font-weight:1000;
-      font-size:13px;
-      color:#e9eef7;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .popHead .cnt{
-      font-size:12px;
-      color:rgba(162,222,204,.9);
-      font-weight:1000;
-      white-space:nowrap;
-    }
-    .popRows{
-      max-height:260px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-      padding:10px 12px 6px;
-    }
-    .popRow{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.04);
-      cursor:pointer;
-      transition: transform .12s ease, border-color .12s ease;
-    }
-    .popRow:hover{
-      transform:translateY(-1px);
-      border-color:rgba(162,222,204,.35);
-    }
-    .popThumb{
-      width:54px;
-      height:42px;
-      border-radius:10px;
-      overflow:hidden;
-      background:#0d0f10;
-      border:1px solid rgba(255,255,255,.10);
-      flex:0 0 auto;
-      position:relative;
-    }
-    .popThumb img{width:100%;height:100%;object-fit:cover;display:block;}
-    .popThumb .fallback{
-      position:absolute; inset:0;
-      display:flex; align-items:center; justify-content:center;
-      color:rgba(255,255,255,.35);
-      font-size:10px;
-      font-weight:1000;
-    }
-    .popMeta{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-      min-width:0;
-      flex:1 1 auto;
-    }
-    .popMeta b{
-      font-size:13px;
-      font-weight:1000;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .popMeta small{
-      font-size:11px;
-      color:var(--muted);
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .popMeta .p{
-      font-size:12px;
-      color:rgba(162,222,204,.95);
-      font-weight:1000;
-      white-space:nowrap;
-    }
-    .popFoot{
-      padding:0 12px 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .popFoot .hint{
-      font-size:11px;
-      color:rgba(255,255,255,.62);
-    }
-    .popFoot .zoomBtn{
-      border:1px solid rgba(162,222,204,.55);
-      background:rgba(162,222,204,.12);
-      color:#e9fff9;
-      font-weight:1000;
-      border-radius:12px;
-      padding:8px 10px;
-      font-size:12px;
-      white-space:nowrap;
-      cursor:pointer;
     }
 
     /* ===== DETAIL OVERLAY ===== */
@@ -703,14 +518,14 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.7</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.8</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
       <div class="qWrap">
-        <input id="q" class="q" type="text" placeholder="검색 (예: 오송역, 홍대, 강남, 전광판 …)" />
+        <input id="q" class="q" type="text" placeholder="검색 (예: 강남역, 홍대, 전광판 …)" />
         <div id="qSuggest" role="listbox" aria-label="검색어 제안"></div>
       </div>
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
@@ -791,7 +606,7 @@
   </div>
 
 <script>
-  const DATA_URL = new URL("data_public.json", window.location.href).toString();
+  const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
@@ -805,95 +620,34 @@
   let map = null;
   let markers = null;
 
-  const markerByKey = new Map(); // itemKey -> marker (stack이면 여러 key가 같은 marker를 가리킴)
+  const markerByKey = new Map();
   const cardByKey = new Map();
 
   const BATCH = 36;
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
+  let curBase = [];
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
 
   let highlightedClusterEl = null;
 
+  /* 지도 드래그/줌 중 hover 개입 방지 */
   let isMapInteracting = false;
 
-  // hover/active marker state (키 기반이 아니라 marker 기반으로 안정화)
-  let hoverMarker = null;
-  let activeMarker = null;
-
-  // cluster popup (map-level popup)
-  let clusterPopup = null;
-
-  // autosuggest
+  /* 검색 제안 */
   let qFocused = false;
-  const QUICK_SUGGEST = ["오송역","홍대","강남역","전광판","KTX","공항"];
+  const QUICK_SUGGEST = ["강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
+  let SUG_POOL = [];  // {term,hint,count,_norm,_cs,_jamo}
+  let SUG_META = new Map(); // term -> {hint,count}
 
-  // Fuse index for suggestions (ranking)
-  let fuseSuggest = null;
+  /* 마커 상태(hover/active) */
+  let hoverKey = null;       // 커서가 올라간 핀
+  let activeMiniKey = null;  // 미니팝업이 열린 핀(선택 상태)
 
   const $ = (id) => document.getElementById(id);
-
-  function showFatal(msg){
-    console.error(msg);
-    let el = document.getElementById("fatalBanner");
-    if(!el){
-      el = document.createElement("div");
-      el.id = "fatalBanner";
-      el.style.cssText = `
-        position:fixed; left:16px; right:16px; bottom:16px; z-index:999999;
-        padding:12px 14px; border-radius:14px;
-        background:rgba(0,0,0,.88); color:#fff;
-        border:1px solid rgba(255,80,80,.65);
-        box-shadow:0 18px 44px rgba(0,0,0,.55);
-        font: 12px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-        white-space:pre-wrap;
-      `;
-      document.body.appendChild(el);
-    }
-    el.textContent = msg;
-  }
-  window.addEventListener("error", (e)=>{
-    showFatal(`JS 오류: ${e.message}\n파일: ${e.filename}\n라인: ${e.lineno}:${e.colno}`);
-  });
-  window.addEventListener("unhandledrejection", (e)=>{
-    showFatal(`Promise 오류: ${e.reason?.message || e.reason || e}`);
-  });
-
-  function pickNumber(obj, keys){
-    for (const k of keys){
-      if (obj && obj[k] != null && obj[k] !== ""){
-        const n = Number(String(obj[k]).trim());
-        if (Number.isFinite(n)) return n;
-      }
-    }
-    return NaN;
-  }
-  function extractLatLng(x){
-    let lat = pickNumber(x, ["lat","LAT","latitude","Latitude","y","Y","Lat","LATITUDE"]);
-    let lng = pickNumber(x, ["lng","LNG","lon","Lon","longitude","Longitude","x","X","Lng","Long","LONGITUDE"]);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)){
-      if (Array.isArray(x?.coordinates) && x.coordinates.length >= 2){
-        lng = Number(x.coordinates[0]);
-        lat = Number(x.coordinates[1]);
-      } else if (Array.isArray(x?.geometry?.coordinates) && x.geometry.coordinates.length >= 2){
-        lng = Number(x.geometry.coordinates[0]);
-        lat = Number(x.geometry.coordinates[1]);
-      }
-    }
-
-    // 흔한 실수: lat=126, lng=37 형태면 스왑
-    if (Number.isFinite(lat) && Number.isFinite(lng)){
-      const looksSwapped = (lat > 120 && lat < 135 && lng > 30 && lng < 45);
-      if (looksSwapped){
-        const t = lat; lat = lng; lng = t;
-      }
-    }
-    return { lat, lng };
-  }
 
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -926,14 +680,6 @@
     const code = c.charCodeAt(0);
     return (code >= 0x3131 && code <= 0x314E);
   }
-  function isConsonantOnly(str){
-    const s = (str ?? "").toString().trim();
-    if (!s) return false;
-    for (const ch of s){
-      if (!isCompatConsonant(ch)) return false;
-    }
-    return true;
-  }
   function chosungify(str){
     const s = (str ?? "").toString();
     let out = "";
@@ -950,11 +696,70 @@
     return out;
   }
 
+  // 한글 자모(초/중/종) 분해: "호" → "ㅎㅗ", "홍대" → "ㅎㅗㅇㄷㅐ"
+  const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
+  const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  function toJamo(str){
+    const s = (str ?? "").toString();
+    let out = "";
+    for (let i=0;i<s.length;i++){
+      const ch = s[i];
+      const code = ch.charCodeAt(0);
+      if (code >= 0xAC00 && code <= 0xD7A3){
+        const v = code - 0xAC00;
+        const cho = Math.floor(v / 588);
+        const jung = Math.floor((v % 588) / 28);
+        const jong = v % 28;
+        out += (CHO[cho] || "") + (JUNG[jung] || "") + (JONG[jong] || "");
+      }else if (isCompatConsonant(ch) || (code >= 0x314F && code <= 0x3163)){
+        out += ch;
+      }
+    }
+    return out;
+  }
+
   function stripAdminSuffix(t){
     return (t ?? "").toString().replace(/(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/,"");
   }
   function stripRoadSuffix(t){
     return (t ?? "").toString().replace(/(대로|로|길)$/,"");
+  }
+  function tokenVariants(tok){
+    const raw = (tok ?? "").toString().trim();
+    if (!raw) return [];
+
+    const t0 = searchNorm(raw);
+    const t1 = stripDigits(t0);
+    const vars = new Set();
+
+    if (t0) vars.add(t0);
+    if (t1) vars.add(t1);
+
+    const a0 = stripAdminSuffix(t1);
+    if (a0 && a0 !== t1) vars.add(a0);
+
+    const r0 = stripRoadSuffix(t1);
+    if (r0 && r0 !== t1) vars.add(r0);
+
+    if (/[동리가면읍구군시도]$/.test(raw)){
+      const base = a0 || stripAdminSuffix(t1) || t1;
+      if (base){
+        vars.add(base);
+        vars.add(base + "로");
+        vars.add(base + "길");
+        vars.add(base + "대로");
+      }
+    }
+
+    if (/(대로|로|길)$/.test(raw)){
+      const base = r0 || stripRoadSuffix(t1) || t1;
+      if (base){
+        vars.add(base);
+        vars.add(base + "동");
+      }
+    }
+
+    return Array.from(vars).filter(v => v && v.length >= 1);
   }
 
   function fmtWon(price, unit){
@@ -1055,6 +860,13 @@
     add(it._high);
     add(it._low);
 
+    const commonKeys = [
+      "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
+      "sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong",
+      "region_1","region_2","region_3"
+    ];
+    for (const k of commonKeys) add(it[k]);
+
     for (const [k, v] of Object.entries(it)){
       if (typeof v !== "string") continue;
       const lk = String(k).toLowerCase();
@@ -1066,30 +878,76 @@
     return parts.join(" ");
   }
 
-  function coordKey(lat, lng){
-    return Number(lat).toFixed(6) + "," + Number(lng).toFixed(6);
+  function metersToLat(m){ return m / 111320; }
+  function metersToLng(m, lat){
+    const r = Math.cos((lat * Math.PI) / 180);
+    return m / (111320 * Math.max(0.2, r));
   }
 
-  // ===== Strict search (지도 필터는 엄격) =====
-  function tokenMatchItemStrict(tok, it){
+  function applyOverlapJitter(items){
+    // 같은 지점(또는 매우 가까운 좌표)끼리 미세 오프셋(스파이럴)을 줘서 클릭/리스트 구분 가능
+    // CELL=1e-4 ≈ 위도 11m 내외
+    const CELL = 1e-4;
+    const groups = new Map();
+
+    for (const it of items){
+      const k = Math.round(it.lat / CELL) + "," + Math.round(it.lng / CELL);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(it);
+    }
+
+    for (const arr of groups.values()){
+      if (arr.length <= 1) continue;
+
+      const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
+      const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
+
+      const base = 10; // meters
+      const step = 9;  // meters
+
+      for (let i=0;i<arr.length;i++){
+        const it = arr[i];
+
+        if (i === 0){
+          it._latDisp = it.lat;
+          it._lngDisp = it.lng;
+          continue;
+        }
+
+        const j = i - 1;
+        const a = j * 1.85;
+        const r = base + step * Math.sqrt(j);
+        const dx = r * Math.cos(a);
+        const dy = r * Math.sin(a);
+
+        it._latDisp = centerLat + metersToLat(dy);
+        it._lngDisp = centerLng + metersToLng(dx, centerLat);
+      }
+    }
+  }
+
+  function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
 
-    const t0 = searchNorm(raw);
-    const t1 = stripDigits(t0);
-    const t2 = stripAdminSuffix(t1);
-    const t3 = stripRoadSuffix(t1);
+    // 1) 초성
+    const cs = chosungify(raw);
+    if (cs && it._chosung && it._chosung.includes(cs)) return true;
 
-    const candidates = [t0, t1, t2, t3].filter(x => x && x.length >= 2);
-    if (!candidates.length) return true;
+    // 2) 정규화 포함
+    const qn = searchNorm(raw);
+    if (qn && it._blob && it._blob.includes(qn)) return true;
 
-    // 초성-only 입력은 초성 인덱스로
-    if (isConsonantOnly(raw)) {
-      return !!(it._chosung && it._chosung.includes(raw));
-    }
+    // 3) 자모(prefix/contains): "호" -> "ㅎㅗ"로 "홍대" 매칭
+    const qj = toJamo(raw);
+    if (qj && it._jamo && it._jamo.includes(qj)) return true;
 
+    // 4) 변형 토큰
+    const vars = tokenVariants(raw);
     const blob = it._blob || "";
-    return candidates.some(v => blob.includes(v));
+    if (vars.length && vars.some(v => blob.includes(v))) return true;
+
+    return false;
   }
 
   function getFilteredBase(){
@@ -1098,10 +956,9 @@
 
     let arr = ALL;
 
-    // 엄격 AND 토큰
     if (qRaw){
       const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
-      arr = arr.filter(x => tokens.every(tok => tokenMatchItemStrict(tok, x)));
+      arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
     }
 
     if (high) arr = arr.filter(x => x._high === high);
@@ -1113,7 +970,9 @@
     if (!pts.length) return null;
     const b = L.latLngBounds([]);
     for (const it of pts){
-      b.extend([it.lat, it.lng]);
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      b.extend([la, ln]);
     }
     return b.isValid() ? b : null;
   }
@@ -1157,28 +1016,6 @@
     iconAnchor:[18,49]
   });
 
-  const stackIconCache = new Map();      // count -> icon
-  const stackIconMintCache = new Map();  // count -> icon mint
-  function stackIcon(count, mint){
-    const c = Math.min(99, Math.max(2, count|0));
-    const cache = mint ? stackIconMintCache : stackIconCache;
-    if (cache.has(c)) return cache.get(c);
-
-    const html = `
-      <div class="stackWrap">
-        <div class="stackPin ${mint ? "mint" : ""}">${c}${count>99 ? "+" : ""}</div>
-      </div>
-    `;
-    const ic = L.divIcon({
-      className:"",
-      html,
-      iconSize:[42,42],
-      iconAnchor:[21,41]
-    });
-    cache.set(c, ic);
-    return ic;
-  }
-
   function makeKey(it, idx){
     if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
     return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
@@ -1216,30 +1053,28 @@
     }
   }
 
-  function updateMarkerVisual(m){
+  function updateMarkerVisual(key){
+    const m = markerByKey.get(key);
     if (!m) return;
-    const mint = (m === hoverMarker) || (m === activeMarker);
+    const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      if (m.__isStack){
-        m.setIcon(stackIcon(m.__count || 2, mint));
-      }else{
-        m.setIcon(mint ? hoverIcon : normalIcon);
-      }
+      m.setIcon(mint ? hoverIcon : normalIcon);
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
 
-  function setHoverMarker(next){
-    const prev = hoverMarker;
+  function setHoverKey(next){
+    const prev = hoverKey;
     if (prev === next) return;
-    hoverMarker = next;
+    hoverKey = next;
     if (prev) updateMarkerVisual(prev);
     if (next) updateMarkerVisual(next);
   }
-  function setActiveMarker(next){
-    const prev = activeMarker;
+
+  function setActiveMiniKey(next){
+    const prev = activeMiniKey;
     if (prev === next) return;
-    activeMarker = next;
+    activeMiniKey = next;
     if (prev) updateMarkerVisual(prev);
     if (next) updateMarkerVisual(next);
   }
@@ -1258,21 +1093,6 @@
     appendList(curInView);
   }
 
-  function showMapPopup(popup){
-    if (!map) return;
-    if (clusterPopup) {
-      try{ map.closePopup(clusterPopup); }catch(_){}
-    }
-    clusterPopup = popup;
-    try{ map.openPopup(popup); }catch(_){}
-  }
-
-  function closeClusterPopup(){
-    if (!map || !clusterPopup) return;
-    try{ map.closePopup(clusterPopup); }catch(_){}
-    clusterPopup = null;
-  }
-
   function highlightClusterOnlyByKey(key){
     clearClusterHighlight();
     const m = markerByKey.get(key);
@@ -1287,24 +1107,27 @@
   }
 
   function clearAllMarkerStates(){
-    setHoverMarker(null);
-    setActiveMarker(null);
+    hoverKey = null;
+    activeMiniKey = null;
+
+    for (const k of markerByKey.keys()){
+      try{
+        const m = markerByKey.get(k);
+        m.setIcon(normalIcon);
+        m.setZIndexOffset(0);
+      }catch(_){}
+    }
     clearClusterHighlight();
   }
 
-  function closeAnyPopups(){
-    closeClusterPopup();
-    if (!activeMarker) return;
-    try{
-      activeMarker.closePopup && activeMarker.closePopup();
-    }catch(_){}
-    setActiveMarker(null);
-  }
-
-  function flyToCenter(latlng, minZoom){
-    if (!map) return;
-    const z = Math.max(map.getZoom(), (minZoom ?? map.getZoom()));
-    map.flyTo(latlng, z, { animate:true, duration:0.45 });
+  function closeMiniPopup(){
+    if (!activeMiniKey) return;
+    const key = activeMiniKey;
+    const m = markerByKey.get(key);
+    try{ m && m.closePopup && m.closePopup(); }catch(_){}
+    setActiveMiniKey(null);
+    clearAllCardHighlights();
+    clearClusterHighlight();
   }
 
   function miniPopupHtml(it){
@@ -1332,38 +1155,122 @@
     `;
   }
 
-  function listPopupHtml(title, items, zoomBtn){
-    const safeTitle = escapeHtml(title || "목록");
-    const rows = items.map(it => {
-      const img = it.thumb
-        ? `<img src="${escapeHtml(it.thumb)}" alt="" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO</div>';"/>`
-        : `<div class="fallback">NO</div>`;
-      return `
-        <div class="popRow" data-key="${escapeHtml(it._key)}">
-          <div class="popThumb">${img}</div>
-          <div class="popMeta">
-            <b>${escapeHtml(it.title || "-")}</b>
-            <small>${escapeHtml(guessPlace(it) || "")}</small>
-            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-          </div>
-        </div>
-      `;
-    }).join("");
+  function openMiniPopupFor(it, marker){
+    clearClusterHighlight();
 
-    return `
-      <div class="popHead">
-        <div class="ttl">${safeTitle}</div>
-        <div class="cnt">${items.length}개</div>
-      </div>
-      <div class="popRows">${rows}</div>
-      <div class="popFoot">
-        <div class="hint">항목 클릭 → 상세보기</div>
-        ${zoomBtn ? `<button class="zoomBtn" data-zoom="1">여기서 확대</button>` : ``}
-      </div>
-    `;
+    if (activeMiniKey && activeMiniKey !== it._key){
+      closeMiniPopup();
+    }
+    setActiveMiniKey(it._key);
+
+    clearAllCardHighlights();
+    ensureCardVisible(it._key);
+    highlightCard(it._key, true);
+
+    try{
+      marker.setPopupContent(miniPopupHtml(it));
+      marker.openPopup();
+    }catch(_){}
+  }
+
+  function renderMarkers(items){
+    // 필터/검색 변경 시만 여기로 들어옴 (moveend에서 호출 금지)
+    closeMiniPopup();
+    clearClusterHighlight();
+    setHoverKey(null);
+
+    markerByKey.clear();
+    markers.clearLayers();
+
+    const ms = [];
+    for (const it of items){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+
+      const m = L.marker([la, ln], { icon: normalIcon });
+      m.__key = it._key;
+
+      m.bindPopup(miniPopupHtml(it), {
+        closeButton:false,
+        autoClose:true,
+        closeOnClick:false,
+        autoPan:false,
+        className:"pinPopWrap",
+        offset: L.point(0, -86)
+      });
+
+      m.on("mouseover", () => {
+        if (isMapInteracting) return;
+        setHoverKey(it._key);
+        highlightClusterOnlyByKey(it._key);
+
+        clearAllCardHighlights();
+        ensureCardVisible(it._key);
+        highlightCard(it._key, true);
+      });
+
+      m.on("mouseout", () => {
+        if (isMapInteracting) return;
+        if (hoverKey === it._key) setHoverKey(null);
+        clearClusterHighlight();
+        clearAllCardHighlights();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
+      });
+
+      // 클릭: 1회=미니팝업, 동일 핀 재클릭=상세
+      m.on("click", (ev) => {
+        try{
+          if (ev && ev.originalEvent){
+            L.DomEvent.stopPropagation(ev.originalEvent);
+            L.DomEvent.preventDefault(ev.originalEvent);
+          }
+        }catch(_){}
+
+        try{
+          map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
+        }catch(_){}
+
+        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
+          openDetail(it, true);
+          return;
+        }
+        openMiniPopupFor(it, m);
+      });
+
+      m.on("popupclose", () => {
+        if (activeMiniKey === it._key){
+          setActiveMiniKey(null);
+          updateMarkerVisual(it._key);
+          clearAllCardHighlights();
+        }
+      });
+
+      markerByKey.set(it._key, m);
+      ms.push(m);
+    }
+
+    markers.addLayers(ms);
+  }
+
+  function setHash(key){
+    const next = "#item=" + encodeURIComponent(key);
+    if (location.hash !== next){
+      suppressHashHandler = true;
+      location.hash = next;
+      setTimeout(()=>{ suppressHashHandler = false; }, 0);
+    }
+  }
+  function clearHash(){
+    if (!location.hash.startsWith("#item=")) return;
+    suppressHashHandler = true;
+    location.hash = "";
+    setTimeout(()=>{ suppressHashHandler = false; }, 0);
   }
 
   function openDetail(it, sethash){
+    // 상세 진입 시 팝업 잔상 방지
+    closeMiniPopup();
+
     currentOpenKey = it._key;
 
     $("dt").textContent = it.title || "-";
@@ -1387,8 +1294,9 @@
 
     $("dOverlay").style.display = "block";
 
-    // 상세 열 때도 중앙으로
-    flyToCenter([it.lat, it.lng], 15);
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    map.setView([la, ln], Math.max(map.getZoom(), 15));
 
     if (sethash) setHash(it._key);
   }
@@ -1399,21 +1307,6 @@
     if (!fromHashChange) clearHash();
   }
 
-  function setHash(key){
-    const next = "#item=" + encodeURIComponent(key);
-    if (location.hash !== next){
-      suppressHashHandler = true;
-      location.hash = next;
-      setTimeout(()=>{ suppressHashHandler = false; }, 0);
-    }
-  }
-  function clearHash(){
-    if (!location.hash.startsWith("#item=")) return;
-    suppressHashHandler = true;
-    location.hash = "";
-    setTimeout(()=>{ suppressHashHandler = false; }, 0);
-  }
-
   function openDetailByHash(){
     if (!location.hash.startsWith("#item=")) return;
     const key = decodeURIComponent(location.hash.replace("#item=", ""));
@@ -1421,148 +1314,8 @@
 
     const it = ALL.find(x => x._key === key);
     if (!it) return;
+
     openDetail(it, false);
-  }
-
-  // ===== Markers: stack by address =====
-  function groupKeyByAddress(it){
-    const a = searchNorm(it.address || "");
-    // 주소가 너무 짧으면(빈 값 등) 좌표로 그룹
-    if (a && a.length >= 6) return "a:" + a;
-    return "c:" + coordKey(it.lat, it.lng);
-  }
-
-  function renderMarkers(items){
-    closeAnyPopups();
-    clearClusterHighlight();
-    setHoverMarker(null);
-
-    markerByKey.clear();
-    markers.clearLayers();
-
-    // group
-    const groups = new Map();
-    for (const it of items){
-      const gk = groupKeyByAddress(it);
-      if (!groups.has(gk)) groups.set(gk, []);
-      groups.get(gk).push(it);
-    }
-
-    const ms = [];
-
-    for (const [gk, arr] of groups.entries()){
-      // 대표 좌표(평균)
-      let lat = 0, lng = 0;
-      for (const it of arr){ lat += it.lat; lng += it.lng; }
-      lat /= arr.length; lng /= arr.length;
-
-      const isStack = arr.length > 1;
-
-      const m = L.marker([lat, lng], {
-        icon: isStack ? stackIcon(arr.length, false) : normalIcon
-      });
-
-      m.__isStack = isStack;
-      m.__count = arr.length;
-      m.__items = arr;
-
-      // popup bind
-      const popHtml = isStack
-        ? listPopupHtml("동일 주소 매체", arr.slice(0, 30), false)
-        : miniPopupHtml(arr[0]);
-
-      m.bindPopup(popHtml, {
-        closeButton:false,
-        autoClose:true,
-        closeOnClick:false,
-        autoPan:false,
-        className:"pinPopWrap",
-        offset: L.point(0, -86)
-      });
-
-      // mouseover
-      m.on("mouseover", () => {
-        if (isMapInteracting) return;
-
-        setHoverMarker(m);
-
-        // 카드 하이라이트: 스택이면 첫 항목만
-        const key = arr[0]._key;
-        clearAllCardHighlights();
-        ensureCardVisible(key);
-        highlightCard(key, true);
-
-        // 클러스터(상위)도 하이라이트
-        highlightClusterOnlyByKey(key);
-      });
-
-      m.on("mouseout", () => {
-        if (isMapInteracting) return;
-        setHoverMarker(null);
-        clearClusterHighlight();
-        clearAllCardHighlights();
-      });
-
-      // click -> center + mini modal
-      m.on("click", (ev) => {
-        try{
-          if (ev && ev.originalEvent){
-            L.DomEvent.stopPropagation(ev.originalEvent);
-            L.DomEvent.preventDefault(ev.originalEvent);
-          }
-        }catch(_){}
-
-        flyToCenter([lat, lng], 14);
-
-        closeClusterPopup();
-        setActiveMarker(m);
-
-        // content refresh (혹시 썸네일 로딩 실패 등)
-        if (isStack){
-          m.setPopupContent(listPopupHtml("동일 주소 매체", arr.slice(0, 30), false));
-        }else{
-          m.setPopupContent(miniPopupHtml(arr[0]));
-        }
-        m.openPopup();
-      });
-
-      m.on("popupclose", () => {
-        if (activeMarker === m){
-          setActiveMarker(null);
-          clearAllCardHighlights();
-          clearClusterHighlight();
-        }
-      });
-
-      // key map (stack이면 여러 key가 같은 marker를 가리킴)
-      for (const it of arr){
-        markerByKey.set(it._key, m);
-      }
-
-      ms.push(m);
-    }
-
-    markers.addLayers(ms);
-  }
-
-  // ===== Cluster click: center + mini list popup =====
-  function clusterPopupHtml(items){
-    const max = 20;
-    const slice = items.slice(0, max);
-    return `
-      ${listPopupHtml("클러스터 내 매체", slice, true)}
-    `;
-  }
-
-  function dedupeByKey(items){
-    const out = [];
-    const seen = new Set();
-    for (const it of items){
-      if (seen.has(it._key)) continue;
-      seen.add(it._key);
-      out.push(it);
-    }
-    return out;
   }
 
   function renderList(items){
@@ -1599,11 +1352,11 @@
             ${it._high ? `<span class="tag">${it._high}</span>` : ``}
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
-          <div class="name">${it.title || "-"}</div>
-          <div class="place">${guessPlace(it)}</div>
+          <div class="name">${escapeHtml(it.title || "-")}</div>
+          <div class="place">${escapeHtml(guessPlace(it))}</div>
           <div class="price">
-            <div class="p">${fmtWon(it.price, it.price_unit)}</div>
-            <div class="u">${it.price_unit ? it.price_unit : ""}</div>
+            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
           </div>
         </div>
       `;
@@ -1613,15 +1366,14 @@
       el.addEventListener("mouseenter", () => {
         clearAllCardHighlights();
         highlightCard(it._key, false);
-
-        const m = markerByKey.get(it._key);
-        if (m) setHoverMarker(m);
+        setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
       });
       el.addEventListener("mouseleave", () => {
         unhighlightCard(it._key);
-        setHoverMarker(null);
+        if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
       el.addEventListener("click", () => openDetail(it, true));
 
@@ -1643,105 +1395,193 @@
     }, { passive:true });
   }
 
-  // ===== Autosuggest (Fuse ranking) =====
-  function showSuggest(items){
+  function showSuggest(values){
     const box = $("qSuggest");
     if (!box) return;
-    if (!items || !items.length){
+
+    const arr = Array.isArray(values) ? values : [];
+    if (!arr.length){
       box.style.display = "none";
       box.innerHTML = "";
       return;
     }
+
     box.innerHTML = "";
-    for (const it of items){
+    for (const v of arr){
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
-      row.dataset.value = it.value;
+      row.dataset.value = v;
 
-      row.innerHTML = `
-        <div class="left">
-          <b>${escapeHtml(it.value)}</b>
-          <small>${escapeHtml(it.hint || "")}</small>
-        </div>
-        <div class="score">${escapeHtml(it.scoreText || "")}</div>
-      `;
+      const meta = SUG_META.get(v);
+      const hint = meta?.hint || "추천";
 
+      row.innerHTML = `<div>${escapeHtml(v)}</div><small>${escapeHtml(hint)}</small>`;
       row.addEventListener("mousedown", (e)=>{ e.preventDefault(); });
       row.addEventListener("click", ()=>{
-        $("q").value = it.value;
+        $("q").value = v;
         box.style.display = "none";
-        render(true);
+        fullRender(true);
       });
       box.appendChild(row);
     }
     box.style.display = "block";
   }
 
+  function buildSuggestPool(){
+    const mapT = new Map(); // term -> {term,hint,count}
+
+    const add = (term, hint) => {
+      const t = (term ?? "").toString().trim();
+      if (!t) return;
+      if (t.length < 2) return;
+
+      const prev = mapT.get(t);
+      if (prev){
+        prev.count += 1;
+      }else{
+        mapT.set(t, { term:t, hint:hint || "추천", count:1 });
+      }
+    };
+
+    for (const it of ALL){
+      add(it.title, "매체명");
+
+      const src = `${it.title || ""} ${it.address || ""}`;
+      const ms = src.match(/[가-힣0-9A-Za-z]{2,14}역/g);
+      if (ms) ms.forEach(x => add(x, "역"));
+
+      const toks = (it.address || "").match(/[가-힣0-9A-Za-z]{2,20}/g);
+      if (toks) toks.forEach(t => add(t, "지역"));
+    }
+
+    for (const x of CATEGORY_TREE){
+      add(x.high, "카테고리");
+      for (const low of (x.lows || [])) add(low, "카테고리");
+    }
+
+    SUG_META = new Map();
+    SUG_POOL = Array.from(mapT.values()).map(o => {
+      SUG_META.set(o.term, { hint:o.hint, count:o.count });
+      return {
+        term: o.term,
+        hint: o.hint,
+        count: o.count,
+        _norm: searchNorm(o.term),
+        _cs: chosungify(o.term),
+        _jamo: toJamo(o.term),
+      };
+    });
+
+    SUG_POOL.sort((a,b)=> (b.count - a.count) || (a.term.length - b.term.length) || a.term.localeCompare(b.term));
+  }
+
+  function suggestScore(qNorm, qCs, qJ, it){
+    let s = 0;
+
+    if (qJ){
+      if (it._jamo && it._jamo.startsWith(qJ)) s = Math.max(s, 95);
+      else if (it._jamo && it._jamo.includes(qJ)) s = Math.max(s, 65);
+    }
+    if (qNorm){
+      if (it._norm && it._norm.startsWith(qNorm)) s = Math.max(s, 90);
+      else if (it._norm && it._norm.includes(qNorm)) s = Math.max(s, 60);
+    }
+    if (qCs){
+      if (it._cs && it._cs.startsWith(qCs)) s = Math.max(s, 80);
+      else if (it._cs && it._cs.includes(qCs)) s = Math.max(s, 55);
+    }
+    if (!s) return 0;
+
+    s += Math.min(8, Math.log2(1 + (it.count || 1)));
+    s += Math.min(4, 10 / (it.term.length + 2));
+    return s;
+  }
+
   function updateSuggest(){
-    const box = $("qSuggest");
-    if (!qFocused){
-      box.style.display = "none";
-      return;
-    }
     const qRaw = $("q").value.trim();
-    if (!qRaw){
-      showSuggest(QUICK_SUGGEST.map(v => ({ value:v, hint:"추천", scoreText:"" })));
-      return;
-    }
-    if (!fuseSuggest){
-      box.style.display = "none";
+    if (!qFocused){
+      $("qSuggest").style.display = "none";
       return;
     }
 
-    const results = fuseSuggest.search(qRaw).slice(0, 10);
+    if (!qRaw){
+      showSuggest(QUICK_SUGGEST);
+      return;
+    }
+
+    const qNorm = searchNorm(qRaw);
+    const qCs = chosungify(qRaw);
+    const qJ = toJamo(qRaw);
+
+    const scored = [];
+    for (const it of SUG_POOL){
+      const sc = suggestScore(qNorm, qCs, qJ, it);
+      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
+    }
+
+    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
+
     const out = [];
     const seen = new Set();
-    for (const r of results){
-      const item = r.item;
-      const v = (item.title || "").trim();
-      if (!v) continue;
-      if (seen.has(v)) continue;
-      seen.add(v);
-
-      const hint = (item.address || item._high || "").toString().slice(0, 40);
-      const scoreText = (r.score != null) ? `rel ${(1 - Math.min(1, r.score)).toFixed(2)}` : "";
-      out.push({ value:v, hint, scoreText });
+    for (const x of scored){
+      if (seen.has(x.v)) continue;
+      seen.add(x.v);
+      out.push(x.v);
       if (out.length >= 10) break;
     }
+
     showSuggest(out);
   }
 
-  function render(shouldFit){
-    closeClusterPopup();
-
+  function fullRender(shouldFit){
     const base = getFilteredBase();
+    curBase = base;
 
     if (currentOpenKey){
       const exists = base.some(x => x._key === currentOpenKey);
       if (!exists) closeDetail(false);
     }
 
-    const b = map.getBounds();
-    const inView = base.filter(x => b.contains([x.lat, x.lng]));
-    curInView = inView;
-
     $("mAll").textContent = ALL.length;
     $("mFilter").textContent = base.length;
-    $("mInView").textContent = inView.length;
 
-    // ★ 지도에는 base만 남는다 (검색 무관 핀 제거)
+    // 검색/필터 변경시에만 마커 재생성
     renderMarkers(base);
 
-    // 리스트는 "현재 지도 범위"로 유지
-    renderList(inView);
+    // 현재 범위 리스트/카운트만 갱신
+    viewportUpdate();
 
-    // suggest 업데이트
+    // 자동완성 갱신
     updateSuggest();
 
     if (shouldFit && base.length){
       const bb = boundsOf(base);
       if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
+    }
+  }
+
+  function viewportUpdate(){
+    const b = map.getBounds();
+    const inView = (curBase || []).filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
+
+    curInView = inView;
+
+    $("mInView").textContent = inView.length;
+
+    renderList(inView);
+
+    // 선택 상태 유지
+    if (activeMiniKey){
+      ensureCardVisible(activeMiniKey);
+      clearAllCardHighlights();
+      highlightCard(activeMiniKey, false);
+      highlightClusterOnlyByKey(activeMiniKey);
+      updateMarkerVisual(activeMiniKey);
     }
   }
 
@@ -1763,74 +1603,52 @@
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
       disableClusteringAtZoom: 18,
-      maxClusterRadius: 52
+      maxClusterRadius: 52,
+      zoomToBoundsOnClick:false
     });
 
-    // hover highlight
-    markers.on("clustermouseover", (e) => {
-      try{
-        closeAnyPopups();
-        if (typeof e.layer.getElement === "function"){
-          highlightClusterElement(e.layer.getElement());
-        }
-      }catch(_){}
-    });
-    markers.on("clustermouseout", () => {
-      clearClusterHighlight();
-    });
-
-    // ★ cluster click -> center + mini list modal
+    // 클러스터 클릭: 중앙/확대(일관) — 별도 "클러스터 리스트 팝업" 없음
     markers.on("clusterclick", (e) => {
       try{
-        closeAnyPopups();
-        clearAllCardHighlights();
-
-        const latlng = e.layer.getLatLng();
-        // 중심 이동(부드럽게)
-        map.flyTo(latlng, Math.min(map.getZoom() + 1, 14), { animate:true, duration:0.45 });
-
-        // cluster의 child markers -> items 추출
-        const childMarkers = e.layer.getAllChildMarkers() || [];
-        let items = [];
-        for (const m of childMarkers){
-          if (m.__items && Array.isArray(m.__items)){
-            items.push(...m.__items);
-          }
+        if (e && e.originalEvent){
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
         }
-        items = dedupeByKey(items);
-
-        // popup (map-level)
-        const html = clusterPopupHtml(items);
-        const pop = L.popup({
-          closeButton:false,
-          autoClose:true,
-          closeOnClick:false,
-          className:"pinPopWrap",
-          offset: L.point(0, -10),
-          maxWidth: 460
-        }).setLatLng(latlng).setContent(html);
-
-        showMapPopup(pop);
       }catch(_){}
+
+      closeMiniPopup();
+      clearAllMarkerStates();
+      clearAllCardHighlights();
+      clearClusterHighlight();
+
+      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
+      if (bb && bb.isValid()){
+        map.fitBounds(bb, { padding:[90,90], maxZoom: 18 });
+      }
     });
+
+    markers.on("spiderfied", () => { clearClusterHighlight(); });
+    markers.on("unspiderfied", () => { clearClusterHighlight(); });
 
     map.addLayer(markers);
 
-    map.on("dragstart", ()=>{ isMapInteracting = true; closeAnyPopups(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeAnyPopups(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
-    map.on("click", ()=>{ closeAnyPopups(); clearAllCardHighlights(); });
+
+    map.on("click", ()=>{ closeMiniPopup(); });
 
     window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
 
     map.getContainer().addEventListener("mouseleave", ()=>{
-      closeAnyPopups();
+      closeMiniPopup();
       clearAllMarkerStates();
       clearAllCardHighlights();
     }, { passive:true });
 
-    map.on("moveend", () => render(false));
+    // moveend에서는 마커 재생성 금지: 리스트/카운트만 갱신 (팝업 0.5초 사라짐 원인 제거)
+    map.on("moveend", () => viewportUpdate());
   }
 
   async function init(){
@@ -1840,27 +1658,10 @@
     buildMap();
     setupInfiniteScroll();
 
-    // popup row click (stack/cluster list)
-    document.addEventListener("click", (e) => {
-      const row = e.target && e.target.closest ? e.target.closest(".popRow") : null;
-      if (!row) return;
-
-      const key = row.getAttribute("data-key");
-      if (!key) return;
-
-      const it = ALL.find(x => x._key === key);
-      if (!it) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      openDetail(it, true);
-    }, true);
-
-    // pin mini card click -> detail
+    // 팝업 클릭(카드 클릭) -> 상세 모달
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
-
       const key = card.getAttribute("data-key");
       if (!key) return;
 
@@ -1872,62 +1673,17 @@
       openDetail(it, true);
     }, true);
 
-    // cluster popup "zoom" button
-    document.addEventListener("click", (e) => {
-      const btn = e.target && e.target.closest ? e.target.closest(".zoomBtn") : null;
-      if (!btn) return;
+    const res = await fetch(DATA_URL, { cache:"no-store" });
+    const json = await res.json();
+    const items = Array.isArray(json) ? json : (json.items || []);
 
-      e.preventDefault();
-      e.stopPropagation();
-
-      if (clusterPopup && map){
-        const ll = clusterPopup.getLatLng();
-        map.flyTo(ll, Math.min(map.getZoom()+2, 16), { animate:true, duration:0.45 });
-      }
-    }, true);
-
-    let json;
-    try{
-      const res = await fetch(DATA_URL, { cache:"no-store" });
-      if (!res.ok){
-        throw new Error(`data_public.json 로드 실패 (HTTP ${res.status})\nURL: ${DATA_URL}`);
-      }
-      json = await res.json();
-    }catch(err){
-      showFatal(
-        `데이터 로드 실패:\n${err?.message || err}\n\n` +
-        `확인 1) 주소창에 /data_public.json 직접 열어보기\n` +
-        `확인 2) index.html과 같은 폴더에 data_public.json 있는지\n` +
-        `확인 3) JSON 문법 오류(쉼표/따옴표) 없는지`
-      );
-      return;
-    }
-
-    const items = Array.isArray(json) ? json : (json.items || json.data || json.features || []);
-    if (!Array.isArray(items) || items.length === 0){
-      showFatal(`data_public.json은 읽혔지만, 배열 데이터가 비어있습니다.\n(지원 형태: [ ... ] 또는 { items:[ ... ] })`);
-      return;
-    }
-
-    const pts = [];
-    for (const raw of items){
-      const { lat, lng } = extractLatLng(raw);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-
-      if (lat < 31.5 || lat > 40.5) continue;
-      if (lng < 122.0 || lng > 133.5) continue;
-
-      const obj = { ...raw, lat, lng };
-      pts.push(obj);
-    }
-
-    if (pts.length === 0){
-      showFatal(
-        `좌표 필터 결과가 0건입니다.\n\n` +
-        `조치: data_public.json 샘플 1개(첫 번째 객체)만 복사해서 보내면 즉시 맞춰드립니다.`
-      );
-      return;
-    }
+    // 좌표 이상치 방어: KR bounding box
+    const pts = items.filter(x => {
+      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
+      if (x.lat < 32.0 || x.lat > 39.8) return false;
+      if (x.lng < 123.0 || x.lng > 132.5) return false;
+      return true;
+    });
 
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
@@ -1936,37 +1692,21 @@
       row._blobText = makeSearchText(row);
       row._blob = searchNorm(row._blobText);
       row._chosung = chosungify(row._blobText);
+      row._jamo = toJamo(row._blobText);
       return row;
     });
 
+    applyOverlapJitter(ALL);
+
     $("pillLoaded").textContent = ALL.length;
 
-    // build Fuse index (suggestion ranking)
-    try{
-      fuseSuggest = new Fuse(ALL, {
-        includeScore:true,
-        shouldSort:true,
-        threshold:0.35,
-        ignoreLocation:true,
-        minMatchCharLength:2,
-        keys:[
-          { name:"title", weight:0.55 },
-          { name:"address", weight:0.35 },
-          { name:"_high", weight:0.05 },
-          { name:"_low", weight:0.05 },
-        ]
-      });
-    }catch(_){
-      fuseSuggest = null;
-    }
-
     setCatHighOptions();
+    buildSuggestPool();
 
-    $("catHigh").addEventListener("change", () => render(true));
+    $("catHigh").addEventListener("change", () => fullRender(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
-
     q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(); });
     q.addEventListener("blur", ()=>{
       qFocused = false;
@@ -1980,16 +1720,16 @@
       }
     });
 
-    q.addEventListener("input", () => debounce(()=>render(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
+    q.addEventListener("input", () => debounce(()=>fullRender(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") fullRender(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
       $("qSuggest").style.display = "none";
       closeDetail(false);
-      closeAnyPopups();
-      render(true);
+      closeMiniPopup();
+      fullRender(true);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
@@ -2005,11 +1745,11 @@
       }
     });
 
-    render(false);
+    fullRender(false);
     openDetailByHash();
   }
 
-  init().catch(err => showFatal(`초기화 실패:\n${err?.message || err}`));
+  init();
 </script>
 </body>
 </html>
