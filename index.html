@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.11</title>
+  <title>Frontier DOOH 전국 DB v1.1.12</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -55,9 +55,9 @@
     }
     .leaflet-marker-icon svg{ pointer-events:none; }
 
-    /* 지도 톤: "너무 어두운 다크" -> "중간" */
+    /* 지도 톤: 화이트 기반 + 살짝 프론티어 감 */
     .leaflet-tile-pane{
-      filter: saturate(1.08) contrast(1.05) brightness(0.90);
+      filter: saturate(0.95) contrast(1.08) brightness(1.08);
     }
 
     /* ===== TOPBAR ===== */
@@ -132,7 +132,9 @@
     }
     input[type="text"]::placeholder{color:var(--inputPh)}
     option{background:#0c0e10; color:#ffffff;}
-    .q{ width:min(420px, 92vw); }
+
+    /* 요청: 검색창 130% */
+    .q{ width:min(560px, 94vw); }
     .cat{ width:260px; }
 
     .btn{
@@ -160,12 +162,14 @@
 
     /* 검색어 제안 박스 */
     .qWrap{ position:relative; display:inline-block; }
-    .qWrap .q{ padding-right:44px; } /* 돋보기 공간 */
+    .qWrap .q{ padding-right:78px; } /* 돋보기 공간 확장 */
+
+    /* 요청: 돋보기 알약 가로 200% (세로는 유지), 아이콘은 중앙 */
     .qGo{
       position:absolute;
       right:6px;
       top:6px;
-      width:32px;
+      width:64px;
       height:32px;
       border-radius:10px;
       border:1px solid rgba(162,222,204,.40);
@@ -214,6 +218,11 @@
     .qSugItem:hover{
       background:rgba(162,222,204,.10);
       border-color:rgba(162,222,204,.25);
+    }
+    /* 방향키 선택 상태 */
+    .qSugItem.isSel{
+      background:rgba(162,222,204,.16);
+      border-color:rgba(162,222,204,.42);
     }
 
     /* ===== APP LAYOUT ===== */
@@ -598,7 +607,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.11</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.12</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -693,6 +702,10 @@
 <script>
   const DATA_URL = "./data_public.json";
 
+  /* 초기화(홈) 뷰: 전국 */
+  const HOME_CENTER = [36.5, 127.9];
+  const HOME_ZOOM = 7;
+
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -730,6 +743,7 @@
   const QUICK_SUGGEST = ["강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
   let SUG_POOL = [];
   let SUG_META = new Map();
+  let sugIndex = -1; /* 방향키 선택 인덱스 */
 
   /* 마커 상태 */
   let hoverKey = null;
@@ -1113,7 +1127,7 @@
     iconAnchor:[18,49]
   });
 
-  /* ★ 중요: key는 무조건 유니크(행 인덱스 기반) */
+  /* key는 항상 유니크(행 인덱스 기반) */
   function makeKey(it, idx){
     const idPart = (it.id != null && String(it.id).trim() !== "") ? (":id=" + String(it.id).trim()) : "";
     return "k:" + idx + idPart;
@@ -1226,13 +1240,13 @@
     clearClusterHighlight();
   }
 
-  function scheduleMiniClose(key, delay=140){
+  function scheduleMiniClose(key, delay=120){
     clearTimeout(miniCloseTimer);
     miniCloseTimer = setTimeout(() => {
       if (!activeMiniKey) return;
       if (activeMiniKey !== key) return;
-      if (hoverKey === key) return;          // 아직 마커 위
-      if (hoveredPopupKey === key) return;   // 팝업 위
+      if (hoverKey === key) return;
+      if (hoveredPopupKey === key) return;
       closeMiniPopup();
     }, delay);
   }
@@ -1285,8 +1299,6 @@
       const pop = marker.getPopup();
       const el = pop && pop.getElement ? pop.getElement() : null;
       if (!el) return;
-
-      // 기존 이벤트 중복을 피하려고 flag
       if (el.__hoverBound) return;
       el.__hoverBound = true;
 
@@ -1297,7 +1309,7 @@
 
       el.addEventListener("mouseleave", () => {
         hoveredPopupKey = null;
-        scheduleMiniClose(key, 120);
+        scheduleMiniClose(key, 90);
       }, { passive:true });
     }catch(_){}
   }
@@ -1343,8 +1355,7 @@
         if (isMapInteracting) return;
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
-        // 마커에서 나가면, 팝업까지 완전히 나갔을 때 자동 닫힘
-        scheduleMiniClose(it._key, 160);
+        scheduleMiniClose(it._key, 110);
       });
 
       m.on("click", (ev) => {
@@ -1470,9 +1481,6 @@
       highlightCard(it._key);
       setHoverKey(it._key);
       highlightClusterOnlyByKey(it._key);
-
-      // 리스트 hover 시에도 미니팝업을 원하면 여기서 열 수 있지만,
-      // 현재는 "리스트 hover = 하이라이트/민트만" 유지.
     });
     el.addEventListener("mouseleave", () => {
       unhighlightCard(it._key);
@@ -1531,6 +1539,8 @@
     if (!box) return;
 
     const arr = Array.isArray(values) ? values : [];
+    sugIndex = -1;
+
     if (!arr.length){
       box.style.display = "none";
       box.innerHTML = "";
@@ -1538,11 +1548,13 @@
     }
 
     box.innerHTML = "";
-    for (const v of arr){
+    for (let i=0; i<arr.length; i++){
+      const v = arr[i];
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
       row.dataset.value = v;
+      row.dataset.idx = String(i);
 
       const meta = SUG_META.get(v);
       const hint = meta?.hint || "추천";
@@ -1557,6 +1569,43 @@
       box.appendChild(row);
     }
     box.style.display = "block";
+  }
+
+  function getSugItems(){
+    const box = $("qSuggest");
+    if (!box || box.style.display === "none") return [];
+    return Array.from(box.querySelectorAll(".qSugItem"));
+  }
+
+  function setSugIndex(nextIdx){
+    const items = getSugItems();
+    if (!items.length) { sugIndex = -1; return; }
+    const n = items.length;
+    if (nextIdx < 0) nextIdx = n - 1;
+    if (nextIdx >= n) nextIdx = 0;
+    sugIndex = nextIdx;
+
+    for (const el of items) el.classList.remove("isSel");
+    const sel = items[sugIndex];
+    if (sel){
+      sel.classList.add("isSel");
+      try{ sel.scrollIntoView({ block:"nearest" }); }catch(_){}
+    }
+  }
+
+  function commitSugSelection(){
+    const items = getSugItems();
+    if (!items.length) return false;
+    if (sugIndex < 0 || sugIndex >= items.length) return false;
+
+    const sel = items[sugIndex];
+    const v = sel.dataset.value;
+    if (!v) return false;
+
+    $("q").value = v;
+    $("qSuggest").style.display = "none";
+    fullRender(true);
+    return true;
   }
 
   function buildSuggestPool(){
@@ -1711,7 +1760,7 @@
     viewportUpdate();
     updateSuggest();
 
-    if (shouldFit && base.length){
+    if (shouldFit && base.length && !isClusterAction){
       const bb = boundsOf(base);
       if (bb){
         const token = ++autoFitToken;
@@ -1754,7 +1803,7 @@
       className:"clusterHint"
     })
     .setLatLng(latlng)
-    .setContent("클릭해서 확대")   /* ★ '클러스터' 제거 */
+    .setContent("클릭해서 확대")
     .addTo(map);
   }
 
@@ -1795,9 +1844,9 @@
   }
 
   function buildMap(){
-    map = L.map("map", { zoomControl:false }).setView([36.5, 127.9], 7);
+    map = L.map("map", { zoomControl:false }).setView(HOME_CENTER, HOME_ZOOM);
 
-    /* ★ OSM Standard (라벨 가독/밝기 중간) */
+    /* OSM Standard */
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
@@ -1829,8 +1878,8 @@
     });
 
     markers.on("clusterclick", (e) => {
-      /* ★ 핵심: 검색 auto-fit 중이면 즉시 취소(분리→복귀 1회 현상 제거) */
-      if (isAutoFitting) cancelAutoFit();
+      /* (핵심) 남아있는 auto-fit / 이동 상태 무조건 취소 */
+      cancelAutoFit();
 
       isClusterAction = true;
       clearClusterHint();
@@ -1841,13 +1890,23 @@
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
       if (bb && bb.isValid()){
-        map.fitBounds(bb, { padding:[90,90], maxZoom: 17, animate:true, duration:0.55 });
+        const TARGET_Z = 17;
+        map.flyToBounds(bb, { padding:[90,90], maxZoom: TARGET_Z, duration:0.55 });
+
+        /* (핵심) 첫 1회 분리→복귀 방지: 최종 줌을 17로 고정 */
+        setTimeout(() => {
+          try{
+            if (map.getZoom() < TARGET_Z){
+              map.flyTo(map.getCenter(), TARGET_Z, { duration:0.22 });
+            }
+          }catch(_){}
+        }, 580);
       }
 
       setTimeout(() => {
         isClusterAction = false;
         viewportUpdate();
-      }, 620);
+      }, 720);
     });
 
     map.addLayer(markers);
@@ -1855,7 +1914,15 @@
     map.on("dragstart", ()=>{ isMapInteracting = true; cancelAutoFit(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; cancelAutoFit(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; });
+    map.on("zoomend",   ()=>{
+      isMapInteracting = false;
+
+      /* 줌아웃(17 미만)에서 팝업/핀 남음 방지 */
+      if (map.getZoom() < 17) closeMiniPopup();
+
+      /* 간헐적 클러스터 갱신 누락 보정 */
+      try{ markers.refreshClusters(); }catch(_){}
+    });
 
     map.on("click", ()=>{ closeMiniPopup(); clearClusterHint(); });
 
@@ -1895,6 +1962,24 @@
       openDetail(it, true);
     }, true);
 
+    /* (핵심) 빈 지도 영역으로 커서 이동 시 미니모달 잔상 제거 */
+    let mmLast = 0;
+    document.addEventListener("mousemove", (e) => {
+      if (!activeMiniKey) return;
+      const now = performance.now();
+      if (now - mmLast < 60) return;
+      mmLast = now;
+
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      if (!el || !el.closest) return;
+
+      const overMarker = !!el.closest(".leaflet-marker-icon");
+      const overPopup  = !!el.closest(".leaflet-popup");
+      if (!overMarker && !overPopup){
+        scheduleMiniClose(activeMiniKey, 80);
+      }
+    }, { passive:true });
+
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
@@ -1928,35 +2013,83 @@
 
     const q = $("q");
     const qBox = $("qSuggest");
+
     q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(); });
     q.addEventListener("blur", ()=>{
       qFocused = false;
-      setTimeout(()=>{ qBox.style.display = "none"; }, 140);
+      setTimeout(()=>{ qBox.style.display = "none"; sugIndex = -1; }, 140);
     });
 
     document.addEventListener("click", (e)=>{
       const wrap = q.parentElement;
       if (!wrap.contains(e.target)){
         qBox.style.display = "none";
+        sugIndex = -1;
       }
     });
 
     q.addEventListener("input", () => debounce(()=>fullRender(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") fullRender(true); });
 
-    /* 돋보기 버튼: 검색 확정 */
+    /* 방향키 + Enter 자동완성 선택 + Enter 검색 실행 */
+    q.addEventListener("keydown", (e)=>{
+      const items = getSugItems();
+      const boxOpen = items.length > 0;
+
+      if (e.key === "ArrowDown" && boxOpen){
+        e.preventDefault();
+        setSugIndex(sugIndex + 1);
+        return;
+      }
+      if (e.key === "ArrowUp" && boxOpen){
+        e.preventDefault();
+        setSugIndex(sugIndex - 1);
+        return;
+      }
+      if (e.key === "Escape"){
+        qBox.style.display = "none";
+        sugIndex = -1;
+        return;
+      }
+      if (e.key === "Enter"){
+        e.preventDefault();
+        if (boxOpen && commitSugSelection()) return;
+        qBox.style.display = "none";
+        sugIndex = -1;
+        fullRender(true);
+      }
+    });
+
     $("qGo").addEventListener("click", () => {
       qBox.style.display = "none";
+      sugIndex = -1;
       fullRender(true);
     });
 
+    /* 초기화: heavy fitBounds 대신 홈 뷰로 부드럽게 */
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
-      $("qSuggest").style.display = "none";
+      qBox.style.display = "none";
+      sugIndex = -1;
+
       closeDetail(false);
       closeMiniPopup();
-      fullRender(true);
+      clearAllMarkerStates();
+      clearAllCardHighlights();
+      cancelAutoFit();
+
+      curBase = ALL;
+      $("mAll").textContent = ALL.length;
+      $("mFilter").textContent = ALL.length;
+
+      renderMarkers(ALL);
+
+      isClusterAction = true;
+      map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.55 });
+      setTimeout(() => {
+        isClusterAction = false;
+        viewportUpdate();
+      }, 650);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
