@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.3</title>
+  <title>Frontier DOOH 전국 DB</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -77,14 +77,19 @@
       line-height:1.08;
       text-align:left;
       white-space:nowrap;
+      display:flex;
+      align-items:baseline;
+      gap:10px;
     }
-    .titleLeft .ver{
+    .verBadge{
       font-size:12px;
+      color:rgba(255,255,255,.70);
+      padding:4px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(0,0,0,.22);
+      box-shadow:0 8px 18px rgba(0,0,0,.22);
       font-weight:900;
-      color:rgba(255,255,255,.55);
-      margin-left:10px;
-      letter-spacing:.2px;
-      vertical-align:middle;
     }
     .pill{
       display:inline-flex; align-items:center; gap:8px;
@@ -519,7 +524,10 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.3</span></div>
+    <div class="titleLeft">
+      <span id="appTitle">Frontier DOOH 전국 DB</span>
+      <span class="verBadge" id="appVer">v0.0.0</span>
+    </div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -540,6 +548,7 @@
         <div class="sPill">전체 <b id="mAll">0</b></div>
         <div class="sPill">필터 <b id="mFilter">0</b></div>
         <div class="sPill">현재범위 <b id="mInView">0</b></div>
+        <div class="sPill" id="mDroppedWrap" style="display:none;">좌표오류 <b id="mDropped">0</b></div>
       </div>
 
       <div class="card listWrap">
@@ -607,6 +616,14 @@
   </div>
 
 <script>
+  /* ========= VERSION =========
+     v0.M.m 형식:
+     - v0 : 아직 개발/안정화 단계 (공개 상용 MVP 전)
+     - M(마이너): 기능 단위 변화(검색/필터/툴팁/클러스터 UX 등)
+     - m(패치): 버그/안정화/미세 UX 개선
+  */
+  const APP_VERSION = "v0.9.6";
+
   const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
@@ -616,6 +633,14 @@
     { high:"극장 / 레저 / 휴양 시설", lows:["극장","레저","휴양, 편의시설"] },
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
+
+  /* 대한민국 범위(대략 + 버퍼) : 좌표 오류로 인해 세계로 튀는 문제 방지 */
+  const KOREA_BBOX = {
+    minLat: 32.3,
+    maxLat: 40.8,
+    minLng: 123.0,
+    maxLng: 133.8
+  };
 
   let ALL = [];
   let map = null;
@@ -627,9 +652,8 @@
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
-
-  /* v1.1.3: moveend에서는 “마커 재생성 금지” → base 캐시 */
-  let CUR_BASE = [];
+  let curBase = [];              // 현재 필터(검색/카테고리) 결과 전체
+  let lastFilterSig = "";        // 필터 시그니처(동일하면 마커/클러스터 재생성 금지)
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
@@ -648,6 +672,9 @@
   /* 검색 제안 */
   let qFocused = false;
   const QUICK_SUGGEST = ["강남역","홍대","전광판","KTX","공항"];
+
+  /* 좌표 오류 drop 카운트 */
+  let droppedOutOfKorea = 0;
 
   const $ = (id) => document.getElementById(id);
 
@@ -684,7 +711,7 @@
   }
   function hasCompatConsonant(str){
     const s = (str ?? "").toString();
-    for (let i=0;i<s.length;i++){
+    for (let i=0; i<s.length; i++){
       if (isCompatConsonant(s[i])) return true;
     }
     return false;
@@ -865,40 +892,16 @@
     return parts.join(" ");
   }
 
-  function hash32(str){
-    const s = (str ?? "").toString();
-    let h = 2166136261 >>> 0;
-    for (let i=0;i<s.length;i++){
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return (h >>> 0).toString(16).padStart(8, "0");
+  function isFiniteNumber(n){
+    return (typeof n === "number") && isFinite(n);
   }
-
-  function stableSig(it){
-    return [
-      it.title||"", it.address||"", it.media_group||"", it.category_low||"",
-      it.price||"", it.price_unit||"", it.operator||"",
-      it.lat, it.lng
-    ].join("|");
+  function isValidLatLng(lat, lng){
+    if (!isFiniteNumber(lat) || !isFiniteNumber(lng)) return false;
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
+    return true;
   }
-
-  function makeKey(it, idx, used){
-    const id = (it.id != null) ? String(it.id).trim() : "";
-    const h = hash32(stableSig(it));
-
-    let base = id ? `id:${id}:${h}` : `k:${h}`;
-
-    if (used){
-      let k = base;
-      let n = 1;
-      while(used.has(k)){
-        k = `${base}:${idx}:${n++}`;
-      }
-      used.add(k);
-      return k;
-    }
-    return base;
+  function isInKorea(lat, lng){
+    return lat >= KOREA_BBOX.minLat && lat <= KOREA_BBOX.maxLat && lng >= KOREA_BBOX.minLng && lng <= KOREA_BBOX.maxLng;
   }
 
   function coordKey(lat, lng){
@@ -935,22 +938,22 @@
     }
   }
 
+  /* ★ 검색 매칭 핵심 수정:
+     - 초성(ㄱㄴㄷ…) 매칭은 "사용자가 실제로 자음(ㄱ-ㅎ)을 입력한 경우"에만 사용
+     - 일반 한글(오송역 등)에서는 초성 fallback을 하지 않아 오탐 대폭 감소
+  */
   function tokenMatchItem(tok, it){
-    const raw = (tok ?? "").toString().trim();
-    if (!raw) return true;
-
-    /* 초성 매칭은 “자모가 섞인 입력”일 때만 적용 (오탐 방지) */
-    const useCs = hasCompatConsonant(raw) || /^[ㄱ-ㅎ]+$/.test(raw);
-    if (useCs){
-      const cs  = chosungify(raw);
-      if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
-    }
-
-    const vars = tokenVariants(raw);
+    const vars = tokenVariants(tok);
     if (!vars.length) return true;
 
     const blob = it._blob || "";
-    return vars.some(v => blob.includes(v));
+    if (vars.some(v => blob.includes(v))) return true;
+
+    if (hasCompatConsonant(tok)){
+      const cs  = chosungify(tok);
+      if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
+    }
+    return false;
   }
 
   function getFilteredBase(){
@@ -969,7 +972,7 @@
   }
 
   function boundsOf(items){
-    const pts = items.slice(0, 600);
+    const pts = items.slice(0, 700);
     if (!pts.length) return null;
     const b = L.latLngBounds([]);
     for (const it of pts){
@@ -1018,6 +1021,11 @@
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
+
+  function makeKey(it, idx){
+    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
+    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+  }
 
   function clearClusterHighlight(){
     if (highlightedClusterEl){
@@ -1163,14 +1171,12 @@
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
-      /* v1.1.3: 기본 click spiderfy/zoom 모두 끄고 우리가 통제 */
-      spiderfyOnMaxZoom:false,
-      zoomToBoundsOnClick:false,
-
+      spiderfyOnMaxZoom:true,
       disableClusteringAtZoom: 18,
       maxClusterRadius: 52
     });
 
+    /* 클러스터: 리스트 스크롤 금지, 말풍선만 */
     markers.on("clustermouseover", (e) => {
       try{
         closeActivePop();
@@ -1185,41 +1191,13 @@
       hideClusterTip();
     });
 
-    /* v1.1.3: 클러스터 클릭 정책
-       - 줌 낮음(<=12): 먼저 확대 → (줌 충분하면) 스파이더파이
-       - 줌 높음(>=13): 즉시 스파이더파이
-    */
-    markers.on("clusterclick", (e) => {
-      try{
-        if (e.originalEvent){
-          e.originalEvent.preventDefault();
-          e.originalEvent.stopPropagation();
-        }
-
-        closeActivePop();
-        hideClusterTip();
-        clearAllMarkerHighlights();
-        clearAllCardHighlights();
-
-        const z = map.getZoom();
-        const layer = e.layer;
-        const bounds = layer.getBounds();
-
-        if (z <= 12){
-          map.fitBounds(bounds, { padding:[70,70], maxZoom: 16 });
-
-          /* 확대 후에 핀 펼침(겹침 많은 역/상권에 유리) */
-          map.once("moveend", ()=>{
-            try{
-              if (map.getZoom() >= 13){
-                layer.spiderfy();
-              }
-            }catch(_){}
-          });
-        }else{
-          layer.spiderfy();
-        }
-      }catch(_){}
+    /* ★ 클러스터 클릭 시: 기본 동작(확대/스파이더파이) 방해하지 않되,
+       hover 요소(팝업/하이라이트/말풍선)만 정리 */
+    markers.on("clusterclick", () => {
+      closeActivePop();
+      hideClusterTip();
+      clearAllMarkerHighlights();
+      clearAllCardHighlights();
     });
 
     map.addLayer(markers);
@@ -1231,6 +1209,11 @@
   }
 
   function renderMarkers(items){
+    closeActivePop();
+    hideClusterTip();
+    clearAllMarkerHighlights();
+    clearAllCardHighlights();
+
     rebuildClusterGroup();
     clearMarkers();
 
@@ -1306,6 +1289,7 @@
 
         highlightMarkerOrClusterByKey(it._key);
         clearAllCardHighlights();
+
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
 
@@ -1363,9 +1347,12 @@
 
     $("dOverlay").style.display = "block";
 
-    const la = (it._latDisp ?? it.lat);
-    const ln = (it._lngDisp ?? it.lng);
-    map.setView([la, ln], Math.max(map.getZoom(), 15));
+    /* 안전장치: 한국 범위 밖 좌표는 화면 이동(세계로 튐) 방지 */
+    if (isInKorea(it.lat, it.lng)){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      map.setView([la, ln], Math.max(map.getZoom(), 15));
+    }
 
     if (sethash) setHash(it._key);
   }
@@ -1480,7 +1467,7 @@
       row.addEventListener("click", ()=>{
         $("q").value = it.value;
         box.style.display = "none";
-        renderFull(true);
+        applyFilters(true);
       });
       box.appendChild(row);
     }
@@ -1492,8 +1479,7 @@
     const tn = searchNorm(text);
     if (qn && tn.includes(qn)) return true;
 
-    const useCs = hasCompatConsonant(q) || /^[ㄱ-ㅎ]+$/.test(q);
-    if (useCs){
+    if (hasCompatConsonant(q)){
       const qcs = chosungify(q);
       const tcs = chosungify(text);
       if (qcs && tcs && tcs.includes(qcs)) return true;
@@ -1532,7 +1518,7 @@
       }
     }
 
-    const sample = (base || []).slice(0, 220);
+    const sample = (base || []).slice(0, 240);
     for (const it of sample){
       const t = (it.title || "").trim();
       if (!t) continue;
@@ -1544,46 +1530,6 @@
     }
 
     showSuggest(out.slice(0, 10));
-  }
-
-  /* v1.1.3: “현재 지도 범위”만 갱신 (마커 재생성 X) */
-  function renderInViewOnly(){
-    const base = CUR_BASE || [];
-    const b = map.getBounds();
-
-    const inView = base.filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
-    curInView = inView;
-
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-    $("mInView").textContent = inView.length;
-
-    renderList(inView);
-  }
-
-  /* v1.1.3: 필터/검색 변경 시에만 “마커 포함 전체 재렌더” */
-  function renderFull(shouldFit){
-    const base = getFilteredBase();
-    CUR_BASE = base;
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
-    renderMarkers(base);
-    renderInViewOnly();
-
-    updateSuggest(base);
-
-    if (shouldFit && base.length){
-      const bb = boundsOf(base);
-      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
-    }
   }
 
   function updateStickyHeights(){
@@ -1600,11 +1546,15 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    map.on("dragstart", ()=>{ isMapInteracting = true; closeActivePop(); clearAllMarkerHighlights(); clearAllCardHighlights(); hideClusterTip(); });
-    map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeActivePop(); clearAllMarkerHighlights(); clearAllCardHighlights(); hideClusterTip(); });
+    /* ★ move/zoom 중 hover UX 꼬임 방지 */
+    map.on("movestart", ()=>{ isMapInteracting = true; closeActivePop(); hideClusterTip(); });
+    map.on("moveend",   ()=>{ isMapInteracting = false; updateViewOnly(); });
+
+    map.on("zoomstart", ()=>{ isMapInteracting = true; closeActivePop(); hideClusterTip(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
+
     map.on("click", ()=>{ closeActivePop(); });
+
     window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
 
     map.getContainer().addEventListener("mouseleave", ()=>{
@@ -1615,12 +1565,64 @@
     }, { passive:true });
 
     rebuildClusterGroup();
+  }
 
-    /* v1.1.3: moveend에서는 리스트/카운트만 갱신 */
-    map.on("moveend", () => renderInViewOnly());
+  function filterSignature(){
+    return searchNorm($("q").value.trim()) + "|" + ($("catHigh").value || "");
+  }
+
+  /* ★ 핵심: 필터(검색/카테고리) 변경 시에만 마커/클러스터를 재생성 */
+  function applyFilters(shouldFit){
+    const base = getFilteredBase();
+    curBase = base;
+
+    if (currentOpenKey){
+      const exists = base.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
+
+    updateSuggest(base);
+
+    const sig = filterSignature();
+    const shouldRebuildMarkers = (sig !== lastFilterSig);
+
+    if (shouldRebuildMarkers){
+      lastFilterSig = sig;
+      renderMarkers(base);
+    }
+
+    updateViewOnly();
+
+    if (shouldFit && base.length){
+      const bb = boundsOf(base);
+      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
+    }
+  }
+
+  /* 지도 범위가 바뀔 때는 리스트/카운트만 갱신(마커/클러스터 유지) */
+  function updateViewOnly(){
+    if (!map) return;
+    const b = map.getBounds();
+
+    const inView = curBase.filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
+
+    curInView = inView;
+
+    $("mInView").textContent = inView.length;
+    renderList(inView);
   }
 
   async function init(){
+    $("appVer").textContent = APP_VERSION;
+    document.title = `Frontier DOOH 전국 DB — ${APP_VERSION}`;
+
     updateStickyHeights();
     window.addEventListener("resize", updateStickyHeights);
 
@@ -1630,28 +1632,40 @@
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
-    const pts = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
+    const pts = items.filter(x => isValidLatLng(x.lat, x.lng));
 
-    const usedKeys = new Set();
+    const temp = [];
+    droppedOutOfKorea = 0;
 
-    ALL = pts.map((it, idx) => {
+    for (let idx=0; idx<pts.length; idx++){
+      const it = pts[idx];
+      if (!isInKorea(it.lat, it.lng)){
+        droppedOutOfKorea++;
+        continue;
+      }
       const t = assignTaxonomy(it);
-      const row = { ...it, _high: t.high, _low: t.low };
-      row._key = makeKey(row, idx, usedKeys);
-
+      const key = makeKey(it, idx);
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
       row._blobText = makeSearchText(row);
       row._blob = searchNorm(row._blobText);
       row._chosung = chosungify(row._blobText);
-      return row;
-    });
+      temp.push(row);
+    }
+
+    ALL = temp;
 
     applyOverlapJitter(ALL);
 
     $("pillLoaded").textContent = ALL.length;
 
+    if (droppedOutOfKorea > 0){
+      $("mDropped").textContent = droppedOutOfKorea;
+      $("mDroppedWrap").style.display = "inline-flex";
+    }
+
     setCatHighOptions();
 
-    $("catHigh").addEventListener("change", () => renderFull(true));
+    $("catHigh").addEventListener("change", () => applyFilters(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -1668,15 +1682,15 @@
       }
     });
 
-    q.addEventListener("input", () => debounce(()=>renderFull(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") renderFull(true); });
+    q.addEventListener("input", () => debounce(()=>applyFilters(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") applyFilters(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
       $("qSuggest").style.display = "none";
       closeDetail(false);
-      renderFull(true);
+      applyFilters(true);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
@@ -1692,8 +1706,8 @@
       }
     });
 
-    /* 최초 1회 전체 렌더 */
-    renderFull(false);
+    /* 초기 렌더: 마커 1회 생성 */
+    applyFilters(false);
     openDetailByHash();
   }
 
