@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.2</title>
+  <title>Frontier DOOH 전국 DB v1.1.3</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -519,7 +519,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.2</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.3</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -627,6 +627,9 @@
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
+
+  /* v1.1.3: moveend에서는 “마커 재생성 금지” → base 캐시 */
+  let CUR_BASE = [];
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
@@ -1160,13 +1163,14 @@
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
+      /* v1.1.3: 기본 click spiderfy/zoom 모두 끄고 우리가 통제 */
+      spiderfyOnMaxZoom:false,
+      zoomToBoundsOnClick:false,
+
       disableClusteringAtZoom: 18,
-      maxClusterRadius: 52,
-      zoomToBoundsOnClick:false
+      maxClusterRadius: 52
     });
 
-    /* 클러스터: hover는 말풍선/하이라이트만 */
     markers.on("clustermouseover", (e) => {
       try{
         closeActivePop();
@@ -1181,23 +1185,39 @@
       hideClusterTip();
     });
 
-    /* 클러스터 클릭: “줌이 안 늘어나는” 경우 최소 +2줌 강제 */
+    /* v1.1.3: 클러스터 클릭 정책
+       - 줌 낮음(<=12): 먼저 확대 → (줌 충분하면) 스파이더파이
+       - 줌 높음(>=13): 즉시 스파이더파이
+    */
     markers.on("clusterclick", (e) => {
       try{
+        if (e.originalEvent){
+          e.originalEvent.preventDefault();
+          e.originalEvent.stopPropagation();
+        }
+
         closeActivePop();
         hideClusterTip();
         clearAllMarkerHighlights();
         clearAllCardHighlights();
 
-        const bounds = e.layer.getBounds();
         const z = map.getZoom();
-        const target = map.getBoundsZoom(bounds, false, L.point(120,120));
+        const layer = e.layer;
+        const bounds = layer.getBounds();
 
-        if (target <= z){
-          const ll = e.latlng || e.layer.getLatLng();
-          map.setView(ll, Math.min(z + 2, 17));
+        if (z <= 12){
+          map.fitBounds(bounds, { padding:[70,70], maxZoom: 16 });
+
+          /* 확대 후에 핀 펼침(겹침 많은 역/상권에 유리) */
+          map.once("moveend", ()=>{
+            try{
+              if (map.getZoom() >= 13){
+                layer.spiderfy();
+              }
+            }catch(_){}
+          });
         }else{
-          map.fitBounds(bounds, { padding:[60,60], maxZoom: 17 });
+          layer.spiderfy();
         }
       }catch(_){}
     });
@@ -1460,7 +1480,7 @@
       row.addEventListener("click", ()=>{
         $("q").value = it.value;
         box.style.display = "none";
-        render(true);
+        renderFull(true);
       });
       box.appendChild(row);
     }
@@ -1526,14 +1546,9 @@
     showSuggest(out.slice(0, 10));
   }
 
-  function render(shouldFit){
-    const base = getFilteredBase();
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
+  /* v1.1.3: “현재 지도 범위”만 갱신 (마커 재생성 X) */
+  function renderInViewOnly(){
+    const base = CUR_BASE || [];
     const b = map.getBounds();
 
     const inView = base.filter(x => {
@@ -1547,8 +1562,21 @@
     $("mFilter").textContent = base.length;
     $("mInView").textContent = inView.length;
 
-    renderMarkers(base);
     renderList(inView);
+  }
+
+  /* v1.1.3: 필터/검색 변경 시에만 “마커 포함 전체 재렌더” */
+  function renderFull(shouldFit){
+    const base = getFilteredBase();
+    CUR_BASE = base;
+
+    if (currentOpenKey){
+      const exists = base.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    renderMarkers(base);
+    renderInViewOnly();
 
     updateSuggest(base);
 
@@ -1587,7 +1615,9 @@
     }, { passive:true });
 
     rebuildClusterGroup();
-    map.on("moveend", () => render(false));
+
+    /* v1.1.3: moveend에서는 리스트/카운트만 갱신 */
+    map.on("moveend", () => renderInViewOnly());
   }
 
   async function init(){
@@ -1621,7 +1651,7 @@
 
     setCatHighOptions();
 
-    $("catHigh").addEventListener("change", () => render(true));
+    $("catHigh").addEventListener("change", () => renderFull(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -1638,15 +1668,15 @@
       }
     });
 
-    q.addEventListener("input", () => debounce(()=>render(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
+    q.addEventListener("input", () => debounce(()=>renderFull(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") renderFull(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
       $("qSuggest").style.display = "none";
       closeDetail(false);
-      render(true);
+      renderFull(true);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
@@ -1662,7 +1692,8 @@
       }
     });
 
-    render(false);
+    /* 최초 1회 전체 렌더 */
+    renderFull(false);
     openDetailByHash();
   }
 
