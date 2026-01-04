@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.9</title>
+  <title>Frontier DOOH 전국 DB v1.1.10</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,6 +30,9 @@
       --inputPh:rgba(255,255,255,.45);
 
       --topbarH:72px;
+
+      /* 지도(타일) 컬러 톤 보정: Frontier 톤에 살짝 맞춤 */
+      --mapFilter: saturate(0.95) contrast(1.06) brightness(0.99) hue-rotate(-8deg);
     }
 
     *{box-sizing:border-box}
@@ -246,13 +249,12 @@
       border-bottom:1px solid rgba(255,255,255,.10);
       box-shadow:0 10px 28px rgba(0,0,0,.35);
     }
-    .statsTitle{
+    .sTitle{
       font-weight:1000;
       color:#e9eef7;
       font-size:15px;
+      margin-right:4px;
       letter-spacing:.2px;
-      margin-right:6px;
-      padding:6px 2px;
     }
     .sPill{
       display:inline-flex; gap:8px; align-items:center;
@@ -269,7 +271,7 @@
     /* ===== LIST ===== */
     .listWrap{padding:14px;}
     .listHeader{
-      display:flex; align-items:baseline; justify-content:space-between;
+      display:flex; align-items:baseline; justify-content:flex-end;
       gap:10px; margin-bottom:10px;
     }
     .listHeader .small{color:var(--muted); font-size:12px;}
@@ -344,26 +346,13 @@
       min-height:0;
     }
     #map{width:100%; height:100%; background:#0b0c0d;}
-
-    /* Zoom pill (leaflet control) */
-    .zoomPillCtl{
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(0,0,0,.35);
-      color:#e9eef7;
-      font-size:12px;
-      box-shadow:0 10px 22px rgba(0,0,0,.35);
-      backdrop-filter: blur(6px);
-      -webkit-backdrop-filter: blur(6px);
-    }
-    .zoomPillCtl b{ color: var(--mint); font-weight:1000; }
+    #map .leaflet-tile{ filter: var(--mapFilter); }
 
     /* ===== PIN ICONS ===== */
     .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
     .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 
-    /* ===== CLUSTER COLORS: 파랑 통일 ===== */
+    /* ===== CLUSTER COLORS ===== */
     .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
     .marker-cluster-medium{ background-color: rgba(42, 158, 255, 0.34) !important; }
@@ -385,7 +374,7 @@
       font-weight:1000 !important;
     }
 
-    /* ===== PIN HOVER POPUP (미니팝업) ===== */
+    /* ===== PIN POPUP ===== */
     .leaflet-popup.pinPopWrap{ margin-bottom:0; }
     .leaflet-popup.pinPopWrap .leaflet-popup-content-wrapper{
       background:rgba(0,0,0,.90);
@@ -534,12 +523,45 @@
       font-weight:1000;
       font-size:12px;
     }
+
+    /* ===== Zoom pill + zoom buttons (topright) ===== */
+    .zoomPillCtl{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(162,222,204,.40);
+      background:rgba(12,14,16,.88);
+      color:#e9eef7;
+      font-size:12px;
+      font-weight:900;
+      box-shadow:0 14px 34px rgba(0,0,0,.45);
+      margin-bottom:8px;
+      min-width:92px;
+    }
+    .zoomPillCtl b{ color:var(--mint); }
+
+    /* 우측 상단 컨트롤 간격 정리 */
+    .leaflet-top.leaflet-right .leaflet-control{
+      margin-top:10px;
+      margin-right:10px;
+    }
+    .leaflet-control-zoom a{
+      background:rgba(12,14,16,.85) !important;
+      color:#fff !important;
+      border:1px solid rgba(255,255,255,.18) !important;
+    }
+    .leaflet-control-zoom a:hover{
+      background:rgba(162,222,204,.12) !important;
+      border-color:rgba(162,222,204,.35) !important;
+    }
   </style>
 </head>
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.9</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.10</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -557,8 +579,7 @@
   <div class="app">
     <div class="panel" id="panel">
       <div class="statsSticky">
-        <div class="statsTitle">리스트</div>
-        <div class="sPill">표시 <b id="resultInfo">0</b>건</div>
+        <div class="sTitle">리스트</div>
         <div class="sPill">전체 <b id="mAll">0</b></div>
         <div class="sPill">필터 <b id="mFilter">0</b></div>
         <div class="sPill">현재범위 <b id="mInView">0</b></div>
@@ -566,7 +587,7 @@
 
       <div class="card listWrap">
         <div class="listHeader">
-          <div class="small">항상 “현재 지도 범위” 기준으로만 리스트가 구성됩니다.</div>
+          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위)</div>
         </div>
 
         <div class="grid" id="list"></div>
@@ -665,17 +686,15 @@
   let SUG_POOL = [];  // {term,hint,count,_norm,_cs,_jamo}
   let SUG_META = new Map(); // term -> {hint,count}
 
-  /* 마커 상태(hover/active) */
-  let hoverKey = null;       // 커서가 올라간 핀
-  let activeMiniKey = null;  // 미니팝업이 열린 핀(선택 상태)
+  /* 마커 상태 */
+  let hoverKey = null;
+  let activeMiniKey = null;
 
-  /* 미니팝업 hover 유지용 */
-  let isPopupHovering = false;
-  let popupCloseTimer = null;
-  let hoverPopupTimer = null;
-
-  /* key 중복 방지 */
-  let ID_SEEN = new Map();
+  /* hover 팝업 안정화(깜빡임/즉시닫힘 방지) */
+  let hoverOpenT = null;
+  let hoverCloseT = null;
+  let isMarkerHover = false;
+  let isPopupHover  = false;
 
   /* Zoom pill */
   let zoomPillEl = null;
@@ -729,7 +748,6 @@
     return out;
   }
 
-  // 한글 자모(초/중/종) 분해
   const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
   const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
   function toJamo(str){
@@ -790,13 +808,6 @@
         vars.add(base);
         vars.add(base + "동");
       }
-    }
-
-    // "역" 제거 변형도 추가
-    if (raw.endsWith("역")){
-      const base = raw.replace(/역$/,"").trim();
-      const bn = searchNorm(base);
-      if (bn) vars.add(bn);
     }
 
     return Array.from(vars).filter(v => v && v.length >= 1);
@@ -886,6 +897,7 @@
     timer = setTimeout(fn, ms);
   }
 
+  /* (2) 검색 정확도 개선: “관련 없는 문자열 필드”까지 무차별 포함하던 로직 제거 */
   function makeSearchText(it){
     const parts = [];
     const add = (v) => {
@@ -900,20 +912,9 @@
     add(it._high);
     add(it._low);
 
-    const commonKeys = [
-      "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
-      "sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong",
-      "region_1","region_2","region_3"
-    ];
-    for (const k of commonKeys) add(it[k]);
-
-    for (const [k, v] of Object.entries(it)){
-      if (typeof v !== "string") continue;
-      const lk = String(k).toLowerCase();
-      if (lk.includes("thumb") || lk.includes("image") || lk.includes("img")) continue;
-      if (lk.includes("url") || lk.includes("link") || lk.includes("api")) continue;
-      add(v);
-    }
+    // 자주 쓰이는 지역 필드만 제한적으로 포함(있을 때만)
+    const keys = ["sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong","region_1","region_2","region_3"];
+    for (const k of keys) add(it[k]);
 
     return parts.join(" ");
   }
@@ -925,7 +926,9 @@
   }
 
   function applyOverlapJitter(items){
-    const CELL = 1e-4;
+    // 같은 지점(또는 매우 가까운 좌표)끼리 미세 오프셋(스파이럴) -> spiderfy(드래곤볼) 원천 차단 목적
+    // CELL=5e-5 ≈ 위도 5~6m 내외
+    const CELL = 5e-5;
     const groups = new Map();
 
     for (const it of items){
@@ -940,21 +943,15 @@
       const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
       const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
 
-      const base = 10; // meters
-      const step = 9;  // meters
+      const base = 18; // meters (기존보다 크게)
+      const step = 14; // meters
 
       for (let i=0;i<arr.length;i++){
         const it = arr[i];
 
-        if (i === 0){
-          it._latDisp = it.lat;
-          it._lngDisp = it.lng;
-          continue;
-        }
-
-        const j = i - 1;
+        const j = i; // 0도 약간 이동시켜 “완전 겹침” 가능성 최소화
         const a = j * 1.85;
-        const r = base + step * Math.sqrt(j);
+        const r = base + step * Math.sqrt(Math.max(1, j));
         const dx = r * Math.cos(a);
         const dy = r * Math.sin(a);
 
@@ -964,35 +961,22 @@
     }
   }
 
-  /* ===== 검색 필터 매칭: 과매칭 줄이기(핵심) ===== */
   function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
 
-    // 1) 자음(초성)만 입력한 경우만 초성 매칭 허용: 예) "ㅎㄷ"
-    const onlyConsonants = /^[ㄱ-ㅎ]+$/.test(raw);
-    if (onlyConsonants){
-      return !!(it._chosung && it._chosung.includes(raw));
-    }
+    const cs = chosungify(raw);
+    if (cs && it._chosung && it._chosung.includes(cs)) return true;
 
-    const blob = it._blob || "";
     const qn = searchNorm(raw);
+    if (qn && it._blob && it._blob.includes(qn)) return true;
 
-    // 2) 기본: 정규화 포함 매칭 (가장 안전)
-    if (qn && blob.includes(qn)) return true;
+    const qj = toJamo(raw);
+    if (qj && it._jamo && it._jamo.includes(qj)) return true;
 
-    // 3) 변형 토큰(행정/도로/역 제거 등)
     const vars = tokenVariants(raw);
+    const blob = it._blob || "";
     if (vars.length && vars.some(v => blob.includes(v))) return true;
-
-    // 4) 매우 짧은 입력(1~2글자)만 자모 매칭 허용: 예) "호" -> "홍대"
-    if (raw.length <= 2){
-      const qj = toJamo(raw);
-      if (qj && it._jamo){
-        if (it._jamo.startsWith(qj)) return true;
-        if (qj.length >= 2 && it._jamo.includes(qj)) return true;
-      }
-    }
 
     return false;
   }
@@ -1064,12 +1048,7 @@
   });
 
   function makeKey(it, idx){
-    const rawId = (it.id != null) ? String(it.id).trim() : "";
-    if (rawId){
-      const n = (ID_SEEN.get(rawId) || 0) + 1;
-      ID_SEEN.set(rawId, n);
-      return (n === 1) ? ("id:" + rawId) : ("id:" + rawId + "~" + n);
-    }
+    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
     return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
   }
 
@@ -1086,12 +1065,13 @@
     highlightedClusterEl = el;
   }
 
-  function highlightCard(key, opts){
+  function highlightCard(key, doScroll){
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.add("isActive");
-    if (opts && opts.scroll){
-      el.scrollIntoView({ block:"center", behavior: opts.behavior || "auto" });
+    if (doScroll){
+      // (1) “회전/정신없는 느낌” 방지: smooth 제거 -> 즉시 이동
+      try{ el.scrollIntoView({ block:"center", behavior:"auto" }); }catch(_){}
     }
   }
   function unhighlightCard(key){
@@ -1173,9 +1153,6 @@
   }
 
   function closeMiniPopup(){
-    clearTimeout(popupCloseTimer);
-    isPopupHovering = false;
-
     if (!activeMiniKey) return;
     const key = activeMiniKey;
     const m = markerByKey.get(key);
@@ -1185,42 +1162,13 @@
     clearClusterHighlight();
   }
 
-  function scheduleCloseMini(delayMs){
-    clearTimeout(popupCloseTimer);
-    popupCloseTimer = setTimeout(() => {
-      if (isPopupHovering) return;
-      closeMiniPopup();
-    }, Math.max(0, delayMs || 0));
-  }
-
-  function wirePopupHover(marker){
-    try{
-      const pop = marker && marker.getPopup ? marker.getPopup() : null;
-      const el = pop && pop.getElement ? pop.getElement() : null;
-      if (!el) return;
-      if (el.dataset && el.dataset.hoverWired === "1") return;
-
-      if (el.dataset) el.dataset.hoverWired = "1";
-
-      el.addEventListener("mouseenter", () => {
-        isPopupHovering = true;
-        clearTimeout(popupCloseTimer);
-      }, { passive:true });
-
-      el.addEventListener("mouseleave", () => {
-        isPopupHovering = false;
-        scheduleCloseMini(120);
-      }, { passive:true });
-    }catch(_){}
-  }
-
   function miniPopupHtml(it){
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
     const price = escapeHtml(fmtWon(it.price, it.price_unit));
 
     const img = it.thumb
-      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>';" />`
+      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>';"/>`
       : `<div class="fallback">NO IMAGE</div>`;
 
     return `
@@ -1239,34 +1187,22 @@
     `;
   }
 
-  function openMiniPopupFor(it, marker, opts){
+  function openMiniPopupFor(it, marker, doScroll){
     clearClusterHighlight();
 
-    // 다른 팝업이 열려있으면 교체
     if (activeMiniKey && activeMiniKey !== it._key){
       closeMiniPopup();
     }
     setActiveMiniKey(it._key);
 
-    // 리스트는 "하이라이트만" (자동 스크롤/회전 제거)
     clearAllCardHighlights();
     ensureCardVisible(it._key);
-    highlightCard(it._key, { scroll: !!(opts && opts.scroll), behavior: (opts && opts.behavior) || "auto" });
+    highlightCard(it._key, !!doScroll);
 
     try{
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
-      setTimeout(()=>wirePopupHover(marker), 0);
     }catch(_){}
-  }
-
-  function openMiniOnHover(it, marker){
-    clearTimeout(hoverPopupTimer);
-    hoverPopupTimer = setTimeout(() => {
-      if (isMapInteracting) return;
-      if (hoverKey !== it._key) return;
-      openMiniPopupFor(it, marker, { scroll:false });
-    }, 70);
   }
 
   function renderMarkers(items){
@@ -1294,34 +1230,46 @@
         offset: L.point(0, -86)
       });
 
-      // hover: 미니모달 표시 + 리스트 하이라이트(자동 스크롤 없음)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
 
-        clearTimeout(popupCloseTimer);
-        isPopupHovering = false;
+        isMarkerHover = true;
+        clearTimeout(hoverOpenT);
+        clearTimeout(hoverCloseT);
 
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
 
+        // (1) hover는 스크롤 강제 금지: 강조만
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key, { scroll:false });
+        highlightCard(it._key, false);
 
-        openMiniOnHover(it, m);
+        // hover 팝업은 살짝 딜레이로 안정화
+        hoverOpenT = setTimeout(() => {
+          if (hoverKey !== it._key) return;
+          openMiniPopupFor(it, m, false);
+        }, 80);
       });
 
       m.on("mouseout", () => {
         if (isMapInteracting) return;
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        clearAllCardHighlights();
 
-        // 팝업 위로 커서가 이동하는 경우를 위해 지연 닫기
-        scheduleCloseMini(140);
+        isMarkerHover = false;
+        clearTimeout(hoverOpenT);
+
+        // 팝업 위로 이동하려는 경우를 위해 약간 지연 후 닫기
+        hoverCloseT = setTimeout(() => {
+          if (!isPopupHover && activeMiniKey === it._key){
+            closeMiniPopup();
+          }
+          if (hoverKey === it._key) setHoverKey(null);
+          clearClusterHighlight();
+          clearAllCardHighlights();
+        }, 140);
       });
 
-      // 클릭: 핀 클릭 = 미니모달 클릭과 동일하게 "상세 모달"로 바로 진입
+      // 클릭: 핀/미니모달 동일하게 “상세 모달”
       m.on("click", (ev) => {
         try{
           if (ev && ev.originalEvent){
@@ -1329,16 +1277,16 @@
             L.DomEvent.preventDefault(ev.originalEvent);
           }
         }catch(_){}
+
+        closeMiniPopup();
         openDetail(it, true);
       });
 
       m.on("popupclose", () => {
-        // 팝업이 닫히면 active 상태 정리
         if (activeMiniKey === it._key){
           setActiveMiniKey(null);
           updateMarkerVisual(it._key);
           clearAllCardHighlights();
-          clearClusterHighlight();
         }
       });
 
@@ -1366,7 +1314,6 @@
 
   function openDetail(it, sethash){
     closeMiniPopup();
-
     currentOpenKey = it._key;
 
     $("dt").textContent = it.title || "-";
@@ -1393,11 +1340,6 @@
     const la = (it._latDisp ?? it.lat);
     const ln = (it._lngDisp ?? it.lng);
     map.setView([la, ln], Math.max(map.getZoom(), 15));
-
-    // 상세 진입 시, 해당 카드만 "즉시" 보이게(스크롤 애니메이션 없음)
-    ensureCardVisible(it._key);
-    clearAllCardHighlights();
-    highlightCard(it._key, { scroll:true, behavior:"auto" });
 
     if (sethash) setHash(it._key);
   }
@@ -1428,8 +1370,6 @@
     renderLimit = BATCH;
 
     $("empty").style.display = items.length ? "none" : "block";
-    $("moreHint").style.display = "none";
-
     appendList(items);
   }
 
@@ -1466,7 +1406,7 @@
 
       el.addEventListener("mouseenter", () => {
         clearAllCardHighlights();
-        highlightCard(it._key, { scroll:false });
+        highlightCard(it._key, false);
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
       });
@@ -1474,14 +1414,14 @@
         unhighlightCard(it._key);
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
-        if (activeMiniKey) highlightCard(activeMiniKey, { scroll:false });
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
       el.addEventListener("click", () => openDetail(it, true));
 
       list.appendChild(el);
     }
 
-    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
+    $("moreHint") && ($("moreHint").style.display = (renderLimit < items.length) ? "block" : "none");
   }
 
   function setupInfiniteScroll(){
@@ -1530,7 +1470,7 @@
   }
 
   function buildSuggestPool(){
-    const mapT = new Map(); // term -> {term,hint,count}
+    const mapT = new Map();
 
     const add = (term, hint) => {
       const t = (term ?? "").toString().trim();
@@ -1635,6 +1575,28 @@
     showSuggest(out);
   }
 
+  function viewportUpdate(){
+    const b = map.getBounds();
+    const inView = (curBase || []).filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
+
+    curInView = inView;
+
+    $("mInView").textContent = inView.length;
+    renderList(inView);
+
+    if (activeMiniKey){
+      ensureCardVisible(activeMiniKey);
+      clearAllCardHighlights();
+      highlightCard(activeMiniKey, false);
+      highlightClusterOnlyByKey(activeMiniKey);
+      updateMarkerVisual(activeMiniKey);
+    }
+  }
+
   function fullRender(shouldFit){
     const base = getFilteredBase();
     curBase = base;
@@ -1657,30 +1619,6 @@
     }
   }
 
-  function viewportUpdate(){
-    const b = map.getBounds();
-    const inView = (curBase || []).filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
-
-    curInView = inView;
-
-    $("mInView").textContent = inView.length;
-
-    renderList(inView);
-
-    // 선택 상태 유지(팝업이 켜져 있는 동안만)
-    if (activeMiniKey){
-      ensureCardVisible(activeMiniKey);
-      clearAllCardHighlights();
-      highlightCard(activeMiniKey, { scroll:false });
-      highlightClusterOnlyByKey(activeMiniKey);
-      updateMarkerVisual(activeMiniKey);
-    }
-  }
-
   function updateStickyHeights(){
     const topbar = $("topbar");
     const h = topbar ? topbar.getBoundingClientRect().height : 72;
@@ -1692,17 +1630,26 @@
     zoomPillEl.innerHTML = `Zoom: <b>${map.getZoom()}</b>`;
   }
 
-  function buildMap(){
-    map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
+  function ensureMarkersAlive(){
+    try{
+      const n = (markers && markers.getLayers) ? markers.getLayers().length : 0;
+      if (n === 0 && (curBase || []).length){
+        renderMarkers(curBase);
+      }
+    }catch(_){}
+  }
 
-    // 친근한 느낌의 타일로 교체 (CARTO Voyager)
+  function buildMap(){
+    // 좌측 기본 줌컨트롤 제거 -> 우측 상단으로 재배치
+    map = L.map("map", { zoomControl:false }).setView([36.5, 127.9], 7);
+
     L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
       subdomains: "abcd",
       maxZoom: 20,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
     }).addTo(map);
 
-    // Zoom pill control
+    // Zoom pill (topright)
     const zoomCtl = L.control({ position:"topright" });
     zoomCtl.onAdd = function(){
       const div = L.DomUtil.create("div", "zoomPillCtl");
@@ -1712,17 +1659,22 @@
       return div;
     };
     zoomCtl.addTo(map);
+
+    // +/- (topright)
+    L.control.zoom({ position:"topright" }).addTo(map);
     updateZoomPill();
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
-      disableClusteringAtZoom: 18,
+      // (5) 드래곤볼(스파이더) 자체를 차단
+      spiderfyOnMaxZoom:false,
+      // (5) 줌 16 이상에서는 클러스터 해제 -> 개별 핀이 확실히 나오도록
+      disableClusteringAtZoom: 16,
       maxClusterRadius: 52,
+      // 기본 클릭 확대는 우리가 직접 fitBounds로 처리
       zoomToBoundsOnClick:false
     });
 
-    // 클러스터 클릭: 중앙/확대 (클러스터 리스트 팝업 없음)
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -1740,17 +1692,23 @@
       if (bb && bb.isValid()){
         map.fitBounds(bb, { padding:[90,90], maxZoom: 18 });
       }
-    });
 
-    markers.on("spiderfied", () => { clearClusterHighlight(); });
-    markers.on("unspiderfied", () => { clearClusterHighlight(); });
+      // (5) 아주 드물게 “0개”로 꼬이면 0.25초 내 자동 복구
+      setTimeout(ensureMarkersAlive, 250);
+    });
 
     map.addLayer(markers);
 
     map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
+
     map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; updateZoomPill(); });
+    map.on("zoomend",   ()=>{
+      isMapInteracting = false;
+      updateZoomPill();
+      setTimeout(ensureMarkersAlive, 80);
+    });
+
     map.on("click", ()=>{ closeMiniPopup(); });
 
     window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
@@ -1761,7 +1719,27 @@
       clearAllCardHighlights();
     }, { passive:true });
 
+    // moveend에서는 마커 재생성 금지: 리스트/카운트만 갱신
     map.on("moveend", () => viewportUpdate());
+
+    // 팝업 hover 유지
+    map.on("popupopen", (e)=>{
+      try{
+        const el = e.popup && e.popup.getElement ? e.popup.getElement() : null;
+        if (!el) return;
+        el.addEventListener("mouseenter", ()=>{
+          isPopupHover = true;
+          clearTimeout(hoverCloseT);
+        }, { passive:true });
+        el.addEventListener("mouseleave", ()=>{
+          isPopupHover = false;
+          clearTimeout(hoverCloseT);
+          hoverCloseT = setTimeout(()=>{
+            if (!isMarkerHover) closeMiniPopup();
+          }, 140);
+        }, { passive:true });
+      }catch(_){}
+    });
   }
 
   async function init(){
@@ -1771,7 +1749,6 @@
     buildMap();
     setupInfiniteScroll();
 
-    // 팝업 카드 클릭 -> 상세 모달
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -1797,9 +1774,6 @@
       if (x.lng < 123.0 || x.lng > 132.5) return false;
       return true;
     });
-
-    // id 중복 방지 초기화
-    ID_SEEN = new Map();
 
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
