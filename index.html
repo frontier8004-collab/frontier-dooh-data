@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.8</title>
+  <title>Frontier DOOH 전국 DB v1.1.4</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -44,9 +44,11 @@
       min-height:0;
     }
 
+    /* map drag UX */
     .leaflet-container{cursor:grab;}
     .leaflet-dragging .leaflet-container{cursor:grabbing;}
 
+    /* 브라우저 기본 드래그/선택 방지 */
     .leaflet-marker-icon, .leaflet-marker-icon *{
       user-select:none;
       -webkit-user-select:none;
@@ -130,6 +132,7 @@
     .q{ width:min(420px, 92vw); }
     .cat{ width:260px; }
 
+    /* 초기화 버튼 */
     .btn{
       height:44px;
       border-radius:12px;
@@ -144,6 +147,7 @@
       font-size:14px;
     }
 
+    /* 검색 입력 텍스트/placeholder 흰색 강제 */
     #q{ color:#fff !important; caret-color:#fff !important; }
     #q::placeholder{ color:#fff !important; }
     #q:-webkit-autofill{
@@ -345,12 +349,14 @@
     /* ===== CLUSTER COLORS: 파랑 통일 ===== */
     .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
+
     .marker-cluster-medium{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-medium div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
+
     .marker-cluster-large{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-large div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
 
-    /* hover/active 시: 클러스터 자체 민트로 */
+    /* hover 시: 외부 링 없이 “클러스터 자체” 민트로 */
     .clusterHighlight{
       outline:none !important;
       outline-offset:0 !important;
@@ -363,6 +369,18 @@
       color:#062b23 !important;
       font-weight:1000 !important;
     }
+
+    /* 클러스터 말풍선 */
+    .leaflet-tooltip.clusterTip{
+      background:rgba(0,0,0,.85);
+      border:1px solid rgba(162,222,204,.55);
+      color:#e9fff9;
+      font-weight:1000;
+      padding:6px 10px;
+      border-radius:10px;
+      box-shadow:0 10px 24px rgba(0,0,0,.35);
+    }
+    .leaflet-tooltip.clusterTip:before{ border-top-color: rgba(0,0,0,.85); }
 
     /* ===== PIN CLICK POPUP (미니팝업) ===== */
     .leaflet-popup.pinPopWrap{ margin-bottom:0; }
@@ -518,7 +536,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.8</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.4</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -627,7 +645,6 @@
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
-  let curBase = [];
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
@@ -637,11 +654,12 @@
   /* 지도 드래그/줌 중 hover 개입 방지 */
   let isMapInteracting = false;
 
+  /* 클러스터 말풍선 */
+  let clusterTip = null;
+
   /* 검색 제안 */
   let qFocused = false;
-  const QUICK_SUGGEST = ["강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
-  let SUG_POOL = [];  // {term,hint,count,_norm,_cs,_jamo}
-  let SUG_META = new Map(); // term -> {hint,count}
+  const QUICK_SUGGEST = ["강남역","홍대","전광판","KTX","공항"];
 
   /* 마커 상태(hover/active) */
   let hoverKey = null;       // 커서가 올라간 핀
@@ -696,28 +714,6 @@
     return out;
   }
 
-  // 한글 자모(초/중/종) 분해: "호" → "ㅎㅗ", "홍대" → "ㅎㅗㅇㄷㅐ"
-  const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
-  const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
-  function toJamo(str){
-    const s = (str ?? "").toString();
-    let out = "";
-    for (let i=0;i<s.length;i++){
-      const ch = s[i];
-      const code = ch.charCodeAt(0);
-      if (code >= 0xAC00 && code <= 0xD7A3){
-        const v = code - 0xAC00;
-        const cho = Math.floor(v / 588);
-        const jung = Math.floor((v % 588) / 28);
-        const jong = v % 28;
-        out += (CHO[cho] || "") + (JUNG[jung] || "") + (JONG[jong] || "");
-      }else if (isCompatConsonant(ch) || (code >= 0x314F && code <= 0x3163)){
-        out += ch;
-      }
-    }
-    return out;
-  }
-
   function stripAdminSuffix(t){
     return (t ?? "").toString().replace(/(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/,"");
   }
@@ -759,7 +755,7 @@
       }
     }
 
-    return Array.from(vars).filter(v => v && v.length >= 1);
+    return Array.from(vars).filter(v => v && v.length >= 2);
   }
 
   function fmtWon(price, unit){
@@ -878,20 +874,18 @@
     return parts.join(" ");
   }
 
+  function coordKey(lat, lng){
+    return Number(lat).toFixed(6) + "," + Number(lng).toFixed(6);
+  }
   function metersToLat(m){ return m / 111320; }
   function metersToLng(m, lat){
     const r = Math.cos((lat * Math.PI) / 180);
     return m / (111320 * Math.max(0.2, r));
   }
-
   function applyOverlapJitter(items){
-    // 같은 지점(또는 매우 가까운 좌표)끼리 미세 오프셋(스파이럴)을 줘서 클릭/리스트 구분 가능
-    // CELL=1e-4 ≈ 위도 11m 내외
-    const CELL = 1e-4;
     const groups = new Map();
-
     for (const it of items){
-      const k = Math.round(it.lat / CELL) + "," + Math.round(it.lng / CELL);
+      const k = coordKey(it.lat, it.lng);
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(it);
     }
@@ -899,55 +893,28 @@
     for (const arr of groups.values()){
       if (arr.length <= 1) continue;
 
-      const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
-      const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
-
-      const base = 10; // meters
-      const step = 9;  // meters
-
-      for (let i=0;i<arr.length;i++){
+      const base = 7;
+      const step = 6;
+      for (let i=0; i<arr.length; i++){
         const it = arr[i];
-
-        if (i === 0){
-          it._latDisp = it.lat;
-          it._lngDisp = it.lng;
-          continue;
-        }
-
-        const j = i - 1;
-        const a = j * 1.85;
-        const r = base + step * Math.sqrt(j);
+        const a = i * 1.85;
+        const r = base + step * Math.sqrt(i);
         const dx = r * Math.cos(a);
         const dy = r * Math.sin(a);
 
-        it._latDisp = centerLat + metersToLat(dy);
-        it._lngDisp = centerLng + metersToLng(dx, centerLat);
+        it._latDisp = it.lat + metersToLat(dy);
+        it._lngDisp = it.lng + metersToLng(dx, it.lat);
       }
     }
   }
 
   function tokenMatchItem(tok, it){
-    const raw = (tok ?? "").toString().trim();
-    if (!raw) return true;
-
-    // 1) 초성
-    const cs = chosungify(raw);
-    if (cs && it._chosung && it._chosung.includes(cs)) return true;
-
-    // 2) 정규화 포함
-    const qn = searchNorm(raw);
-    if (qn && it._blob && it._blob.includes(qn)) return true;
-
-    // 3) 자모(prefix/contains): "호" -> "ㅎㅗ"로 "홍대" 매칭
-    const qj = toJamo(raw);
-    if (qj && it._jamo && it._jamo.includes(qj)) return true;
-
-    // 4) 변형 토큰
-    const vars = tokenVariants(raw);
+    const vars = tokenVariants(tok);
+    const cs  = chosungify(tok);
+    if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
+    if (!vars.length) return true;
     const blob = it._blob || "";
-    if (vars.length && vars.some(v => blob.includes(v))) return true;
-
-    return false;
+    return vars.some(v => blob.includes(v));
   }
 
   function getFilteredBase(){
@@ -1093,6 +1060,25 @@
     appendList(curInView);
   }
 
+  function showClusterTip(latlng){
+    if (!map) return;
+    if (!clusterTip){
+      clusterTip = L.tooltip({
+        permanent:false,
+        direction:"top",
+        offset:[0,-12],
+        opacity:0.95,
+        className:"clusterTip"
+      });
+    }
+    clusterTip.setLatLng(latlng).setContent("클릭해서 확대");
+    map.openTooltip(clusterTip);
+  }
+  function hideClusterTip(){
+    if (!map || !clusterTip) return;
+    map.closeTooltip(clusterTip);
+  }
+
   function highlightClusterOnlyByKey(key){
     clearClusterHighlight();
     const m = markerByKey.get(key);
@@ -1107,6 +1093,8 @@
   }
 
   function clearAllMarkerStates(){
+    const prevHover = hoverKey;
+    const prevActive = activeMiniKey;
     hoverKey = null;
     activeMiniKey = null;
 
@@ -1118,6 +1106,9 @@
       }catch(_){}
     }
     clearClusterHighlight();
+    if (prevHover || prevActive) {
+      // no-op; just ensuring cleared
+    }
   }
 
   function closeMiniPopup(){
@@ -1156,17 +1147,21 @@
   }
 
   function openMiniPopupFor(it, marker){
+    hideClusterTip();
     clearClusterHighlight();
 
+    // 이전 선택 팝업 닫고, 선택 상태 갱신
     if (activeMiniKey && activeMiniKey !== it._key){
       closeMiniPopup();
     }
     setActiveMiniKey(it._key);
 
+    // 리스트를 보이게 + 하이라이트
     clearAllCardHighlights();
     ensureCardVisible(it._key);
     highlightCard(it._key, true);
 
+    // 팝업 내용 세팅 후 오픈(항상 1개만 유지: autoClose=true)
     try{
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
@@ -1174,7 +1169,7 @@
   }
 
   function renderMarkers(items){
-    // 필터/검색 변경 시만 여기로 들어옴 (moveend에서 호출 금지)
+    // 지도 이동 등으로 렌더가 다시 들어올 때, 기존 미니팝업은 닫는 게 안전
     closeMiniPopup();
     clearClusterHighlight();
     setHoverKey(null);
@@ -1192,13 +1187,14 @@
 
       m.bindPopup(miniPopupHtml(it), {
         closeButton:false,
-        autoClose:true,
+        autoClose:true,         // ★ 겹침/스택 방지
         closeOnClick:false,
         autoPan:false,
         className:"pinPopWrap",
-        offset: L.point(0, -86)
+        offset: L.point(0, -86) // 팝업이 핀을 가리지 않게 위로
       });
 
+      // 마커 Hover: 민트/리스트만 반응 (팝업은 열지 않음)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
@@ -1213,11 +1209,12 @@
         if (isMapInteracting) return;
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
+        // 리스트 하이라이트는 유지/해제 취향 갈릴 수 있어서: 일단 "커서가 떨어지면 해제"
         clearAllCardHighlights();
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
 
-      // 클릭: 1회=미니팝업, 동일 핀 재클릭=상세
+      // 클릭 1회: 미니팝업, 동일 핀 재클릭: 해시모달(상세)
       m.on("click", (ev) => {
         try{
           if (ev && ev.originalEvent){
@@ -1226,10 +1223,7 @@
           }
         }catch(_){}
 
-        try{
-          map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
-        }catch(_){}
-
+        // 같은 핀을 다시 클릭하면 상세로
         if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
           openDetail(it, true);
           return;
@@ -1237,6 +1231,7 @@
         openMiniPopupFor(it, m);
       });
 
+      // 팝업 닫히면 선택 상태 해제
       m.on("popupclose", () => {
         if (activeMiniKey === it._key){
           setActiveMiniKey(null);
@@ -1268,9 +1263,6 @@
   }
 
   function openDetail(it, sethash){
-    // 상세 진입 시 팝업 잔상 방지
-    closeMiniPopup();
-
     currentOpenKey = it._key;
 
     $("dt").textContent = it.title || "-";
@@ -1352,11 +1344,11 @@
             ${it._high ? `<span class="tag">${it._high}</span>` : ``}
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
-          <div class="name">${escapeHtml(it.title || "-")}</div>
-          <div class="place">${escapeHtml(guessPlace(it))}</div>
+          <div class="name">${it.title || "-"}</div>
+          <div class="place">${guessPlace(it)}</div>
           <div class="price">
-            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
+            <div class="p">${fmtWon(it.price, it.price_unit)}</div>
+            <div class="u">${it.price_unit ? it.price_unit : ""}</div>
           </div>
         </div>
       `;
@@ -1395,110 +1387,45 @@
     }, { passive:true });
   }
 
-  function showSuggest(values){
+  function showSuggest(items){
     const box = $("qSuggest");
     if (!box) return;
-
-    const arr = Array.isArray(values) ? values : [];
-    if (!arr.length){
+    if (!items || !items.length){
       box.style.display = "none";
       box.innerHTML = "";
       return;
     }
-
     box.innerHTML = "";
-    for (const v of arr){
+    for (const it of items){
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
-      row.dataset.value = v;
-
-      const meta = SUG_META.get(v);
-      const hint = meta?.hint || "추천";
-
-      row.innerHTML = `<div>${escapeHtml(v)}</div><small>${escapeHtml(hint)}</small>`;
+      row.dataset.value = it.value;
+      row.innerHTML = `<div>${escapeHtml(it.value)}</div><small>${escapeHtml(it.hint || "")}</small>`;
       row.addEventListener("mousedown", (e)=>{ e.preventDefault(); });
       row.addEventListener("click", ()=>{
-        $("q").value = v;
+        $("q").value = it.value;
         box.style.display = "none";
-        fullRender(true);
+        render(true);
       });
       box.appendChild(row);
     }
     box.style.display = "block";
   }
 
-  function buildSuggestPool(){
-    const mapT = new Map(); // term -> {term,hint,count}
+  function matchText(q, text){
+    const qn = searchNorm(q);
+    const tn = searchNorm(text);
+    if (qn && tn.includes(qn)) return true;
 
-    const add = (term, hint) => {
-      const t = (term ?? "").toString().trim();
-      if (!t) return;
-      if (t.length < 2) return;
+    const qcs = chosungify(q);
+    const tcs = chosungify(text);
+    if (qcs && tcs && tcs.includes(qcs)) return true;
 
-      const prev = mapT.get(t);
-      if (prev){
-        prev.count += 1;
-      }else{
-        mapT.set(t, { term:t, hint:hint || "추천", count:1 });
-      }
-    };
-
-    for (const it of ALL){
-      add(it.title, "매체명");
-
-      const src = `${it.title || ""} ${it.address || ""}`;
-      const ms = src.match(/[가-힣0-9A-Za-z]{2,14}역/g);
-      if (ms) ms.forEach(x => add(x, "역"));
-
-      const toks = (it.address || "").match(/[가-힣0-9A-Za-z]{2,20}/g);
-      if (toks) toks.forEach(t => add(t, "지역"));
-    }
-
-    for (const x of CATEGORY_TREE){
-      add(x.high, "카테고리");
-      for (const low of (x.lows || [])) add(low, "카테고리");
-    }
-
-    SUG_META = new Map();
-    SUG_POOL = Array.from(mapT.values()).map(o => {
-      SUG_META.set(o.term, { hint:o.hint, count:o.count });
-      return {
-        term: o.term,
-        hint: o.hint,
-        count: o.count,
-        _norm: searchNorm(o.term),
-        _cs: chosungify(o.term),
-        _jamo: toJamo(o.term),
-      };
-    });
-
-    SUG_POOL.sort((a,b)=> (b.count - a.count) || (a.term.length - b.term.length) || a.term.localeCompare(b.term));
+    return false;
   }
 
-  function suggestScore(qNorm, qCs, qJ, it){
-    let s = 0;
-
-    if (qJ){
-      if (it._jamo && it._jamo.startsWith(qJ)) s = Math.max(s, 95);
-      else if (it._jamo && it._jamo.includes(qJ)) s = Math.max(s, 65);
-    }
-    if (qNorm){
-      if (it._norm && it._norm.startsWith(qNorm)) s = Math.max(s, 90);
-      else if (it._norm && it._norm.includes(qNorm)) s = Math.max(s, 60);
-    }
-    if (qCs){
-      if (it._cs && it._cs.startsWith(qCs)) s = Math.max(s, 80);
-      else if (it._cs && it._cs.includes(qCs)) s = Math.max(s, 55);
-    }
-    if (!s) return 0;
-
-    s += Math.min(8, Math.log2(1 + (it.count || 1)));
-    s += Math.min(4, 10 / (it.term.length + 2));
-    return s;
-  }
-
-  function updateSuggest(){
+  function updateSuggest(base){
     const qRaw = $("q").value.trim();
     if (!qFocused){
       $("qSuggest").style.display = "none";
@@ -1506,82 +1433,70 @@
     }
 
     if (!qRaw){
-      showSuggest(QUICK_SUGGEST);
+      const sug = QUICK_SUGGEST.map(v => ({ value:v, hint:"추천" }));
+      showSuggest(sug.slice(0, 10));
       return;
     }
 
-    const qNorm = searchNorm(qRaw);
-    const qCs = chosungify(qRaw);
-    const qJ = toJamo(qRaw);
-
-    const scored = [];
-    for (const it of SUG_POOL){
-      const sc = suggestScore(qNorm, qCs, qJ, it);
-      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
-    }
-
-    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
-
     const out = [];
     const seen = new Set();
-    for (const x of scored){
-      if (seen.has(x.v)) continue;
-      seen.add(x.v);
-      out.push(x.v);
+
+    const catPool = [];
+    for (const x of CATEGORY_TREE){
+      catPool.push(x.high);
+      for (const low of (x.lows||[])) catPool.push(low);
+    }
+    for (const c of catPool){
+      if (seen.has(c)) continue;
+      if (matchText(qRaw, c)){
+        seen.add(c);
+        out.push({ value:c, hint:"카테고리" });
+        if (out.length >= 10) break;
+      }
+    }
+
+    const sample = (base || []).slice(0, 220);
+    for (const it of sample){
+      const t = (it.title || "").trim();
+      if (!t) continue;
+      if (seen.has(t)) continue;
+      if (!matchText(qRaw, t) && !tokenMatchItem(qRaw, it)) continue;
+      seen.add(t);
+      out.push({ value:t, hint:"매체명" });
       if (out.length >= 10) break;
     }
 
-    showSuggest(out);
+    showSuggest(out.slice(0, 10));
   }
 
-  function fullRender(shouldFit){
+  function render(shouldFit){
     const base = getFilteredBase();
-    curBase = base;
 
     if (currentOpenKey){
       const exists = base.some(x => x._key === currentOpenKey);
       if (!exists) closeDetail(false);
     }
 
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-
-    // 검색/필터 변경시에만 마커 재생성
-    renderMarkers(base);
-
-    // 현재 범위 리스트/카운트만 갱신
-    viewportUpdate();
-
-    // 자동완성 갱신
-    updateSuggest();
-
-    if (shouldFit && base.length){
-      const bb = boundsOf(base);
-      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
-    }
-  }
-
-  function viewportUpdate(){
     const b = map.getBounds();
-    const inView = (curBase || []).filter(x => {
+    const inView = base.filter(x => {
       const la = (x._latDisp ?? x.lat);
       const ln = (x._lngDisp ?? x.lng);
       return b.contains([la, ln]);
     });
-
     curInView = inView;
 
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
     $("mInView").textContent = inView.length;
 
+    renderMarkers(base);
     renderList(inView);
 
-    // 선택 상태 유지
-    if (activeMiniKey){
-      ensureCardVisible(activeMiniKey);
-      clearAllCardHighlights();
-      highlightCard(activeMiniKey, false);
-      highlightClusterOnlyByKey(activeMiniKey);
-      updateMarkerVisual(activeMiniKey);
+    updateSuggest(base);
+
+    if (shouldFit && base.length){
+      const bb = boundsOf(base);
+      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
     }
   }
 
@@ -1603,41 +1518,35 @@
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
       disableClusteringAtZoom: 18,
-      maxClusterRadius: 52,
-      zoomToBoundsOnClick:false
+      maxClusterRadius: 52
     });
 
-    // 클러스터 클릭: 중앙/확대(일관) — 별도 "클러스터 리스트 팝업" 없음
-    markers.on("clusterclick", (e) => {
+    // 클러스터 hover: 하이라이트 + 클릭 유도 말풍선
+    markers.on("clustermouseover", (e) => {
       try{
-        if (e && e.originalEvent){
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
+        closeMiniPopup();
+        if (typeof e.layer.getElement === "function"){
+          highlightClusterElement(e.layer.getElement());
         }
+        showClusterTip(e.latlng || e.layer.getLatLng());
       }catch(_){}
-
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
+    });
+    markers.on("clustermouseout", () => {
       clearClusterHighlight();
-
-      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
-      if (bb && bb.isValid()){
-        map.fitBounds(bb, { padding:[90,90], maxZoom: 18 });
-      }
+      hideClusterTip();
     });
 
-    markers.on("spiderfied", () => { clearClusterHighlight(); });
-    markers.on("unspiderfied", () => { clearClusterHighlight(); });
+    // 스파이더파이 상태에서 지도 조작 시: 팝업/상태 정리
+    markers.on("spiderfied", () => { hideClusterTip(); clearClusterHighlight(); });
+    markers.on("unspiderfied", () => { hideClusterTip(); clearClusterHighlight(); });
 
     map.addLayer(markers);
 
-    map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); hideClusterTip(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); hideClusterTip(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
-
-    map.on("click", ()=>{ closeMiniPopup(); });
+    map.on("click", ()=>{ closeMiniPopup(); hideClusterTip(); });
 
     window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
 
@@ -1645,10 +1554,10 @@
       closeMiniPopup();
       clearAllMarkerStates();
       clearAllCardHighlights();
+      hideClusterTip();
     }, { passive:true });
 
-    // moveend에서는 마커 재생성 금지: 리스트/카운트만 갱신 (팝업 0.5초 사라짐 원인 제거)
-    map.on("moveend", () => viewportUpdate());
+    map.on("moveend", () => render(false));
   }
 
   async function init(){
@@ -1658,7 +1567,7 @@
     buildMap();
     setupInfiniteScroll();
 
-    // 팝업 클릭(카드 클릭) -> 상세 모달
+    // ★ 팝업 클릭(카드 클릭) -> 상세 모달
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -1677,9 +1586,10 @@
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
 
-    // 좌표 이상치 방어: KR bounding box
+    // 좌표 이상치(태평양 등) 방어: 대한민국 근방만 통과
     const pts = items.filter(x => {
       if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
+      // 대략적 KR bounding box
       if (x.lat < 32.0 || x.lat > 39.8) return false;
       if (x.lng < 123.0 || x.lng > 132.5) return false;
       return true;
@@ -1692,7 +1602,6 @@
       row._blobText = makeSearchText(row);
       row._blob = searchNorm(row._blobText);
       row._chosung = chosungify(row._blobText);
-      row._jamo = toJamo(row._blobText);
       return row;
     });
 
@@ -1701,13 +1610,12 @@
     $("pillLoaded").textContent = ALL.length;
 
     setCatHighOptions();
-    buildSuggestPool();
 
-    $("catHigh").addEventListener("change", () => fullRender(true));
+    $("catHigh").addEventListener("change", () => render(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
-    q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(); });
+    q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(getFilteredBase()); });
     q.addEventListener("blur", ()=>{
       qFocused = false;
       setTimeout(()=>{ qBox.style.display = "none"; }, 140);
@@ -1720,8 +1628,8 @@
       }
     });
 
-    q.addEventListener("input", () => debounce(()=>fullRender(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") fullRender(true); });
+    q.addEventListener("input", () => debounce(()=>render(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
@@ -1729,7 +1637,7 @@
       $("qSuggest").style.display = "none";
       closeDetail(false);
       closeMiniPopup();
-      fullRender(true);
+      render(true);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
@@ -1745,7 +1653,7 @@
       }
     });
 
-    fullRender(false);
+    render(false);
     openDetailByHash();
   }
 
