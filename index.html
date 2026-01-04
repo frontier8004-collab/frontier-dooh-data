@@ -44,11 +44,10 @@
       min-height:0;
     }
 
-    /* map drag UX */
     .leaflet-container{cursor:grab;}
     .leaflet-dragging .leaflet-container{cursor:grabbing;}
 
-    /* 브라우저 기본 드래그/선택 방지 */
+    /* 기본 드래그/선택 방지 */
     .leaflet-marker-icon, .leaflet-marker-icon *{
       user-select:none;
       -webkit-user-select:none;
@@ -138,7 +137,6 @@
     .q{ width:min(420px, 92vw); }
     .cat{ width:260px; }
 
-    /* 초기화 버튼 */
     .btn{
       height:44px;
       border-radius:12px;
@@ -352,7 +350,7 @@
     .pinWrap{filter: drop-shadow(0 6px 10px rgba(0,0,0,.45));}
     .pinHover{filter: drop-shadow(0 10px 16px rgba(0,0,0,.55));}
 
-    /* ===== CLUSTER COLORS: 파랑 통일 ===== */
+    /* ===== CLUSTER COLORS ===== */
     .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
 
@@ -362,7 +360,6 @@
     .marker-cluster-large{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-large div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
 
-    /* hover 시: 외부 링 없이 “클러스터 자체” 민트로 */
     .clusterHighlight{
       outline:none !important;
       outline-offset:0 !important;
@@ -376,7 +373,6 @@
       font-weight:1000 !important;
     }
 
-    /* 클러스터 말풍선 */
     .leaflet-tooltip.clusterTip{
       background:rgba(0,0,0,.85);
       border:1px solid rgba(162,222,204,.55);
@@ -388,57 +384,24 @@
     }
     .leaflet-tooltip.clusterTip:before{ border-top-color: rgba(0,0,0,.85); }
 
-    /* ===== 핀 hover 팝업(한 개만 유지) ===== */
-    .leaflet-popup.pinPopWrap{ margin-bottom:0; }
-    .leaflet-popup.pinPopWrap .leaflet-popup-content-wrapper{
+    /* ===== 핀 hover 툴팁 (팝업X, 이벤트를 먹지 않음) ===== */
+    .leaflet-tooltip.pinTip{
       background:rgba(0,0,0,.88);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:14px;
-      box-shadow:0 18px 44px rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.14);
       color:#e9eef7;
-      padding:0;
-    }
-    .leaflet-popup.pinPopWrap .leaflet-popup-tip{
-      background:rgba(0,0,0,.88);
-      box-shadow:0 18px 44px rgba(0,0,0,.35);
-    }
-    .leaflet-popup.pinPopWrap .leaflet-popup-content{
-      margin:10px 12px;
-      min-width:280px;
-      max-width:340px;
-    }
-
-    /* 이미지 “상단” */
-    .pinPop{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      align-items:stretch;
-      cursor:pointer;
-    }
-    .pinPopImg{
-      width:100%;
-      height:140px;
+      font-weight:900;
+      padding:10px 12px;
       border-radius:12px;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      background:#0d0f10;
-      flex:0 0 auto;
+      box-shadow:0 18px 44px rgba(0,0,0,.55);
+      max-width:320px;
+      white-space:normal;
     }
-    .pinPopImg img{ width:100%; height:100%; object-fit:cover; display:block; }
-    .pinPopImg .fallback{
-      width:100%; height:100%;
-      display:flex; align-items:center; justify-content:center;
-      color:rgba(255,255,255,.35);
-      font-weight:1000;
-      font-size:10px;
-      letter-spacing:.3px;
-    }
-    .pinPopTxt{ min-width:0; }
-    .pinPop .pt{font-weight:1000;font-size:14px;line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .pinPop .ps{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .pinPop .pp{font-size:12px;color:var(--mint);font-weight:1000;margin-top:8px;line-height:1.2;}
-    .pinPop .pc{font-size:11px;color:rgba(255,255,255,.70);margin-top:8px;line-height:1.2;}
+    .leaflet-tooltip.pinTip:before{ border-top-color: rgba(0,0,0,.88); }
+
+    .pinTipT{font-size:13px; line-height:1.2; margin:0 0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .pinTipS{font-size:11px; color:var(--muted); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .pinTipP{font-size:12px; color:var(--mint); font-weight:1000; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .pinTipC{font-size:11px; color:rgba(255,255,255,.70); margin-top:8px;}
 
     /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
@@ -491,12 +454,9 @@
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:#0d0f10;
-      aspect-ratio:auto;
       height:min(52vh, 520px);
     }
-    @media (max-width: 920px){
-      .dimg{ height:min(46vh, 460px); }
-    }
+    @media (max-width: 920px){ .dimg{ height:min(46vh, 460px); } }
     .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
     .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
     .info{
@@ -622,7 +582,7 @@
      - M(마이너): 기능 단위 변화(검색/필터/툴팁/클러스터 UX 등)
      - m(패치): 버그/안정화/미세 UX 개선
   */
-  const APP_VERSION = "v0.9.6";
+  const APP_VERSION = "v0.9.7";
 
   const DATA_URL = "./data_public.json";
 
@@ -634,13 +594,7 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  /* 대한민국 범위(대략 + 버퍼) : 좌표 오류로 인해 세계로 튀는 문제 방지 */
-  const KOREA_BBOX = {
-    minLat: 32.3,
-    maxLat: 40.8,
-    minLng: 123.0,
-    maxLng: 133.8
-  };
+  const KOREA_BBOX = { minLat: 32.3, maxLat: 40.8, minLng: 123.0, maxLng: 133.8 };
 
   let ALL = [];
   let map = null;
@@ -652,28 +606,21 @@
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
-  let curBase = [];              // 현재 필터(검색/카테고리) 결과 전체
-  let lastFilterSig = "";        // 필터 시그니처(동일하면 마커/클러스터 재생성 금지)
+  let curBase = [];
+  let lastFilterSig = "";
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
 
   let highlightedClusterEl = null;
 
-  /* 지도 드래그/줌 중 hover 개입 방지 */
   let isMapInteracting = false;
 
-  /* 클러스터 말풍선 */
   let clusterTip = null;
 
-  /* 핀 hover 팝업 상태(한 개만) */
-  const activePop = { marker:null, hover:false, timer:null };
-
-  /* 검색 제안 */
   let qFocused = false;
   const QUICK_SUGGEST = ["강남역","홍대","전광판","KTX","공항"];
 
-  /* 좌표 오류 drop 카운트 */
   let droppedOutOfKorea = 0;
 
   const $ = (id) => document.getElementById(id);
@@ -892,9 +839,7 @@
     return parts.join(" ");
   }
 
-  function isFiniteNumber(n){
-    return (typeof n === "number") && isFinite(n);
-  }
+  function isFiniteNumber(n){ return (typeof n === "number") && isFinite(n); }
   function isValidLatLng(lat, lng){
     if (!isFiniteNumber(lat) || !isFiniteNumber(lng)) return false;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return false;
@@ -938,10 +883,6 @@
     }
   }
 
-  /* ★ 검색 매칭 핵심 수정:
-     - 초성(ㄱㄴㄷ…) 매칭은 "사용자가 실제로 자음(ㄱ-ㅎ)을 입력한 경우"에만 사용
-     - 일반 한글(오송역 등)에서는 초성 fallback을 하지 않아 오탐 대폭 감소
-  */
   function tokenMatchItem(tok, it){
     const vars = tokenVariants(tok);
     if (!vars.length) return true;
@@ -983,7 +924,6 @@
     return b.isValid() ? b : null;
   }
 
-  /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -1125,41 +1065,16 @@
     map.closeTooltip(clusterTip);
   }
 
-  function closeActivePop(){
-    if (activePop.timer){ clearTimeout(activePop.timer); activePop.timer = null; }
-    activePop.hover = false;
-    if (activePop.marker){
-      try{ activePop.marker.closePopup(); }catch(_){}
-      activePop.marker = null;
-    }
-  }
-  function scheduleClosePop(marker){
-    if (activePop.timer) clearTimeout(activePop.timer);
-    activePop.timer = setTimeout(()=>{
-      if (!activePop.hover){
-        try{ marker.closePopup(); }catch(_){}
-      }
-    }, 140);
-  }
-
-  function pinPopHtml(it){
+  function pinTipHtml(it){
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
     const price = escapeHtml(fmtWon(it.price, it.price_unit));
-
-    const img = it.thumb
-      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO</div>';"/>`
-      : `<div class="fallback">NO</div>`;
-
     return `
-      <div class="pinPop" data-key="${escapeHtml(it._key)}" title="클릭해서 상세보기">
-        <div class="pinPopImg">${img}</div>
-        <div class="pinPopTxt">
-          <div class="pt">${title}</div>
-          <div class="ps">${cat}</div>
-          <div class="pp">${price}</div>
-          <div class="pc">클릭해서 상세보기</div>
-        </div>
+      <div>
+        <div class="pinTipT">${title}</div>
+        <div class="pinTipS">${cat}</div>
+        <div class="pinTipP">${price}</div>
+        <div class="pinTipC">클릭해서 상세보기</div>
       </div>
     `;
   }
@@ -1176,10 +1091,8 @@
       maxClusterRadius: 52
     });
 
-    /* 클러스터: 리스트 스크롤 금지, 말풍선만 */
     markers.on("clustermouseover", (e) => {
       try{
-        closeActivePop();
         if (typeof e.layer.getElement === "function"){
           highlightClusterElement(e.layer.getElement());
         }
@@ -1191,10 +1104,7 @@
       hideClusterTip();
     });
 
-    /* ★ 클러스터 클릭 시: 기본 동작(확대/스파이더파이) 방해하지 않되,
-       hover 요소(팝업/하이라이트/말풍선)만 정리 */
     markers.on("clusterclick", () => {
-      closeActivePop();
       hideClusterTip();
       clearAllMarkerHighlights();
       clearAllCardHighlights();
@@ -1209,7 +1119,6 @@
   }
 
   function renderMarkers(items){
-    closeActivePop();
     hideClusterTip();
     clearAllMarkerHighlights();
     clearAllCardHighlights();
@@ -1225,56 +1134,16 @@
       const m = L.marker([la, ln], { icon: normalIcon });
       m.__key = it._key;
 
-      m.bindPopup(pinPopHtml(it), {
-        closeButton:false,
-        autoClose:true,
-        closeOnClick:false,
-        autoPan:false,
-        className:"pinPopWrap",
-        offset: L.point(0, -84)
+      /* ★ 팝업 대신 툴팁: 이벤트를 먹지 않아서 13개 모두 hover 반응 */
+      m.bindTooltip(pinTipHtml(it), {
+        direction:"top",
+        offset:[0,-14],
+        opacity:0.95,
+        className:"pinTip",
+        sticky:false
       });
 
-      m.on("popupopen", () => {
-        if (activePop.timer){ clearTimeout(activePop.timer); activePop.timer = null; }
-        activePop.marker = m;
-        activePop.hover = false;
-
-        const p = m.getPopup && m.getPopup();
-        const el = p && p.getElement ? p.getElement() : null;
-        if (el && !el.__bound){
-          el.__bound = true;
-
-          el.addEventListener("mouseenter", ()=>{
-            activePop.hover = true;
-            if (activePop.timer){ clearTimeout(activePop.timer); activePop.timer = null; }
-          });
-
-          el.addEventListener("mouseleave", ()=>{
-            activePop.hover = false;
-            scheduleClosePop(m);
-          });
-
-          el.addEventListener("click", (ev)=>{
-            ev.stopPropagation();
-            closeActivePop();
-            openDetail(it, true);
-          });
-        }
-      });
-
-      m.on("popupclose", () => {
-        if (activePop.marker === m){
-          activePop.marker = null;
-          activePop.hover = false;
-          if (activePop.timer){ clearTimeout(activePop.timer); activePop.timer = null; }
-        }
-        unhighlightMarkerByKey(it._key);
-        clearAllCardHighlights();
-      });
-
-      /* 핀 클릭: 항상 해시모달 */
       m.on("click", () => {
-        closeActivePop();
         openDetail(it, true);
       });
 
@@ -1283,22 +1152,21 @@
 
         hideClusterTip();
 
-        if (activePop.marker && activePop.marker !== m){
-          closeActivePop();
-        }
-
-        highlightMarkerOrClusterByKey(it._key);
+        clearAllMarkerHighlights();
         clearAllCardHighlights();
 
+        highlightMarkerOrClusterByKey(it._key);
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
 
-        try{ m.openPopup(); }catch(_){}
+        try{ m.openTooltip(); }catch(_){}
       });
 
       m.on("mouseout", () => {
         if (isMapInteracting) return;
-        scheduleClosePop(m);
+        try{ m.closeTooltip(); }catch(_){}
+        unhighlightMarkerByKey(it._key);
+        clearAllCardHighlights();
       });
 
       markerByKey.set(it._key, m);
@@ -1347,7 +1215,6 @@
 
     $("dOverlay").style.display = "block";
 
-    /* 안전장치: 한국 범위 밖 좌표는 화면 이동(세계로 튐) 방지 */
     if (isInKorea(it.lat, it.lng)){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
@@ -1546,19 +1413,15 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    /* ★ move/zoom 중 hover UX 꼬임 방지 */
-    map.on("movestart", ()=>{ isMapInteracting = true; closeActivePop(); hideClusterTip(); });
+    map.on("movestart", ()=>{ isMapInteracting = true; hideClusterTip(); });
     map.on("moveend",   ()=>{ isMapInteracting = false; updateViewOnly(); });
 
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeActivePop(); hideClusterTip(); });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterTip(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; });
 
-    map.on("click", ()=>{ closeActivePop(); });
-
-    window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
+    map.on("click", ()=>{ hideClusterTip(); clearAllMarkerHighlights(); clearAllCardHighlights(); });
 
     map.getContainer().addEventListener("mouseleave", ()=>{
-      closeActivePop();
       clearAllMarkerHighlights();
       clearAllCardHighlights();
       hideClusterTip();
@@ -1571,7 +1434,6 @@
     return searchNorm($("q").value.trim()) + "|" + ($("catHigh").value || "");
   }
 
-  /* ★ 핵심: 필터(검색/카테고리) 변경 시에만 마커/클러스터를 재생성 */
   function applyFilters(shouldFit){
     const base = getFilteredBase();
     curBase = base;
@@ -1602,7 +1464,6 @@
     }
   }
 
-  /* 지도 범위가 바뀔 때는 리스트/카운트만 갱신(마커/클러스터 유지) */
   function updateViewOnly(){
     if (!map) return;
     const b = map.getBounds();
@@ -1653,7 +1514,6 @@
     }
 
     ALL = temp;
-
     applyOverlapJitter(ALL);
 
     $("pillLoaded").textContent = ALL.length;
@@ -1706,7 +1566,6 @@
       }
     });
 
-    /* 초기 렌더: 마커 1회 생성 */
     applyFilters(false);
     openDetailByHash();
   }
