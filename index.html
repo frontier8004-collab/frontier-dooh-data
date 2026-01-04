@@ -47,7 +47,7 @@
     .leaflet-container{cursor:grab;}
     .leaflet-dragging .leaflet-container{cursor:grabbing;}
 
-    /* 기본 드래그/선택 방지 */
+    /* 드래그/선택 방지 */
     .leaflet-marker-icon, .leaflet-marker-icon *{
       user-select:none;
       -webkit-user-select:none;
@@ -353,10 +353,8 @@
     /* ===== CLUSTER COLORS ===== */
     .marker-cluster-small{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-small div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
-
     .marker-cluster-medium{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-medium div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
-
     .marker-cluster-large{ background-color: rgba(42, 158, 255, 0.34) !important; }
     .marker-cluster-large div{ background-color: rgba(42, 158, 255, 0.68) !important; color:#fff !important; font-weight:1000 !important; }
 
@@ -373,6 +371,7 @@
       font-weight:1000 !important;
     }
 
+    /* ===== CLUSTER HINT TOOLTIP ===== */
     .leaflet-tooltip.clusterTip{
       background:rgba(0,0,0,.85);
       border:1px solid rgba(162,222,204,.55);
@@ -381,27 +380,90 @@
       padding:6px 10px;
       border-radius:10px;
       box-shadow:0 10px 24px rgba(0,0,0,.35);
+      pointer-events:none; /* 힌트 툴팁은 이벤트를 먹지 않음 */
     }
     .leaflet-tooltip.clusterTip:before{ border-top-color: rgba(0,0,0,.85); }
 
-    /* ===== 핀 hover 툴팁 (팝업X, 이벤트를 먹지 않음) ===== */
-    .leaflet-tooltip.pinTip{
-      background:rgba(0,0,0,.88);
-      border:1px solid rgba(255,255,255,.14);
-      color:#e9eef7;
-      font-weight:900;
-      padding:10px 12px;
-      border-radius:12px;
-      box-shadow:0 18px 44px rgba(0,0,0,.55);
-      max-width:320px;
-      white-space:normal;
+    /* ===== PIN MINI POPUP (이미지 포함, 클릭 전용) ===== */
+    .pinPopup .leaflet-popup-content-wrapper{
+      background:rgba(10,12,14,.94);
+      border:1px solid rgba(162,222,204,.38);
+      border-radius:16px;
+      box-shadow:0 22px 60px rgba(0,0,0,.60);
+      padding:0;
     }
-    .leaflet-tooltip.pinTip:before{ border-top-color: rgba(0,0,0,.88); }
+    .pinPopup .leaflet-popup-content{
+      margin:0;
+      width:320px;
+    }
+    .pinPopup .leaflet-popup-tip{
+      background:rgba(10,12,14,.94);
+      box-shadow:none;
+    }
 
-    .pinTipT{font-size:13px; line-height:1.2; margin:0 0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .pinTipS{font-size:11px; color:var(--muted); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .pinTipP{font-size:12px; color:var(--mint); font-weight:1000; margin-top:8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .pinTipC{font-size:11px; color:rgba(255,255,255,.70); margin-top:8px;}
+    .pinPopCard{
+      border-radius:16px;
+      overflow:hidden;
+      cursor:pointer;
+    }
+    .pinPopImg{
+      width:100%;
+      height:120px;
+      background:#0d0f10;
+      position:relative;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .pinPopImg img{width:100%;height:100%;object-fit:cover;display:block;}
+    .pinPopImg .fallback{
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,.35);
+      font-weight:1000;
+      letter-spacing:.4px;
+      font-size:12px;
+    }
+    .pinPopBody{ padding:12px 12px 12px; }
+    .pinPopTitle{
+      font-size:14px;
+      font-weight:1000;
+      color:#e9eef7;
+      line-height:1.25;
+      margin:0 0 6px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .pinPopMeta{
+      font-size:12px;
+      color:rgba(255,255,255,.62);
+      margin:0 0 10px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .pinPopPrice{
+      font-size:13px;
+      font-weight:1000;
+      color:var(--mint);
+      margin:0 0 10px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .pinPopCta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+      font-size:12px;
+      color:rgba(255,255,255,.70);
+    }
+    .pinPopBtn{
+      border:1px solid rgba(162,222,204,.45);
+      background:rgba(162,222,204,.12);
+      color:#e9fff9;
+      font-weight:1000;
+      border-radius:12px;
+      padding:8px 10px;
+      font-size:12px;
+      white-space:nowrap;
+    }
 
     /* ===== DETAIL OVERLAY ===== */
     .detailOverlay{
@@ -577,13 +639,9 @@
 
 <script>
   /* ========= VERSION =========
-     v0.M.m 형식:
-     - v0 : 아직 개발/안정화 단계 (공개 상용 MVP 전)
-     - M(마이너): 기능 단위 변화(검색/필터/툴팁/클러스터 UX 등)
-     - m(패치): 버그/안정화/미세 UX 개선
+     v1.1.3 → v1.1.4: (Patch) 클릭 기반 미니팝업 + 안정화
   */
-  const APP_VERSION = "v0.9.7";
-
+  const APP_VERSION = "v1.1.4";
   const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
@@ -599,6 +657,7 @@
   let ALL = [];
   let map = null;
   let markers = null;
+
   const markerByKey = new Map();
   const cardByKey = new Map();
 
@@ -613,15 +672,15 @@
   let suppressHashHandler = false;
 
   let highlightedClusterEl = null;
-
-  let isMapInteracting = false;
-
   let clusterTip = null;
 
   let qFocused = false;
   const QUICK_SUGGEST = ["강남역","홍대","전광판","KTX","공항"];
-
   let droppedOutOfKorea = 0;
+
+  /* ====== 클릭 기반 미니팝업 상태 ====== */
+  let activeMiniKey = null;   // 현재 “미니팝업”이 열린 핀 key
+  let activeMiniPopup = null; // Leaflet popup 객체(열린 것)
 
   const $ = (id) => document.getElementById(id);
 
@@ -1006,30 +1065,25 @@
     clearClusterHighlight();
   }
 
+  /* ===== 핵심 수정: visibleParent 의존을 줄이고 “실제로 화면에 아이콘이 있으면” 무조건 핀을 민트로 바꿈 ===== */
   function highlightMarkerOrClusterByKey(key){
-    clearClusterHighlight();
     const m = markerByKey.get(key);
     if (!m || !markers) return;
 
-    const parent = markers.getVisibleParent(m);
-    if (!parent) return;
-
-    if (parent instanceof L.Marker && parent === m){
-      m.setIcon(hoverIcon);
-      m.setZIndexOffset(9999);
+    // 화면에 아이콘이 있으면(스파이더파이 포함) 핀을 민트로 처리
+    if (m._icon){
+      try{
+        m.setIcon(hoverIcon);
+        m.setZIndexOffset(9999);
+      }catch(_){}
       return;
     }
 
+    // 아이콘이 없으면(클러스터에 묶임) 클러스터를 민트로
+    const parent = markers.getVisibleParent(m);
     if (parent && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
-  }
-  function unhighlightMarkerByKey(key){
-    const m = markerByKey.get(key);
-    if (!m) return;
-    m.setIcon(normalIcon);
-    m.setZIndexOffset(0);
-    clearClusterHighlight();
   }
 
   function ensureCardVisible(key){
@@ -1063,117 +1117,6 @@
   function hideClusterTip(){
     if (!map || !clusterTip) return;
     map.closeTooltip(clusterTip);
-  }
-
-  function pinTipHtml(it){
-    const title = escapeHtml(it.title || "-");
-    const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
-    const price = escapeHtml(fmtWon(it.price, it.price_unit));
-    return `
-      <div>
-        <div class="pinTipT">${title}</div>
-        <div class="pinTipS">${cat}</div>
-        <div class="pinTipP">${price}</div>
-        <div class="pinTipC">클릭해서 상세보기</div>
-      </div>
-    `;
-  }
-
-  function rebuildClusterGroup(){
-    if (markers){
-      map.removeLayer(markers);
-    }
-
-    markers = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
-      disableClusteringAtZoom: 18,
-      maxClusterRadius: 52
-    });
-
-    markers.on("clustermouseover", (e) => {
-      try{
-        if (typeof e.layer.getElement === "function"){
-          highlightClusterElement(e.layer.getElement());
-        }
-        showClusterTip(e.latlng || e.layer.getLatLng());
-      }catch(_){}
-    });
-    markers.on("clustermouseout", () => {
-      clearClusterHighlight();
-      hideClusterTip();
-    });
-
-    markers.on("clusterclick", () => {
-      hideClusterTip();
-      clearAllMarkerHighlights();
-      clearAllCardHighlights();
-    });
-
-    map.addLayer(markers);
-  }
-
-  function clearMarkers(){
-    markerByKey.clear();
-    markers.clearLayers();
-  }
-
-  function renderMarkers(items){
-    hideClusterTip();
-    clearAllMarkerHighlights();
-    clearAllCardHighlights();
-
-    rebuildClusterGroup();
-    clearMarkers();
-
-    const ms = [];
-    for (const it of items){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-
-      const m = L.marker([la, ln], { icon: normalIcon });
-      m.__key = it._key;
-
-      /* ★ 팝업 대신 툴팁: 이벤트를 먹지 않아서 13개 모두 hover 반응 */
-      m.bindTooltip(pinTipHtml(it), {
-        direction:"top",
-        offset:[0,-14],
-        opacity:0.95,
-        className:"pinTip",
-        sticky:false
-      });
-
-      m.on("click", () => {
-        openDetail(it, true);
-      });
-
-      m.on("mouseover", () => {
-        if (isMapInteracting) return;
-
-        hideClusterTip();
-
-        clearAllMarkerHighlights();
-        clearAllCardHighlights();
-
-        highlightMarkerOrClusterByKey(it._key);
-        ensureCardVisible(it._key);
-        highlightCard(it._key, true);
-
-        try{ m.openTooltip(); }catch(_){}
-      });
-
-      m.on("mouseout", () => {
-        if (isMapInteracting) return;
-        try{ m.closeTooltip(); }catch(_){}
-        unhighlightMarkerByKey(it._key);
-        clearAllCardHighlights();
-      });
-
-      markerByKey.set(it._key, m);
-      ms.push(m);
-    }
-
-    markers.addLayers(ms);
   }
 
   function setHash(key){
@@ -1241,6 +1184,155 @@
     openDetail(it, false);
   }
 
+  /* ====== 미니팝업(이미지 포함) ====== */
+  function miniPopupHtml(it){
+    const title = escapeHtml(it.title || "-");
+    const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
+    const price = escapeHtml(fmtWon(it.price, it.price_unit));
+    const img = it.thumb
+      ? `<img src="${escapeHtml(it.thumb)}" alt="">`
+      : `<div class="fallback">NO IMAGE</div>`;
+
+    return `
+      <div class="pinPopCard" data-open="1">
+        <div class="pinPopImg">${img}</div>
+        <div class="pinPopBody">
+          <div class="pinPopTitle">${title}</div>
+          <div class="pinPopMeta">${cat}</div>
+          <div class="pinPopPrice">${price}</div>
+          <div class="pinPopCta">
+            <span>클릭하면 상세보기</span>
+            <span class="pinPopBtn">상세보기</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function closeMiniPopup(){
+    if (!map) return;
+    if (activeMiniPopup){
+      try{ map.closePopup(activeMiniPopup); }catch(_){}
+    }
+    activeMiniPopup = null;
+    activeMiniKey = null;
+  }
+
+  function openMiniPopupFor(it){
+    const m = markerByKey.get(it._key);
+    if (!m) return;
+
+    // 기존 미니팝업 1개만 유지
+    closeMiniPopup();
+
+    m.setPopupContent(miniPopupHtml(it));
+    m.openPopup();
+
+    activeMiniPopup = m.getPopup();
+    activeMiniKey = it._key;
+  }
+
+  function rebuildClusterGroup(){
+    if (markers){
+      map.removeLayer(markers);
+    }
+
+    markers = L.markerClusterGroup({
+      showCoverageOnHover:false,
+      spiderfyOnMaxZoom:true,
+      disableClusteringAtZoom: 18,
+      maxClusterRadius: 52
+    });
+
+    markers.on("clustermouseover", (e) => {
+      try{
+        if (typeof e.layer.getElement === "function"){
+          highlightClusterElement(e.layer.getElement());
+        }
+        showClusterTip(e.latlng || e.layer.getLatLng());
+      }catch(_){}
+    });
+    markers.on("clustermouseout", () => {
+      clearClusterHighlight();
+      hideClusterTip();
+    });
+
+    markers.on("clusterclick", () => {
+      hideClusterTip();
+      closeMiniPopup();
+      clearAllMarkerHighlights();
+      clearAllCardHighlights();
+    });
+
+    map.addLayer(markers);
+  }
+
+  function clearMarkers(){
+    markerByKey.clear();
+    markers.clearLayers();
+  }
+
+  function renderMarkers(items){
+    hideClusterTip();
+    closeMiniPopup();
+    clearAllMarkerHighlights();
+    clearAllCardHighlights();
+
+    rebuildClusterGroup();
+    clearMarkers();
+
+    const ms = [];
+    for (const it of items){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+
+      const m = L.marker([la, ln], { icon: normalIcon });
+      m.__key = it._key;
+
+      // 미니팝업은 클릭 전용 + 이미지 포함
+      m.bindPopup(miniPopupHtml(it), {
+        closeButton:false,
+        autoPan:true,
+        className:"pinPopup",
+        offset:[0, -18],
+        autoClose:false,
+        closeOnClick:false,
+        maxWidth: 340
+      });
+
+      // ★ 요구사항 구현:
+      // (1) 첫 클릭: 미니팝업만
+      // (2) 같은 핀 두 번째 클릭: 상세(해시모달)
+      m.on("click", (ev) => {
+        try{ L.DomEvent.stop(ev); }catch(_){}
+
+        hideClusterTip();
+
+        // 같은 핀 다시 클릭 → 상세모달
+        if (activeMiniKey === it._key){
+          closeMiniPopup();
+          openDetail(it, true);
+          return;
+        }
+
+        // 다른 핀 클릭 → 미니팝업 + 하이라이트/리스트 동기화
+        clearAllMarkerHighlights();
+        clearAllCardHighlights();
+
+        highlightMarkerOrClusterByKey(it._key);
+        ensureCardVisible(it._key);
+        highlightCard(it._key, true);
+
+        openMiniPopupFor(it);
+      });
+
+      markerByKey.set(it._key, m);
+      ms.push(m);
+    }
+
+    markers.addLayers(ms);
+  }
+
   function renderList(items){
     $("resultInfo").textContent = items.length;
 
@@ -1286,16 +1378,29 @@
 
       cardByKey.set(it._key, el);
 
+      // 리스트 hover는 “하이라이트만” (툴팁/팝업은 클릭으로만)
       el.addEventListener("mouseenter", () => {
         clearAllCardHighlights();
         highlightCard(it._key, false);
+
+        clearAllMarkerHighlights();
         highlightMarkerOrClusterByKey(it._key);
       });
       el.addEventListener("mouseleave", () => {
         unhighlightCard(it._key);
-        unhighlightMarkerByKey(it._key);
+        clearAllMarkerHighlights();
+        if (activeMiniKey){
+          // 미니팝업이 열려있으면 해당 핀 하이라이트는 유지
+          highlightMarkerOrClusterByKey(activeMiniKey);
+          highlightCard(activeMiniKey, false);
+        }
       });
-      el.addEventListener("click", () => openDetail(it, true));
+
+      // 리스트 클릭 → 바로 상세모달
+      el.addEventListener("click", () => {
+        closeMiniPopup();
+        openDetail(it, true);
+      });
 
       list.appendChild(el);
     }
@@ -1413,19 +1518,37 @@
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    map.on("movestart", ()=>{ isMapInteracting = true; hideClusterTip(); });
-    map.on("moveend",   ()=>{ isMapInteracting = false; updateViewOnly(); });
-
-    map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterTip(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; });
-
-    map.on("click", ()=>{ hideClusterTip(); clearAllMarkerHighlights(); clearAllCardHighlights(); });
-
-    map.getContainer().addEventListener("mouseleave", ()=>{
+    // 지도 클릭: 미니팝업 닫기 + 하이라이트 초기화
+    map.on("click", () => {
+      hideClusterTip();
+      closeMiniPopup();
       clearAllMarkerHighlights();
       clearAllCardHighlights();
-      hideClusterTip();
-    }, { passive:true });
+    });
+
+    // 팝업 클릭: 상세로 전환 (요구사항 2)
+    map.on("popupopen", (e) => {
+      const popup = e.popup;
+      const src = popup && popup._source;
+      const key = src && src.__key;
+      if (!key) return;
+
+      const it = ALL.find(x => x._key === key);
+      if (!it) return;
+
+      // 팝업 안을 클릭하면 상세모달
+      const el = popup.getElement();
+      if (!el) return;
+
+      const card = el.querySelector(".pinPopCard");
+      if (!card) return;
+
+      card.addEventListener("click", (ev) => {
+        try{ L.DomEvent.stop(ev); }catch(_){}
+        closeMiniPopup();
+        openDetail(it, true);
+      }, { once:true });
+    });
 
     rebuildClusterGroup();
   }
@@ -1437,6 +1560,9 @@
   function applyFilters(shouldFit){
     const base = getFilteredBase();
     curBase = base;
+
+    // 필터 변경 시 열린 상세/미니팝업 정리
+    closeMiniPopup();
 
     if (currentOpenKey){
       const exists = base.some(x => x._key === currentOpenKey);
@@ -1529,6 +1655,7 @@
 
     const q = $("q");
     const qBox = $("qSuggest");
+
     q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(getFilteredBase()); });
     q.addEventListener("blur", ()=>{
       qFocused = false;
@@ -1549,6 +1676,7 @@
       $("q").value = "";
       $("catHigh").value = "";
       $("qSuggest").style.display = "none";
+      closeMiniPopup();
       closeDetail(false);
       applyFilters(true);
     });
