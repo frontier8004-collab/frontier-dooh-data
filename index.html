@@ -395,15 +395,6 @@
       max-width:340px;
     }
 
-    /* 근접 핀 선택성 개선: 팝업의 "빈 공간"은 통과, 실제 카드만 클릭 가능 */
-    .leaflet-popup.pinPopWrap{ pointer-events:none; }
-    .leaflet-popup.pinPopWrap .leaflet-popup-content-wrapper,
-    .leaflet-popup.pinPopWrap .leaflet-popup-tip,
-    .leaflet-popup.pinPopWrap .pinPop,
-    .leaflet-popup.pinPopWrap .pinPop *{
-      pointer-events:auto;
-    }
-
     /* 이미지 “상단” */
     .pinPop{
       display:flex;
@@ -464,34 +455,8 @@
       gap:12px;
       z-index:2;
     }
-    .detailHead .t{font-weight:1000;color:#e9eef7;font-size:24px;margin:0;}
+    .detailHead .t{font-weight:1000;color:#e9eef7;font-size:22px;margin:0;}
     .detailHead .s{color:var(--muted);font-size:12px;line-height:1.4;margin-top:4px;}
-
-    .dActions{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex:0 0 auto;
-    }
-    .actBtn{
-      height:44px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.14);
-      background:rgba(255,255,255,.06);
-      color:#e9eef7;
-      cursor:pointer;
-      font-weight:1000;
-      padding:0 12px;
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .actBtn.primary{
-      border-color: rgba(162,222,204,.45);
-      background: rgba(162,222,204,.12);
-      color:#e9fff9;
-    }
-    .actBtn:active{ transform:translateY(1px); }
-
     .x{
       width:44px; height:44px;
       border-radius:12px;
@@ -501,7 +466,6 @@
       cursor:pointer;
       font-weight:1000;
     }
-
     .detailBody{
       padding:16px 16px 18px;
       display:grid;
@@ -602,11 +566,7 @@
           <div class="t" id="dt"></div>
           <div class="s" id="ds"></div>
         </div>
-        <div class="dActions">
-          <button class="actBtn" id="copyLink">링크 복사</button>
-          <button class="actBtn primary" id="copyMsg">문의문 복사</button>
-          <button class="x" id="dx">✕</button>
-        </div>
+        <button class="x" id="dx">✕</button>
       </div>
 
       <div class="detailBody">
@@ -676,10 +636,7 @@
 
   /* 검색 제안 */
   let qFocused = false;
-  const QUICK_SUGGEST = ["강남역","홍대","전광판","…"];
-
-  /* 상세(복사 CTA) */
-  let currentOpenItem = null;
+  const QUICK_SUGGEST = ["강남역","홍대","전광판","KTX","공항"];
 
   const $ = (id) => document.getElementById(id);
 
@@ -960,6 +917,15 @@
     return b.isValid() ? b : null;
   }
 
+  function computeInView(base){
+    const b = map.getBounds();
+    return base.filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
+  }
+
   /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
@@ -1048,19 +1014,22 @@
     const m = markerByKey.get(key);
     if (!m || !markers) return;
 
-    const parent = markers.getVisibleParent(m);
-    if (!parent) return;
-
-    if (parent instanceof L.Marker && parent === m){
-      m.setIcon(hoverIcon);
-      m.setZIndexOffset(9999);
+    /* 1) 실제로 핀이 보이면(렌더된 상태) 핀을 우선 하이라이트 */
+    if (m._icon){
+      try{
+        m.setIcon(hoverIcon);
+        m.setZIndexOffset(9999);
+      }catch(_){}
       return;
     }
 
+    /* 2) 핀이 보이지 않으면(클러스터에 묶임) 클러스터만 하이라이트 */
+    const parent = markers.getVisibleParent(m);
     if (parent && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
   }
+
   function unhighlightMarkerByKey(key){
     const m = markerByKey.get(key);
     if (!m) return;
@@ -1141,8 +1110,11 @@
     `;
   }
 
-  /* 클러스터 그룹은 1회 생성, 필터 변경 시에는 clear/add만 */
-  function createClusterGroupOnce(){
+  function rebuildClusterGroup(){
+    if (markers){
+      map.removeLayer(markers);
+    }
+
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
@@ -1174,11 +1146,7 @@
   }
 
   function renderMarkers(items){
-    closeActivePop();
-    clearAllMarkerHighlights();
-    clearAllCardHighlights();
-    hideClusterTip();
-
+    rebuildClusterGroup();
     clearMarkers();
 
     const ms = [];
@@ -1205,23 +1173,20 @@
 
         const p = m.getPopup && m.getPopup();
         const el = p && p.getElement ? p.getElement() : null;
-        if (!el) return;
+        if (el && !el.__bound){
+          el.__bound = true;
 
-        const popCard = el.querySelector && el.querySelector(".pinPop");
-        if (popCard && !popCard.__bound){
-          popCard.__bound = true;
-
-          popCard.addEventListener("mouseenter", ()=>{
+          el.addEventListener("mouseenter", ()=>{
             activePop.hover = true;
             if (activePop.timer){ clearTimeout(activePop.timer); activePop.timer = null; }
           });
 
-          popCard.addEventListener("mouseleave", ()=>{
+          el.addEventListener("mouseleave", ()=>{
             activePop.hover = false;
             scheduleClosePop(m);
           });
 
-          popCard.addEventListener("click", (ev)=>{
+          el.addEventListener("click", (ev)=>{
             ev.stopPropagation();
             closeActivePop();
             openDetail(it, true);
@@ -1256,6 +1221,14 @@
 
         highlightMarkerOrClusterByKey(it._key);
         clearAllCardHighlights();
+
+        /* 안전장치: 근접 핀/줌 직후 curInView 어긋남 방지 */
+        if (!curInView.some(x => x._key === it._key)){
+          const baseNow = getFilteredBase();
+          curInView = computeInView(baseNow);
+          renderList(curInView);
+        }
+
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
 
@@ -1289,47 +1262,8 @@
     setTimeout(()=>{ suppressHashHandler = false; }, 0);
   }
 
-  function shareUrlForKey(key){
-    return location.origin + location.pathname + "#item=" + encodeURIComponent(key);
-  }
-
-  async function copyToClipboard(text){
-    try{
-      if (navigator.clipboard && navigator.clipboard.writeText){
-        await navigator.clipboard.writeText(text);
-        return true;
-      }
-    }catch(_){}
-    try{
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.left = "-9999px";
-      ta.style.top = "0";
-      document.body.appendChild(ta);
-      ta.focus();
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return !!ok;
-    }catch(_){}
-    return false;
-  }
-
-  function flashBtn(btn, text){
-    if (!btn) return;
-    const prev = btn.textContent;
-    btn.textContent = text;
-    btn.disabled = true;
-    setTimeout(()=>{
-      btn.textContent = prev;
-      btn.disabled = false;
-    }, 900);
-  }
-
   function openDetail(it, sethash){
     currentOpenKey = it._key;
-    currentOpenItem = it;
 
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
@@ -1362,7 +1296,6 @@
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
-    currentOpenItem = null;
     if (!fromHashChange) clearHash();
   }
 
@@ -1470,7 +1403,7 @@
       row.addEventListener("click", ()=>{
         $("q").value = it.value;
         box.style.display = "none";
-        renderAll(true);
+        render(true);
       });
       box.appendChild(row);
     }
@@ -1491,11 +1424,8 @@
 
   function updateSuggest(base){
     const qRaw = $("q").value.trim();
-    const box = $("qSuggest");
-    if (!box) return;
-
     if (!qFocused){
-      box.style.display = "none";
+      $("qSuggest").style.display = "none";
       return;
     }
 
@@ -1536,40 +1466,7 @@
     showSuggest(out.slice(0, 10));
   }
 
-  function computeInView(base){
-    const b = map.getBounds();
-    const inView = base.filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
-    return inView;
-  }
-
-  /* ===== 성능 원칙 복원 =====
-     - moveend: 리스트(inView)만 갱신
-     - 검색/필터 변경: 마커/클러스터 재구성 + 리스트 갱신
-  */
-  function renderListOnly(){
-    const base = getFilteredBase();
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
-    const inView = computeInView(base);
-    curInView = inView;
-
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-    $("mInView").textContent = inView.length;
-
-    renderList(inView);
-    updateSuggest(base);
-  }
-
-  function renderAll(shouldFit){
+  function render(shouldFit){
     const base = getFilteredBase();
 
     if (currentOpenKey){
@@ -1623,10 +1520,8 @@
       hideClusterTip();
     }, { passive:true });
 
-    createClusterGroupOnce();
-
-    /* moveend에서는 리스트만 */
-    map.on("moveend", () => renderListOnly());
+    rebuildClusterGroup();
+    map.on("moveend", () => render(false));
   }
 
   async function init(){
@@ -1657,7 +1552,7 @@
 
     setCatHighOptions();
 
-    $("catHigh").addEventListener("change", () => renderAll(true));
+    $("catHigh").addEventListener("change", () => render(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -1674,47 +1569,19 @@
       }
     });
 
-    q.addEventListener("input", () => debounce(()=>renderAll(true), 160));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") renderAll(true); });
+    q.addEventListener("input", () => debounce(()=>render(true), 90));
+    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
 
     $("reset").addEventListener("click", () => {
       $("q").value = "";
       $("catHigh").value = "";
       $("qSuggest").style.display = "none";
       closeDetail(false);
-      renderAll(true);
+      render(true);
     });
 
     $("dx").addEventListener("click", () => closeDetail(false));
     $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
-
-    $("copyLink").addEventListener("click", async () => {
-      if (!currentOpenItem) return;
-      const url = shareUrlForKey(currentOpenItem._key);
-      const ok = await copyToClipboard(url);
-      flashBtn($("copyLink"), ok ? "복사됨" : "복사 실패");
-    });
-
-    $("copyMsg").addEventListener("click", async () => {
-      if (!currentOpenItem) return;
-      const url = shareUrlForKey(currentOpenItem._key);
-      const msg =
-`[Frontier DOOH 문의]
-매체명: ${currentOpenItem.title || "-"}
-카테고리: ${(currentOpenItem._high||"-")}${currentOpenItem._low ? " > " + currentOpenItem._low : ""}
-주소/지역: ${currentOpenItem.address || "-"}
-가격: ${fmtWon(currentOpenItem.price, currentOpenItem.price_unit)}
-링크: ${url}
-
-요청사항:
-- 집행 기간/시작일:
-- 희망 예산:
-- 타깃/업종:
-- 집행 지역(우선순위):
-- 추가 참고:`;
-      const ok = await copyToClipboard(msg);
-      flashBtn($("copyMsg"), ok ? "복사됨" : "복사 실패");
-    });
 
     window.addEventListener("hashchange", () => {
       if (suppressHashHandler) return;
@@ -1726,8 +1593,7 @@
       }
     });
 
-    /* 최초 1회는 전체 렌더(마커+리스트) */
-    renderAll(false);
+    render(false);
     openDetailByHash();
   }
 
