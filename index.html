@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.13</title>
+  <title>Frontier DOOH 전국 DB v1.1.14</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -80,7 +80,10 @@
       line-height:1.08;
       text-align:left;
       white-space:nowrap;
+      cursor:pointer;          /* (요청) 타이틀 클릭 초기화 */
+      user-select:none;
     }
+    .titleLeft:active{ transform: translateY(1px); }
     .titleLeft .ver{
       font-size:12px;
       font-weight:900;
@@ -164,7 +167,7 @@
     .qWrap{ position:relative; display:inline-block; }
     .qWrap .q{ padding-right:78px; } /* 돋보기 공간 확장 */
 
-    /* 요청: 돋보기 알약 가로 200% */
+    /* 돋보기 알약 가로 200% */
     .qGo{
       position:absolute;
       right:6px;
@@ -266,7 +269,7 @@
       top:0;
       z-index:4000;
       margin:0;
-      padding:12px 14px 12px;
+      padding:12px 14px 10px;
       display:flex;
       gap:10px;
       flex-wrap:wrap;
@@ -288,27 +291,15 @@
       white-space:nowrap;
     }
     .sPill b{color:var(--mint); font-weight:1000}
-
-    /* 요청: "리스트 업데이트 중" 알약(전체 왼쪽) */
-    #mBusyWrap{
-      border-color:rgba(162,222,204,.26);
+    .sLabel{
+      color:#e9eef7;
+      font-weight:1000;
+      border-color:rgba(162,222,204,.22);
       background:rgba(162,222,204,.10);
-      color:rgba(233,255,249,.88);
-      box-shadow:0 0 0 2px rgba(162,222,204,.08);
-    }
-    #mBusyWrap b{
-      color:#e9fff9;
     }
 
     /* ===== LIST ===== */
-    .listWrap{padding:14px;}
-    .listHeader{
-      display:flex; align-items:baseline; justify-content:space-between;
-      gap:10px; margin-bottom:10px;
-    }
-    .listHeader .h{font-weight:1000; color:#e9eef7; font-size:16px;}
-    .listHeader .small{color:var(--muted); font-size:12px;}
-
+    .listWrap{padding:12px;} /* (요청) 헤더 삭제로 위로 당김 */
     .grid{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
@@ -371,7 +362,7 @@
     /* ===== MAP ===== */
     .mapBox{position:relative; background:#000; padding:10px; min-height:0;}
     .mapInner{
-      position:relative; /* overlay 위해 */
+      position:relative;
       border-radius:18px;
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
@@ -381,7 +372,7 @@
     }
     #map{width:100%; height:100%; background:#0b0c0d;}
 
-    /* 초기화 페이드 오버레이(드드드득 체감 완화) */
+    /* 초기화 페이드 오버레이 */
     .mapFade{
       position:absolute;
       inset:0;
@@ -626,7 +617,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.13</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.14</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -648,21 +639,15 @@
 
   <div class="app">
     <div class="panel" id="panel">
+      <!-- (요청) 리스트 | 전체 | 필터 | 현재범위 -->
       <div class="statsSticky">
-        <!-- (요청) 전체 왼쪽: 리스트 업데이트 중 -->
-        <div class="sPill" id="mBusyWrap" style="display:none;">리스트 업데이트 중 <b id="mBusyDots">…</b></div>
-
+        <div class="sPill sLabel">리스트</div>
         <div class="sPill">전체 <b id="mAll">0</b></div>
         <div class="sPill">필터 <b id="mFilter">0</b></div>
         <div class="sPill">현재범위 <b id="mInView">0</b></div>
       </div>
 
       <div class="card listWrap">
-        <div class="listHeader">
-          <div class="h">리스트</div>
-          <div class="small"><span id="resultInfo">0</span>건 · (항상 현재 지도 범위)</div>
-        </div>
-
         <div class="grid" id="list"></div>
 
         <div id="empty" style="display:none; padding:12px; color:var(--muted); font-size:12px;">
@@ -774,41 +759,17 @@
   let autoFitToken = 0;
   let isAutoFitting = false;
 
-  /* (요청) 리스트 업데이트 알약 */
-  let busyCount = 0;
-  let busyTick = 0;
-  let busyTimer = null;
-
-  /* reset fade token */
+  /* reset token / safety */
   let resetToken = 0;
+  let resetFinalizeTimer = null;
+
+  /* (요청) 첫 등장 리스트 랜덤 1회 */
+  let firstViewportRandom = true;
+
+  /* (요청) 백스페이스로 완전 삭제 시 초기화 */
+  let lastQueryNonEmpty = false;
 
   const $ = (id) => document.getElementById(id);
-
-  function beginBusy(){
-    busyCount++;
-    const wrap = $("mBusyWrap");
-    if (!wrap) return;
-    wrap.style.display = "inline-flex";
-    if (!busyTimer){
-      busyTick = 0;
-      busyTimer = setInterval(() => {
-        busyTick = (busyTick + 1) % 4;
-        const dots = "…".repeat(Math.max(1, busyTick));
-        const el = $("mBusyDots");
-        if (el) el.textContent = dots;
-      }, 260);
-    }
-  }
-  function endBusy(){
-    busyCount = Math.max(0, busyCount - 1);
-    if (busyCount !== 0) return;
-    const wrap = $("mBusyWrap");
-    if (wrap) wrap.style.display = "none";
-    if (busyTimer){
-      clearInterval(busyTimer);
-      busyTimer = null;
-    }
-  }
 
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -1432,6 +1393,9 @@
     }
 
     markers.addLayers(ms);
+
+    /* 안전: 클러스터 재계산 */
+    try{ markers.refreshClusters(); }catch(_){}
   }
 
   function setHash(key){
@@ -1541,9 +1505,15 @@
     return el;
   }
 
-  function renderList(items){
-    $("resultInfo").textContent = items.length;
+  function shuffleInPlace(arr){
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
 
+  function renderList(items){
     const list = $("list");
     list.innerHTML = "";
     cardByKey.clear();
@@ -1764,30 +1734,32 @@
   }
 
   function viewportUpdate(){
-    beginBusy();
-    try{
-      const b = map.getBounds();
-      const inView = (curBase || []).filter(x => {
-        const la = (x._latDisp ?? x.lat);
-        const ln = (x._lngDisp ?? x.lng);
-        return b.contains([la, ln]);
-      });
+    const b = map.getBounds();
+    let inView = (curBase || []).filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
 
-      curInView = inView;
+    /* (요청) 최초 1회 랜덤 */
+    if (firstViewportRandom){
+      firstViewportRandom = false;
+      inView = inView.slice();
+      shuffleInPlace(inView);
+    }
 
-      $("mInView").textContent = inView.length;
+    curInView = inView;
 
-      renderList(inView);
+    $("mInView").textContent = inView.length;
 
-      if (activeMiniKey){
-        ensureCardVisible(activeMiniKey);
-        clearAllCardHighlights();
-        highlightCard(activeMiniKey);
-        highlightClusterOnlyByKey(activeMiniKey);
-        updateMarkerVisual(activeMiniKey);
-      }
-    } finally {
-      endBusy();
+    renderList(inView);
+
+    if (activeMiniKey){
+      ensureCardVisible(activeMiniKey);
+      clearAllCardHighlights();
+      highlightCard(activeMiniKey);
+      highlightClusterOnlyByKey(activeMiniKey);
+      updateMarkerVisual(activeMiniKey);
     }
   }
 
@@ -1798,48 +1770,43 @@
   }
 
   function fullRender(shouldFit){
-    beginBusy();
-    try{
-      const qRaw = $("q").value.trim();
-      const base = getFilteredBase();
-      curBase = base;
+    const qRaw = $("q").value.trim();
+    const base = getFilteredBase();
+    curBase = base;
 
-      if (currentOpenKey){
-        const exists = base.some(x => x._key === currentOpenKey);
-        if (!exists) closeDetail(false);
+    if (currentOpenKey){
+      const exists = base.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
+
+    renderMarkers(base);
+    viewportUpdate();
+    updateSuggest();
+
+    if (shouldFit && base.length && !isClusterAction){
+      const bb = boundsOf(base);
+      if (bb){
+        const token = ++autoFitToken;
+        isAutoFitting = true;
+
+        const maxZ = (qRaw && base.length > 1) ? 13 : 16;
+        map.flyToBounds(bb, { padding:[60,60], maxZoom:maxZ, duration:0.65 });
+
+        const done = () => {
+          if (token === autoFitToken) isAutoFitting = false;
+          map.off("moveend", done);
+          map.off("zoomend", done);
+        };
+        map.on("moveend", done);
+        map.on("zoomend", done);
       }
-
-      $("mAll").textContent = ALL.length;
-      $("mFilter").textContent = base.length;
-
-      renderMarkers(base);
-      viewportUpdate();
-      updateSuggest();
-
-      if (shouldFit && base.length && !isClusterAction){
-        const bb = boundsOf(base);
-        if (bb){
-          const token = ++autoFitToken;
-          isAutoFitting = true;
-
-          const maxZ = (qRaw && base.length > 1) ? 13 : 16;
-          map.flyToBounds(bb, { padding:[60,60], maxZoom:maxZ, duration:0.65 });
-
-          const done = () => {
-            if (token === autoFitToken) isAutoFitting = false;
-            map.off("moveend", done);
-            map.off("zoomend", done);
-          };
-          map.on("moveend", done);
-          map.on("zoomend", done);
-        }
-      }
-    } finally {
-      endBusy();
     }
   }
 
-  /* (요청) 타이핑은 자동완성만, Enter/돋보기/제안 선택 때만 검색 실행 */
+  /* 타이핑은 자동완성만, Enter/돋보기/제안 선택 때만 검색 실행 */
   function runSearch(shouldFit=true){
     const box = $("qSuggest");
     if (box) box.style.display = "none";
@@ -1910,6 +1877,70 @@
     map.on("zoomend", sync);
   }
 
+  function doResetSameAsButton(){
+    const my = ++resetToken;
+    const fade = $("mapFade");
+
+    /* 혹시 남아있는 finalize 타이머 제거 */
+    if (resetFinalizeTimer){
+      clearTimeout(resetFinalizeTimer);
+      resetFinalizeTimer = null;
+    }
+
+    const qBox = $("qSuggest");
+    if (qBox) qBox.style.display = "none";
+    sugIndex = -1;
+
+    closeDetail(false);
+    closeMiniPopup();
+    clearAllMarkerStates();
+    clearAllCardHighlights();
+    cancelAutoFit();
+
+    $("q").value = "";
+    $("catHigh").value = "";
+
+    /* reset 시점에는 첫 리스트 랜덤 다시 1회 */
+    firstViewportRandom = true;
+    lastQueryNonEmpty = false;
+
+    if (fade) fade.classList.add("on");
+    isClusterAction = true;
+
+    const finalize = () => {
+      if (my !== resetToken) return;
+
+      curBase = ALL;
+      $("mAll").textContent = ALL.length;
+      $("mFilter").textContent = ALL.length;
+
+      renderMarkers(ALL);
+      viewportUpdate();
+
+      isClusterAction = false;
+
+      setTimeout(() => {
+        if (my !== resetToken) return;
+        if (fade) fade.classList.remove("on");
+      }, 60);
+    };
+
+    /* moveend가 안터지는 케이스 방지용 안전장치 */
+    let fired = false;
+    map.once("moveend", () => {
+      fired = true;
+      finalize();
+    });
+
+    map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.75 });
+
+    resetFinalizeTimer = setTimeout(() => {
+      if (my !== resetToken) return;
+      if (fired) return;
+      finalize();
+    }, 950);
+  }
+
   function buildMap(){
     map = L.map("map", { zoomControl:false }).setView(HOME_CENTER, HOME_ZOOM);
 
@@ -1943,34 +1974,38 @@
       clearClusterHint();
     });
 
+    /* (핵심 수정) 클러스터 클릭: zoomToBounds 기반으로 안정화 */
     markers.on("clusterclick", (e) => {
       cancelAutoFit();
 
-      isClusterAction = true;
       clearClusterHint();
       closeMiniPopup();
       clearAllMarkerStates();
       clearAllCardHighlights();
       clearClusterHighlight();
 
-      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
-      if (bb && bb.isValid()){
-        const TARGET_Z = 17;
-        map.flyToBounds(bb, { padding:[90,90], maxZoom: TARGET_Z, duration:0.55 });
+      const layer = e.layer;
+      if (!layer || typeof layer.zoomToBounds !== "function") return;
 
-        setTimeout(() => {
-          try{
-            if (map.getZoom() < TARGET_Z){
-              map.flyTo(map.getCenter(), TARGET_Z, { duration:0.22 });
-            }
-          }catch(_){}
-        }, 580);
-      }
+      isClusterAction = true;
 
-      setTimeout(() => {
+      const my = ++autoFitToken;
+      const done = () => {
+        if (my !== autoFitToken) return;
         isClusterAction = false;
         viewportUpdate();
-      }, 720);
+        map.off("moveend", done);
+        map.off("zoomend", done);
+      };
+      map.on("moveend", done);
+      map.on("zoomend", done);
+
+      try{
+        layer.zoomToBounds({ padding:[90,90], maxZoom:17, animate:true });
+      }catch(_){
+        isClusterAction = false;
+        viewportUpdate();
+      }
     });
 
     map.addLayer(markers);
@@ -2088,10 +2123,14 @@
       }
     });
 
-    /* (요청 핵심) 타이핑 중엔 검색 실행 금지: 자동완성만 */
-    q.addEventListener("input", () => debounce(()=>updateSuggest(), 60));
+    /* 타이핑 중엔 검색 실행 금지: 자동완성만 */
+    q.addEventListener("input", () => {
+      const nowVal = q.value.trim();
+      if (nowVal.length > 0) lastQueryNonEmpty = true;
+      debounce(()=>updateSuggest(), 60);
+    });
 
-    /* 방향키 + Enter */
+    /* 방향키 + Enter + Backspace(완전삭제 시 초기화) */
     q.addEventListener("keydown", (e)=>{
       const items = getSugItems();
       const boxOpen = items.length > 0;
@@ -2117,56 +2156,30 @@
         qBox.style.display = "none";
         sugIndex = -1;
         runSearch(true);
+        return;
+      }
+
+      /* (요청) 백스페이스로 완전 삭제되어 빈 값이 되는 순간 = 초기화 */
+      if (e.key === "Backspace"){
+        const willBeEmpty = (q.value.trim().length <= 1); // 현재 1글자면 백스페이스 후 empty
+        if (willBeEmpty && lastQueryNonEmpty){
+          // 기본 백스페이스 동작 후 값이 비워졌을 때 실행
+          setTimeout(() => {
+            if (q.value.trim() === ""){
+              doResetSameAsButton();
+            }
+          }, 0);
+        }
       }
     });
 
     $("qGo").addEventListener("click", () => runSearch(true));
 
-    /* 초기화: 페이드 → 이동 → 끝나고 마커/리스트 갱신 */
-    $("reset").addEventListener("click", () => {
-      const my = ++resetToken;
-      const fade = $("mapFade");
+    /* (요청) 초기화 버튼 */
+    $("reset").addEventListener("click", () => doResetSameAsButton());
 
-      qBox.style.display = "none";
-      sugIndex = -1;
-
-      closeDetail(false);
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-      cancelAutoFit();
-
-      $("q").value = "";
-      $("catHigh").value = "";
-
-      if (fade) fade.classList.add("on");
-      isClusterAction = true;
-
-      map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.75 });
-
-      map.once("moveend", () => {
-        if (my !== resetToken) return;
-
-        beginBusy();
-        try{
-          curBase = ALL;
-          $("mAll").textContent = ALL.length;
-          $("mFilter").textContent = ALL.length;
-
-          renderMarkers(ALL);
-          viewportUpdate();
-        } finally {
-          endBusy();
-        }
-
-        isClusterAction = false;
-
-        setTimeout(() => {
-          if (my !== resetToken) return;
-          if (fade) fade.classList.remove("on");
-        }, 60);
-      });
-    });
+    /* (요청) 타이틀 클릭 = 초기화 */
+    $("titleReset").addEventListener("click", () => doResetSameAsButton());
 
     $("dx").addEventListener("click", () => closeDetail(false));
     $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
