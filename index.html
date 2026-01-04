@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.4</title>
+  <title>Frontier DOOH 전국 DB v1.1.5</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -56,6 +56,8 @@
       -webkit-tap-highlight-color: transparent;
     }
     .leaflet-marker-icon svg{ pointer-events:none; }
+    /* (보험) 마커가 항상 인터랙티브하도록 강제 */
+    .leaflet-marker-icon.leaflet-interactive{ pointer-events:auto !important; cursor:pointer; }
 
     /* ===== TOPBAR ===== */
     .topbar{
@@ -536,7 +538,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.4</span></div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.5</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -640,6 +642,7 @@
 
   const markerByKey = new Map();
   const cardByKey = new Map();
+  const itemByKey = new Map(); // ★ O(1) lookup
 
   const BATCH = 36;
   const STEP  = 24;
@@ -664,6 +667,16 @@
   /* 마커 상태(hover/active) */
   let hoverKey = null;       // 커서가 올라간 핀
   let activeMiniKey = null;  // 미니팝업이 열린 핀(선택 상태)
+
+  /* ★ 단일 미니팝업(잔상/누적 방지 핵심) */
+  let miniPopup = null;
+  let miniPopupKey = null;
+
+  /* 스파이더파이 상태 유지용 */
+  let isSpiderfied = false;
+
+  /* render 최적화: 필터 조건이 바뀔 때만 마커 재구성 */
+  let lastFilterSig = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -932,6 +945,12 @@
     return arr;
   }
 
+  function filterSignature(){
+    const qRaw = $("q").value.trim();
+    const high = $("catHigh").value;
+    return searchNorm(qRaw) + "|" + (high || "");
+  }
+
   function boundsOf(items){
     const pts = items.slice(0, 600);
     if (!pts.length) return null;
@@ -983,9 +1002,35 @@
     iconAnchor:[18,49]
   });
 
-  function makeKey(it, idx){
-    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+  /* ===== 키 생성(중복/비고유 id 방어) ===== */
+  function hash32(str){
+    let h = 0x811c9dc5;
+    for (let i=0; i<str.length; i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h >>> 0).toString(16).padStart(8,"0");
+  }
+  function makeUniqueKey(it, keyCounts){
+    const id = (it.id == null ? "" : String(it.id).trim());
+    let base = "";
+    if (id){
+      base = "id:" + id;
+    }else{
+      const raw = [
+        (it.title || ""),
+        (it.address || ""),
+        String(it.lat ?? ""),
+        String(it.lng ?? ""),
+        (it.media_group || ""),
+        (it.category_low || "")
+      ].join("|");
+      base = "h:" + hash32(raw);
+    }
+
+    const n = (keyCounts.get(base) || 0) + 1;
+    keyCounts.set(base, n);
+    return (n === 1) ? base : (base + "~" + n);
   }
 
   function clearClusterHighlight(){
@@ -1093,11 +1138,8 @@
   }
 
   function clearAllMarkerStates(){
-    const prevHover = hoverKey;
-    const prevActive = activeMiniKey;
     hoverKey = null;
     activeMiniKey = null;
-
     for (const k of markerByKey.keys()){
       try{
         const m = markerByKey.get(k);
@@ -1106,17 +1148,36 @@
       }catch(_){}
     }
     clearClusterHighlight();
-    if (prevHover || prevActive) {
-      // no-op; just ensuring cleared
-    }
+  }
+
+  /* ===== 단일 미니팝업 ===== */
+  function ensureMiniPopup(){
+    if (miniPopup) return;
+    miniPopup = L.popup({
+      closeButton:false,
+      autoClose:true,
+      closeOnClick:false,
+      autoPan:false,
+      className:"pinPopWrap",
+      offset: L.point(0, -86)
+    });
   }
 
   function closeMiniPopup(){
-    if (!activeMiniKey) return;
-    const key = activeMiniKey;
-    const m = markerByKey.get(key);
-    try{ m && m.closePopup && m.closePopup(); }catch(_){}
-    setActiveMiniKey(null);
+    if (!map || !miniPopup) return;
+
+    try{
+      map.closePopup(miniPopup);
+    }catch(_){
+      try{ map.closePopup(); }catch(__){}
+    }
+
+    miniPopupKey = null;
+    if (activeMiniKey){
+      const prev = activeMiniKey;
+      setActiveMiniKey(null);
+      updateMarkerVisual(prev);
+    }
     clearAllCardHighlights();
     clearClusterHighlight();
   }
@@ -1149,27 +1210,36 @@
   function openMiniPopupFor(it, marker){
     hideClusterTip();
     clearClusterHighlight();
+    ensureMiniPopup();
 
-    // 이전 선택 팝업 닫고, 선택 상태 갱신
-    if (activeMiniKey && activeMiniKey !== it._key){
-      closeMiniPopup();
-    }
+    // 항상 1개만: 열기 전에 먼저 닫기(잔상/누적 방지)
+    try{ map.closePopup(); }catch(_){}
+    miniPopupKey = it._key;
+
     setActiveMiniKey(it._key);
 
-    // 리스트를 보이게 + 하이라이트
     clearAllCardHighlights();
     ensureCardVisible(it._key);
     highlightCard(it._key, true);
 
-    // 팝업 내용 세팅 후 오픈(항상 1개만 유지: autoClose=true)
     try{
-      marker.setPopupContent(miniPopupHtml(it));
-      marker.openPopup();
+      const ll = marker.getLatLng();
+      miniPopup.setLatLng(ll).setContent(miniPopupHtml(it));
+      miniPopup.openOn(map);
     }catch(_){}
   }
 
-  function renderMarkers(items){
-    // 지도 이동 등으로 렌더가 다시 들어올 때, 기존 미니팝업은 닫는 게 안전
+  function isMiniPopupOpenFor(key){
+    if (!map || !miniPopup) return false;
+    try{
+      return (miniPopupKey === key) && map.hasLayer(miniPopup);
+    }catch(_){
+      return false;
+    }
+  }
+
+  /* ===== 마커 재구성(필터 변경 시에만) ===== */
+  function rebuildMarkers(base){
     closeMiniPopup();
     clearClusterHighlight();
     setHoverKey(null);
@@ -1178,23 +1248,20 @@
     markers.clearLayers();
 
     const ms = [];
-    for (const it of items){
+    for (const it of base){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
-      m.__key = it._key;
-
-      m.bindPopup(miniPopupHtml(it), {
-        closeButton:false,
-        autoClose:true,         // ★ 겹침/스택 방지
-        closeOnClick:false,
-        autoPan:false,
-        className:"pinPopWrap",
-        offset: L.point(0, -86) // 팝업이 핀을 가리지 않게 위로
+      const m = L.marker([la, ln], {
+        icon: normalIcon,
+        interactive:true,
+        riseOnHover:true,
+        bubblingMouseEvents:false
       });
 
-      // 마커 Hover: 민트/리스트만 반응 (팝업은 열지 않음)
+      m.__key = it._key;
+
+      // Hover: 민트/리스트만 (팝업은 클릭으로만)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
@@ -1209,7 +1276,6 @@
         if (isMapInteracting) return;
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
-        // 리스트 하이라이트는 유지/해제 취향 갈릴 수 있어서: 일단 "커서가 떨어지면 해제"
         clearAllCardHighlights();
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
@@ -1223,441 +1289,11 @@
           }
         }catch(_){}
 
-        // 같은 핀을 다시 클릭하면 상세로
-        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
+        if (isMiniPopupOpenFor(it._key)){
           openDetail(it, true);
           return;
         }
         openMiniPopupFor(it, m);
       });
 
-      // 팝업 닫히면 선택 상태 해제
-      m.on("popupclose", () => {
-        if (activeMiniKey === it._key){
-          setActiveMiniKey(null);
-          updateMarkerVisual(it._key);
-          clearAllCardHighlights();
-        }
-      });
-
-      markerByKey.set(it._key, m);
-      ms.push(m);
-    }
-
-    markers.addLayers(ms);
-  }
-
-  function setHash(key){
-    const next = "#item=" + encodeURIComponent(key);
-    if (location.hash !== next){
-      suppressHashHandler = true;
-      location.hash = next;
-      setTimeout(()=>{ suppressHashHandler = false; }, 0);
-    }
-  }
-  function clearHash(){
-    if (!location.hash.startsWith("#item=")) return;
-    suppressHashHandler = true;
-    location.hash = "";
-    setTimeout(()=>{ suppressHashHandler = false; }, 0);
-  }
-
-  function openDetail(it, sethash){
-    currentOpenKey = it._key;
-
-    $("dt").textContent = it.title || "-";
-    $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
-
-    $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
-    $("dprice").textContent = fmtWon(it.price, it.price_unit);
-    $("daddr").textContent = it.address || "-";
-    $("dop").textContent = it.operator || "문의";
-
-    $("dimg").innerHTML = it.thumb
-      ? `<img src="${it.thumb}" alt="">`
-      : `<div class="fallback">NO IMAGE</div>`;
-
-    const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
-    const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
-    $("dlinks").innerHTML = `
-      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
-      <a href="${google}" target="_blank" rel="noopener">구글맵</a>
-    `;
-
-    $("dOverlay").style.display = "block";
-
-    const la = (it._latDisp ?? it.lat);
-    const ln = (it._lngDisp ?? it.lng);
-    map.setView([la, ln], Math.max(map.getZoom(), 15));
-
-    if (sethash) setHash(it._key);
-  }
-
-  function closeDetail(fromHashChange){
-    $("dOverlay").style.display = "none";
-    currentOpenKey = null;
-    if (!fromHashChange) clearHash();
-  }
-
-  function openDetailByHash(){
-    if (!location.hash.startsWith("#item=")) return;
-    const key = decodeURIComponent(location.hash.replace("#item=", ""));
-    if (currentOpenKey === key && $("dOverlay").style.display === "block") return;
-
-    const it = ALL.find(x => x._key === key);
-    if (!it) return;
-
-    openDetail(it, false);
-  }
-
-  function renderList(items){
-    $("resultInfo").textContent = items.length;
-
-    const list = $("list");
-    list.innerHTML = "";
-    cardByKey.clear();
-    renderLimit = BATCH;
-
-    $("empty").style.display = items.length ? "none" : "block";
-    $("moreHint").style.display = "none";
-
-    appendList(items);
-  }
-
-  function appendList(items){
-    const list = $("list");
-    const slice = items.slice(0, renderLimit);
-    list.innerHTML = "";
-    cardByKey.clear();
-
-    for (const it of slice){
-      const el = document.createElement("div");
-      el.className = "item";
-      el.dataset.key = it._key;
-
-      el.innerHTML = `
-        <div class="thumb">
-          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
-        </div>
-        <div class="body">
-          <div class="catRow">
-            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
-            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
-          </div>
-          <div class="name">${it.title || "-"}</div>
-          <div class="place">${guessPlace(it)}</div>
-          <div class="price">
-            <div class="p">${fmtWon(it.price, it.price_unit)}</div>
-            <div class="u">${it.price_unit ? it.price_unit : ""}</div>
-          </div>
-        </div>
-      `;
-
-      cardByKey.set(it._key, el);
-
-      el.addEventListener("mouseenter", () => {
-        clearAllCardHighlights();
-        highlightCard(it._key, false);
-        setHoverKey(it._key);
-        highlightClusterOnlyByKey(it._key);
-      });
-      el.addEventListener("mouseleave", () => {
-        unhighlightCard(it._key);
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        if (activeMiniKey) highlightCard(activeMiniKey, false);
-      });
-      el.addEventListener("click", () => openDetail(it, true));
-
-      list.appendChild(el);
-    }
-
-    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
-  }
-
-  function setupInfiniteScroll(){
-    const panel = $("panel");
-    panel.addEventListener("scroll", () => {
-      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
-      if (!nearBottom) return;
-      if (renderLimit >= curInView.length) return;
-
-      renderLimit = Math.min(curInView.length, renderLimit + STEP);
-      appendList(curInView);
-    }, { passive:true });
-  }
-
-  function showSuggest(items){
-    const box = $("qSuggest");
-    if (!box) return;
-    if (!items || !items.length){
-      box.style.display = "none";
-      box.innerHTML = "";
-      return;
-    }
-    box.innerHTML = "";
-    for (const it of items){
-      const row = document.createElement("div");
-      row.className = "qSugItem";
-      row.setAttribute("role","option");
-      row.dataset.value = it.value;
-      row.innerHTML = `<div>${escapeHtml(it.value)}</div><small>${escapeHtml(it.hint || "")}</small>`;
-      row.addEventListener("mousedown", (e)=>{ e.preventDefault(); });
-      row.addEventListener("click", ()=>{
-        $("q").value = it.value;
-        box.style.display = "none";
-        render(true);
-      });
-      box.appendChild(row);
-    }
-    box.style.display = "block";
-  }
-
-  function matchText(q, text){
-    const qn = searchNorm(q);
-    const tn = searchNorm(text);
-    if (qn && tn.includes(qn)) return true;
-
-    const qcs = chosungify(q);
-    const tcs = chosungify(text);
-    if (qcs && tcs && tcs.includes(qcs)) return true;
-
-    return false;
-  }
-
-  function updateSuggest(base){
-    const qRaw = $("q").value.trim();
-    if (!qFocused){
-      $("qSuggest").style.display = "none";
-      return;
-    }
-
-    if (!qRaw){
-      const sug = QUICK_SUGGEST.map(v => ({ value:v, hint:"추천" }));
-      showSuggest(sug.slice(0, 10));
-      return;
-    }
-
-    const out = [];
-    const seen = new Set();
-
-    const catPool = [];
-    for (const x of CATEGORY_TREE){
-      catPool.push(x.high);
-      for (const low of (x.lows||[])) catPool.push(low);
-    }
-    for (const c of catPool){
-      if (seen.has(c)) continue;
-      if (matchText(qRaw, c)){
-        seen.add(c);
-        out.push({ value:c, hint:"카테고리" });
-        if (out.length >= 10) break;
-      }
-    }
-
-    const sample = (base || []).slice(0, 220);
-    for (const it of sample){
-      const t = (it.title || "").trim();
-      if (!t) continue;
-      if (seen.has(t)) continue;
-      if (!matchText(qRaw, t) && !tokenMatchItem(qRaw, it)) continue;
-      seen.add(t);
-      out.push({ value:t, hint:"매체명" });
-      if (out.length >= 10) break;
-    }
-
-    showSuggest(out.slice(0, 10));
-  }
-
-  function render(shouldFit){
-    const base = getFilteredBase();
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
-    const b = map.getBounds();
-    const inView = base.filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
-    curInView = inView;
-
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-    $("mInView").textContent = inView.length;
-
-    renderMarkers(base);
-    renderList(inView);
-
-    updateSuggest(base);
-
-    if (shouldFit && base.length){
-      const bb = boundsOf(base);
-      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
-    }
-  }
-
-  function updateStickyHeights(){
-    const topbar = $("topbar");
-    const h = topbar ? topbar.getBoundingClientRect().height : 72;
-    document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
-  }
-
-  function buildMap(){
-    map = L.map("map", { zoomControl:true }).setView([36.5, 127.9], 7);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    markers = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
-      disableClusteringAtZoom: 18,
-      maxClusterRadius: 52
-    });
-
-    // 클러스터 hover: 하이라이트 + 클릭 유도 말풍선
-    markers.on("clustermouseover", (e) => {
-      try{
-        closeMiniPopup();
-        if (typeof e.layer.getElement === "function"){
-          highlightClusterElement(e.layer.getElement());
-        }
-        showClusterTip(e.latlng || e.layer.getLatLng());
-      }catch(_){}
-    });
-    markers.on("clustermouseout", () => {
-      clearClusterHighlight();
-      hideClusterTip();
-    });
-
-    // 스파이더파이 상태에서 지도 조작 시: 팝업/상태 정리
-    markers.on("spiderfied", () => { hideClusterTip(); clearClusterHighlight(); });
-    markers.on("unspiderfied", () => { hideClusterTip(); clearClusterHighlight(); });
-
-    map.addLayer(markers);
-
-    map.on("dragstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); hideClusterTip(); });
-    map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); hideClusterTip(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; });
-    map.on("click", ()=>{ closeMiniPopup(); hideClusterTip(); });
-
-    window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
-
-    map.getContainer().addEventListener("mouseleave", ()=>{
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-      hideClusterTip();
-    }, { passive:true });
-
-    map.on("moveend", () => render(false));
-  }
-
-  async function init(){
-    updateStickyHeights();
-    window.addEventListener("resize", updateStickyHeights);
-
-    buildMap();
-    setupInfiniteScroll();
-
-    // ★ 팝업 클릭(카드 클릭) -> 상세 모달
-    document.addEventListener("click", (e) => {
-      const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
-      if (!card) return;
-      const key = card.getAttribute("data-key");
-      if (!key) return;
-
-      const it = ALL.find(x => x._key === key);
-      if (!it) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      openDetail(it, true);
-    }, true);
-
-    const res = await fetch(DATA_URL, { cache:"no-store" });
-    const json = await res.json();
-    const items = Array.isArray(json) ? json : (json.items || []);
-
-    // 좌표 이상치(태평양 등) 방어: 대한민국 근방만 통과
-    const pts = items.filter(x => {
-      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-      // 대략적 KR bounding box
-      if (x.lat < 32.0 || x.lat > 39.8) return false;
-      if (x.lng < 123.0 || x.lng > 132.5) return false;
-      return true;
-    });
-
-    ALL = pts.map((it, idx) => {
-      const t = assignTaxonomy(it);
-      const key = makeKey(it, idx);
-      const row = { ...it, _key: key, _high: t.high, _low: t.low };
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._chosung = chosungify(row._blobText);
-      return row;
-    });
-
-    applyOverlapJitter(ALL);
-
-    $("pillLoaded").textContent = ALL.length;
-
-    setCatHighOptions();
-
-    $("catHigh").addEventListener("change", () => render(true));
-
-    const q = $("q");
-    const qBox = $("qSuggest");
-    q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(getFilteredBase()); });
-    q.addEventListener("blur", ()=>{
-      qFocused = false;
-      setTimeout(()=>{ qBox.style.display = "none"; }, 140);
-    });
-
-    document.addEventListener("click", (e)=>{
-      const wrap = q.parentElement;
-      if (!wrap.contains(e.target)){
-        qBox.style.display = "none";
-      }
-    });
-
-    q.addEventListener("input", () => debounce(()=>render(true), 90));
-    q.addEventListener("keydown", (e)=>{ if (e.key === "Enter") render(true); });
-
-    $("reset").addEventListener("click", () => {
-      $("q").value = "";
-      $("catHigh").value = "";
-      $("qSuggest").style.display = "none";
-      closeDetail(false);
-      closeMiniPopup();
-      render(true);
-    });
-
-    $("dx").addEventListener("click", () => closeDetail(false));
-    $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
-
-    window.addEventListener("hashchange", () => {
-      if (suppressHashHandler) return;
-
-      if (location.hash.startsWith("#item=")){
-        openDetailByHash();
-      }else{
-        closeDetail(true);
-      }
-    });
-
-    render(false);
-    openDetailByHash();
-  }
-
-  init();
-</script>
-</body>
-</html>
+      markerByKey.set(it._key, m_
