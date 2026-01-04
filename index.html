@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB</title>
+  <title>Frontier DOOH 전국 DB v1.1.2</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -77,6 +77,14 @@
       line-height:1.08;
       text-align:left;
       white-space:nowrap;
+    }
+    .titleLeft .ver{
+      font-size:12px;
+      font-weight:900;
+      color:rgba(255,255,255,.55);
+      margin-left:10px;
+      letter-spacing:.2px;
+      vertical-align:middle;
     }
     .pill{
       display:inline-flex; align-items:center; gap:8px;
@@ -511,7 +519,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft">Frontier DOOH 전국 DB</div>
+    <div class="titleLeft">Frontier DOOH 전국 DB <span class="ver">v1.1.2</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -670,6 +678,13 @@
   function isCompatConsonant(c){
     const code = c.charCodeAt(0);
     return (code >= 0x3131 && code <= 0x314E);
+  }
+  function hasCompatConsonant(str){
+    const s = (str ?? "").toString();
+    for (let i=0;i<s.length;i++){
+      if (isCompatConsonant(s[i])) return true;
+    }
+    return false;
   }
   function chosungify(str){
     const s = (str ?? "").toString();
@@ -847,6 +862,42 @@
     return parts.join(" ");
   }
 
+  function hash32(str){
+    const s = (str ?? "").toString();
+    let h = 2166136261 >>> 0;
+    for (let i=0;i<s.length;i++){
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return (h >>> 0).toString(16).padStart(8, "0");
+  }
+
+  function stableSig(it){
+    return [
+      it.title||"", it.address||"", it.media_group||"", it.category_low||"",
+      it.price||"", it.price_unit||"", it.operator||"",
+      it.lat, it.lng
+    ].join("|");
+  }
+
+  function makeKey(it, idx, used){
+    const id = (it.id != null) ? String(it.id).trim() : "";
+    const h = hash32(stableSig(it));
+
+    let base = id ? `id:${id}:${h}` : `k:${h}`;
+
+    if (used){
+      let k = base;
+      let n = 1;
+      while(used.has(k)){
+        k = `${base}:${idx}:${n++}`;
+      }
+      used.add(k);
+      return k;
+    }
+    return base;
+  }
+
   function coordKey(lat, lng){
     return Number(lat).toFixed(6) + "," + Number(lng).toFixed(6);
   }
@@ -882,10 +933,19 @@
   }
 
   function tokenMatchItem(tok, it){
-    const vars = tokenVariants(tok);
-    const cs  = chosungify(tok);
-    if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
+    const raw = (tok ?? "").toString().trim();
+    if (!raw) return true;
+
+    /* 초성 매칭은 “자모가 섞인 입력”일 때만 적용 (오탐 방지) */
+    const useCs = hasCompatConsonant(raw) || /^[ㄱ-ㅎ]+$/.test(raw);
+    if (useCs){
+      const cs  = chosungify(raw);
+      if (cs && cs.length >= 1 && it._chosung && it._chosung.includes(cs)) return true;
+    }
+
+    const vars = tokenVariants(raw);
     if (!vars.length) return true;
+
     const blob = it._blob || "";
     return vars.some(v => blob.includes(v));
   }
@@ -915,15 +975,6 @@
       b.extend([la, ln]);
     }
     return b.isValid() ? b : null;
-  }
-
-  function computeInView(base){
-    const b = map.getBounds();
-    return base.filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
   }
 
   /* ===== ICONS ===== */
@@ -964,11 +1015,6 @@
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
-
-  function makeKey(it, idx){
-    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
-  }
 
   function clearClusterHighlight(){
     if (highlightedClusterEl){
@@ -1014,22 +1060,19 @@
     const m = markerByKey.get(key);
     if (!m || !markers) return;
 
-    /* 1) 실제로 핀이 보이면(렌더된 상태) 핀을 우선 하이라이트 */
-    if (m._icon){
-      try{
-        m.setIcon(hoverIcon);
-        m.setZIndexOffset(9999);
-      }catch(_){}
+    const parent = markers.getVisibleParent(m);
+    if (!parent) return;
+
+    if (parent instanceof L.Marker && parent === m){
+      m.setIcon(hoverIcon);
+      m.setZIndexOffset(9999);
       return;
     }
 
-    /* 2) 핀이 보이지 않으면(클러스터에 묶임) 클러스터만 하이라이트 */
-    const parent = markers.getVisibleParent(m);
     if (parent && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
   }
-
   function unhighlightMarkerByKey(key){
     const m = markerByKey.get(key);
     if (!m) return;
@@ -1119,10 +1162,11 @@
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:true,
       disableClusteringAtZoom: 18,
-      maxClusterRadius: 52
+      maxClusterRadius: 52,
+      zoomToBoundsOnClick:false
     });
 
-    /* 클러스터: 리스트 스크롤 금지, 말풍선만 */
+    /* 클러스터: hover는 말풍선/하이라이트만 */
     markers.on("clustermouseover", (e) => {
       try{
         closeActivePop();
@@ -1135,6 +1179,27 @@
     markers.on("clustermouseout", () => {
       clearClusterHighlight();
       hideClusterTip();
+    });
+
+    /* 클러스터 클릭: “줌이 안 늘어나는” 경우 최소 +2줌 강제 */
+    markers.on("clusterclick", (e) => {
+      try{
+        closeActivePop();
+        hideClusterTip();
+        clearAllMarkerHighlights();
+        clearAllCardHighlights();
+
+        const bounds = e.layer.getBounds();
+        const z = map.getZoom();
+        const target = map.getBoundsZoom(bounds, false, L.point(120,120));
+
+        if (target <= z){
+          const ll = e.latlng || e.layer.getLatLng();
+          map.setView(ll, Math.min(z + 2, 17));
+        }else{
+          map.fitBounds(bounds, { padding:[60,60], maxZoom: 17 });
+        }
+      }catch(_){}
     });
 
     map.addLayer(markers);
@@ -1221,14 +1286,6 @@
 
         highlightMarkerOrClusterByKey(it._key);
         clearAllCardHighlights();
-
-        /* 안전장치: 근접 핀/줌 직후 curInView 어긋남 방지 */
-        if (!curInView.some(x => x._key === it._key)){
-          const baseNow = getFilteredBase();
-          curInView = computeInView(baseNow);
-          renderList(curInView);
-        }
-
         ensureCardVisible(it._key);
         highlightCard(it._key, true);
 
@@ -1415,9 +1472,12 @@
     const tn = searchNorm(text);
     if (qn && tn.includes(qn)) return true;
 
-    const qcs = chosungify(q);
-    const tcs = chosungify(text);
-    if (qcs && tcs && tcs.includes(qcs)) return true;
+    const useCs = hasCompatConsonant(q) || /^[ㄱ-ㅎ]+$/.test(q);
+    if (useCs){
+      const qcs = chosungify(q);
+      const tcs = chosungify(text);
+      if (qcs && tcs && tcs.includes(qcs)) return true;
+    }
 
     return false;
   }
@@ -1474,7 +1534,13 @@
       if (!exists) closeDetail(false);
     }
 
-    const inView = computeInView(base);
+    const b = map.getBounds();
+
+    const inView = base.filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
+    });
     curInView = inView;
 
     $("mAll").textContent = ALL.length;
@@ -1536,10 +1602,13 @@
     const items = Array.isArray(json) ? json : (json.items || []);
     const pts = items.filter(x => typeof x.lat === "number" && typeof x.lng === "number");
 
+    const usedKeys = new Set();
+
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
-      const key = makeKey(it, idx);
-      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      const row = { ...it, _high: t.high, _low: t.low };
+      row._key = makeKey(row, idx, usedKeys);
+
       row._blobText = makeSearchText(row);
       row._blob = searchNorm(row._blobText);
       row._chosung = chosungify(row._blobText);
