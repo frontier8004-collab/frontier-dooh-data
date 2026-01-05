@@ -218,6 +218,31 @@
       border-color:rgba(162,222,204,.25);
     }
 
+    /* ===== LOAD ERROR BANNER (v1.1.18+ 방어) ===== */
+    .loadErr{
+      display:none;
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,90,90,.45);
+      background:rgba(255,90,90,.10);
+      color:#ffd9d9;
+      box-shadow:0 12px 30px rgba(0,0,0,.35);
+      max-width:1200px;
+      line-height:1.35;
+      font-size:12px;
+    }
+    .loadErr b{ color:#ffffff; font-weight:1000; }
+    .loadErr code{
+      color:#ffffff;
+      background:rgba(0,0,0,.30);
+      border:1px solid rgba(255,255,255,.10);
+      padding:2px 6px;
+      border-radius:8px;
+    }
+    .loadErr .row{ margin-top:6px; color:rgba(255,255,255,.88); }
+    .loadErr .hint{ margin-top:8px; color:rgba(255,255,255,.75); }
+
     /* ===== APP LAYOUT ===== */
     .app{
       flex:1 1 auto;
@@ -882,6 +907,9 @@
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
+
+    <!-- v1.1.18+ 방어: 데이터 로딩 실패 시에도 지도/줌 UI 유지 + 에러 메시지 표시 -->
+    <div class="loadErr" id="loadErr" role="alert" aria-live="polite"></div>
   </div>
 
   <div class="app">
@@ -1017,6 +1045,9 @@
   ];
 
   const HOME_ZOOM = 8;
+
+  /* v1.1.18+ 홈뷰 북쪽 상한(속초 수준까지만) */
+  const HOME_MAX_LAT = 38.35;
 
   let ALL = [];
   let map = null;
@@ -1158,10 +1189,6 @@
     return false;
   }
 
-  /* NOTE:
-     - 초성 매칭 제거(요청 유지)
-     - v1.1.18: 토큰(단어) 단위 prefix 중심 매칭으로 오탐 감소
-  */
   function tokenVariantsForLoose(tok){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return [];
@@ -1466,7 +1493,24 @@
     return b.isValid() ? b : null;
   }
 
-  /* v1.1.18: 홈뷰 적용(춘천~제주가 보이도록) */
+  /* v1.1.18+ 홈뷰 전용 bounds: 북쪽을 속초 수준까지만 캡 */
+  function boundsHome(items){
+    const b0 = boundsAll(items);
+    if (!b0 || !b0.isValid || !b0.isValid()) return null;
+
+    const sw = b0.getSouthWest();
+    const ne = b0.getNorthEast();
+
+    const cappedLat = Math.min(ne.lat, HOME_MAX_LAT);
+
+    // 캡이 과도하여 역전되면 원본 유지
+    if (cappedLat <= sw.lat + 0.05) return b0;
+
+    const b = L.latLngBounds([sw.lat, sw.lng], [cappedLat, ne.lng]);
+    return (b && b.isValid && b.isValid()) ? b : b0;
+  }
+
+  /* v1.1.18: 홈뷰 적용 */
   function getHomePadding(){
     const sideW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sideW")) || 268;
     return {
@@ -1475,6 +1519,10 @@
     };
   }
 
+  /* v1.1.18+ 변경:
+     - fitBounds 우선
+     - ZOOM=8 강제(setZoom) 금지 (제주+속초 1화면 우선)
+  */
   function applyHomeView(animate){
     if (!HOME_BOUNDS || !map) return;
 
@@ -1487,11 +1535,7 @@
       map.fitBounds(HOME_BOUNDS, opt);
     }
 
-    // ZOOM 8 고정(필요 시 보정)
     map.once("moveend", () => {
-      if (map.getZoom() !== HOME_ZOOM){
-        map.setZoom(HOME_ZOOM);
-      }
       updateZoomUI();
       viewportUpdate();
     });
@@ -1790,9 +1834,9 @@
     if (!key) return;
     recentKeys = recentKeys.filter(k => k !== key);
     recentKeys.unshift(key);
-    if (recentKeys.length > 200) recentKeys.length = 200; /* 페이지네이션 전제: 충분히 보관 */
+    if (recentKeys.length > 200) recentKeys.length = 200;
     try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-    recentPage = 0; /* 최신 추가 시 1페이지로 */
+    recentPage = 0;
     renderRecentPanel();
   }
 
@@ -2463,11 +2507,73 @@
     fullRender(false);
   }
 
+  /* ===== v1.1.18+ 방어: 로딩 에러 표시(앱 생존) ===== */
+  function showLoadErrorUI(meta){
+    const box = $("loadErr");
+    if (!box) return;
+
+    const url = meta?.url || DATA_URL;
+    const status = meta?.status != null ? String(meta.status) : "-";
+    const ct = meta?.contentType || "-";
+    const msg = meta?.message || "데이터 로딩 실패";
+
+    box.innerHTML = `
+      <div><b>데이터 로딩 실패</b> — 지도/줌 UI는 유지됩니다.</div>
+      <div class="row">URL: <code>${escapeHtml(url)}</code></div>
+      <div class="row">HTTP: <code>${escapeHtml(status)}</code> / Content-Type: <code>${escapeHtml(ct)}</code></div>
+      <div class="row">Message: <code>${escapeHtml(msg)}</code></div>
+      <div class="hint">
+        확인: GitHub Pages에서 위 URL 경로에 파일이 실제로 존재하는지, 그리고 응답이 JSON인지(Network 탭 Response가 HTML이면 경로/파일명 문제 가능성이 큼) 확인하십시오.
+      </div>
+    `;
+    box.style.display = "block";
+  }
+
+  function hideLoadErrorUI(){
+    const box = $("loadErr");
+    if (!box) return;
+    box.style.display = "none";
+    box.innerHTML = "";
+  }
+
+  async function safeFetchJson(url){
+    const res = await fetch(url, { cache:"no-store" });
+
+    const status = res.status;
+    const contentType = (res.headers.get("content-type") || "").toLowerCase();
+
+    if (!res.ok){
+      const err = new Error("HTTP " + status);
+      err.__meta = { url, status, contentType, message: "HTTP " + status };
+      throw err;
+    }
+
+    // JSON이 아닌 경우(예: GitHub Pages 404 HTML) 방어
+    if (!contentType.includes("application/json") && !contentType.includes("text/json") && !contentType.includes("+json")){
+      let sample = "";
+      try{ sample = (await res.text()).slice(0, 120); }catch(_){}
+      const err = new Error("Non-JSON response");
+      err.__meta = {
+        url, status, contentType,
+        message: "응답이 JSON이 아닙니다(HTML/텍스트 가능). 샘플: " + sample.replace(/\s+/g," ").trim()
+      };
+      throw err;
+    }
+
+    try{
+      const json = await res.json();
+      return { json, meta: { url, status, contentType } };
+    }catch(e){
+      const err = new Error("JSON parse failed");
+      err.__meta = { url, status, contentType, message: "JSON 파싱 실패: " + (e && e.message ? e.message : "unknown") };
+      throw err;
+    }
+  }
+
   async function init(){
     updateStickyHeights();
     window.addEventListener("resize", () => {
       updateStickyHeights();
-      // 화면 크기 변경 시 홈뷰 패딩이 달라질 수 있으므로, "중립 상태"이면 홈뷰 유지
       if (isNeutralState() && HOME_BOUNDS && map){
         applyHomeView(false);
       }
@@ -2491,59 +2597,7 @@
       openDetail(it, true);
     }, true);
 
-    // 데이터 로드
-    const res = await fetch(DATA_URL, { cache:"no-store" });
-    const json = await res.json();
-    const items = Array.isArray(json) ? json : (json.items || []);
-
-    const pts = items.filter(x => {
-      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-      if (x.lat < 32.0 || x.lat > 39.8) return false;
-      if (x.lng < 123.0 || x.lng > 132.5) return false;
-      return true;
-    });
-
-    ALL = pts.map((it, idx) => {
-      const t = assignTaxonomy(it);
-      const key = makeKey(it, idx);
-      const row = { ...it, _key: key, _high: t.high, _low: t.low };
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._jamo = toJamo(row._blobText);
-
-      // v1.1.18: 토큰 캐시
-      const toks = extractTokens(row._blobText);
-      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
-      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
-
-      return row;
-    });
-
-    applyOverlapJitter(ALL);
-
-    itemByKey.clear();
-    ALL.forEach(it => itemByKey.set(it._key, it));
-
-    $("pillLoaded").textContent = ALL.length;
-
-    setCatHighOptions();
-    buildSuggestPool();
-
-    // load recent/cart
-    loadRecentAndCart();
-    renderRecentPanel();
-    renderCartSummary();
-
-    // 홈뷰 bounds 계산 및 적용 (춘천~제주)
-    HOME_BOUNDS = boundsAll(ALL);
-    if (HOME_BOUNDS){
-      applyHomeView(false);
-    }else{
-      map.setView([36.25, 127.8], HOME_ZOOM);
-      updateZoomUI();
-    }
-
-    // Zoom UI init
+    // Zoom UI init (데이터 로딩 실패와 무관하게 항상 살아있어야 함)
     updateZoomUI();
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
@@ -2571,8 +2625,8 @@
       renderCartSummary();
     });
 
-    // filters
-    $("catHigh").addEventListener("change", () => fullRender(true));
+    // filters (카테고리 변경 시 지도 위치/줌 유지: fit 금지)
+    $("catHigh").addEventListener("change", () => fullRender(false));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -2645,12 +2699,111 @@
       }
     });
 
+    // ===== 데이터 로드 (방어) =====
+    hideLoadErrorUI();
+
+    let items = [];
+    try{
+      const out = await safeFetchJson(DATA_URL);
+      const json = out.json;
+      items = Array.isArray(json) ? json : (json.items || []);
+    }catch(e){
+      const meta = (e && e.__meta) ? e.__meta : { url: DATA_URL, status: "-", contentType: "-", message: (e && e.message) ? e.message : "unknown" };
+      console.error("[Frontier DOOH] data load failed:", e);
+      showLoadErrorUI(meta);
+
+      // 앱 생존: 데이터 없는 상태로 정상 UI 유지
+      ALL = [];
+      itemByKey.clear();
+      $("pillLoaded").textContent = "0";
+      $("mAll").textContent = "0";
+      $("mFilter").textContent = "0";
+      $("mInView").textContent = "0";
+
+      setCatHighOptions();
+      buildSuggestPool();
+
+      loadRecentAndCart();
+      renderRecentPanel();
+      renderCartSummary();
+
+      // 홈뷰: 데이터 없으면 기본 센터/줌 유지
+      HOME_BOUNDS = null;
+      map.setView([36.25, 127.8], HOME_ZOOM);
+      updateZoomUI();
+
+      // 최초 렌더(빈 상태)
+      curBase = [];
+      fullRender(false);
+      openDetailByHash();
+      return; // 여기서 종료(죽지 않음)
+    }
+
+    // ===== 정상 로드 처리 =====
+    const pts = items.filter(x => {
+      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
+      if (x.lat < 32.0 || x.lat > 39.8) return false;
+      if (x.lng < 123.0 || x.lng > 132.5) return false;
+      return true;
+    });
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = makeKey(it, idx);
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._jamo = toJamo(row._blobText);
+
+      // v1.1.18: 토큰 캐시
+      const toks = extractTokens(row._blobText);
+      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
+
+      return row;
+    });
+
+    applyOverlapJitter(ALL);
+
+    itemByKey.clear();
+    ALL.forEach(it => itemByKey.set(it._key, it));
+
+    $("pillLoaded").textContent = ALL.length;
+
+    setCatHighOptions();
+    buildSuggestPool();
+
+    // load recent/cart
+    loadRecentAndCart();
+    renderRecentPanel();
+    renderCartSummary();
+
+    // 홈뷰 bounds 계산 및 적용 (속초 상한 캡 + 제주 포함)
+    HOME_BOUNDS = boundsHome(ALL);
+    if (HOME_BOUNDS){
+      applyHomeView(false);
+    }else{
+      map.setView([36.25, 127.8], HOME_ZOOM);
+      updateZoomUI();
+    }
+
     // 최초 렌더
     fullRender(false);
     openDetailByHash();
   }
 
-  init();
+  // v1.1.18+ 방어: init 에러가 앱 전체를 죽이지 않도록 최상위 catch
+  init().catch((e) => {
+    console.error("[Frontier DOOH] init fatal error:", e);
+    try{
+      showLoadErrorUI({
+        url: DATA_URL,
+        status: "-",
+        contentType: "-",
+        message: "초기화 중 예외 발생: " + (e && e.message ? e.message : "unknown")
+      });
+    }catch(_){}
+  });
 </script>
 </body>
 </html>
