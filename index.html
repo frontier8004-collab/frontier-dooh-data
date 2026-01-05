@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.16</title>
+  <title>Frontier DOOH 전국 DB v1.1.17</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,7 +134,7 @@
     option{background:#0c0e10; color:#ffffff;}
 
     .qWrap{ position:relative; display:flex; align-items:center; gap:10px; }
-    .q{ width:min(560px, 92vw); } /* 130% 확장 느낌 */
+    .q{ width:min(560px, 92vw); }
     .cat{ width:260px; }
 
     .btn{
@@ -162,7 +162,7 @@
 
     .qGo{
       height:44px;
-      width:88px; /* 돋보기 알약 가로 200% 느낌 */
+      width:88px;
       border-radius:999px;
       border:1px solid rgba(162,222,204,.55);
       background:rgba(162,222,204,.12);
@@ -183,7 +183,7 @@
       position:absolute;
       top:48px;
       left:0;
-      width:calc(100% - 98px); /* 입력창 폭 기준(돋보기 제외) */
+      width:calc(100% - 98px);
       display:none;
       max-height:260px;
       overflow:auto;
@@ -484,7 +484,7 @@
       display:flex;
       flex-direction:column;
       gap:10px;
-      pointer-events:none; /* 내부 버튼만 클릭 */
+      pointer-events:none;
     }
     .sideCard{
       pointer-events:auto;
@@ -496,14 +496,16 @@
     }
 
     .zoomCard{ padding:10px; }
-    .zoomBtns{
+
+    /* v1.1.17: zoom UI -> (← ZOOM 8 →) 가로 중앙 정렬 */
+    .zoomRow{
       display:flex;
-      flex-direction:column;
       align-items:center;
+      justify-content:center;
       gap:10px;
     }
     .zBtn{
-      width:78px; /* +,- 150% 느낌 */
+      width:56px;
       height:44px;
       border-radius:14px;
       border:1px solid rgba(162,222,204,.45);
@@ -518,24 +520,26 @@
     }
     .zBtn:active{ transform:translateY(1px); }
     .zNum{
-      width:78px;
-      height:40px;
+      min-width:132px;
+      height:44px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.28);
       display:flex;
       align-items:center;
-      justify-content:center; /* 중앙 */
+      justify-content:center;
       color:#e9eef7;
       font-weight:1000;
       letter-spacing:.2px;
       user-select:none;
+      padding:0 12px;
     }
     .zNum small{
       font-size:11px;
       color:rgba(255,255,255,.55);
       margin-right:8px;
       font-weight:900;
+      letter-spacing:.6px;
     }
 
     .sideSectionTitle{
@@ -590,7 +594,7 @@
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
       position:relative;
-      min-height:148px; /* 세로사이즈 확대 */
+      min-height:148px;
     }
     .rCard:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.30); }
     .rImg{ width:100%; height:78px; background:#0d0f10; position:relative; }
@@ -826,7 +830,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.16</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.17</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -874,10 +878,10 @@
         <!-- right side panel -->
         <div class="mapSide" id="mapSide">
           <div class="sideCard zoomCard">
-            <div class="zoomBtns">
-              <button class="zBtn" id="zIn">+</button>
+            <div class="zoomRow">
+              <button class="zBtn" id="zOut" aria-label="줌 아웃">←</button>
               <div class="zNum" id="zNum"><small>ZOOM</small><span id="zVal">8</span></div>
-              <button class="zBtn" id="zOut">−</button>
+              <button class="zBtn" id="zIn" aria-label="줌 인">→</button>
             </div>
           </div>
 
@@ -978,6 +982,19 @@
     { high:"극장 / 레저 / 휴양 시설", lows:["극장","레저","휴양, 편의시설"] },
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
+
+  // v1.1.17: "짧은 지역 토큰"이 카테고리 단어에 의해 geo로 오판되는 것을 방지
+  const CATEGORY_TERMS = new Set();
+  (function initCategoryTerms(){
+    for (const x of CATEGORY_TREE){
+      CATEGORY_TERMS.add(x.high);
+      (x.lows || []).forEach(v => CATEGORY_TERMS.add(v));
+    }
+    [
+      "전광판","빌보드","외벽","교통매체","버스","지하철","택시","공항","터미널","극장","레저","휴양","쇼핑몰","마트",
+      "엘리베이터","병원","편의점","운동","캠퍼스","식당","주점","약국","뷰티","드럭"
+    ].forEach(v => CATEGORY_TERMS.add(v));
+  })();
 
   let ALL = [];
   let map = null;
@@ -1082,9 +1099,10 @@
     return (t ?? "").toString().replace(/(대로|로|길)$/,"");
   }
 
-  /* NOTE: v1.1.16 핵심 변경
-     - 행정구역 접미(구/군/시/도/동…)로 끝나는 토큰은 "축약 변형" 매칭을 금지(정확 매칭 우선)
-     - 초성 매칭 제거(요청 반영)
+  /* NOTE: v1.1.17 핵심 변경
+     - 검색 텍스트를 Geo(지역/주소 중심) / All(확장)로 분리
+     - 지역성 토큰은 Geo로만 매칭하여 "운영사/잡필드 지역명" 오탐 방지
+     - 초성(초성-only) 매칭은 사용하지 않음
   */
   function tokenVariantsForLoose(tok){
     const raw = (tok ?? "").toString().trim();
@@ -1209,7 +1227,8 @@
     CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
 
-  function makeSearchText(it){
+  // v1.1.17: Geo(지역/주소 중심) 검색 텍스트
+  function makeSearchTextGeo(it){
     const parts = [];
     const add = (v) => {
       if (typeof v !== "string") return;
@@ -1220,8 +1239,40 @@
 
     add(it.title);
     add(it.address);
+    add(it.media_group);
+    add(it.category_low);
     add(it._high);
     add(it._low);
+
+    const commonKeys = [
+      "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
+      "sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong",
+      "region_1","region_2","region_3"
+    ];
+    for (const k of commonKeys) add(it[k]);
+
+    return parts.join(" ");
+  }
+
+  // v1.1.17: All(확장) 검색 텍스트 - 운영사/기타 필드 포함
+  function makeSearchTextAll(it){
+    const parts = [];
+    const add = (v) => {
+      if (typeof v !== "string") return;
+      const s = v.trim();
+      if (!s) return;
+      parts.push(s);
+    };
+
+    add(it.title);
+    add(it.address);
+    add(it.media_group);
+    add(it.category_low);
+    add(it._high);
+    add(it._low);
+
+    // 운영사/담당은 "확장 검색"에만 포함 (지역 토큰은 Geo로만 매칭)
+    add(it.operator);
 
     const commonKeys = [
       "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
@@ -1293,6 +1344,39 @@
     return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
   }
 
+  // v1.1.17: 지역성 토큰 판별(짧은 한글/역/IC/행정접미 등)
+  function isLikelyGeoToken(raw){
+    const s = (raw ?? "").toString().trim();
+    if (!s) return false;
+
+    if (/(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s)) return true;
+    if (/(역|IC)$/.test(s)) return true;
+
+    // 2~3글자 한글은 대부분 지역(단, 카테고리 단어는 제외)
+    if (/^[가-힣]{2,3}$/.test(s)){
+      if (CATEGORY_TERMS.has(s)) return false;
+      return true;
+    }
+    return false;
+  }
+
+  // v1.1.17: "서울시" vs "서울특별시", "제주도" vs "제주특별자치도" 같은 행정명 보정
+  function adminAliasesForNorm(qn){
+    const out = [];
+    const s = (qn ?? "").toString();
+    if (!s) return out;
+    if (/시$/.test(s)){
+      out.push(s.replace(/시$/,"광역시"));
+      out.push(s.replace(/시$/,"특별시"));
+      out.push(s.replace(/시$/,"자치시"));
+    }
+    if (/도$/.test(s)){
+      out.push(s.replace(/도$/,"특별자치도"));
+      out.push(s.replace(/도$/,"자치도"));
+    }
+    return out;
+  }
+
   function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
@@ -1300,19 +1384,38 @@
     const qn = searchNorm(raw);
     const qj = toJamo(raw);
 
-    // 1) 자모(prefix/contains)
-    if (qj && it._jamo && it._jamo.includes(qj)) return true;
+    const useGeo = isLikelyGeoToken(raw);
+
+    const blobGeo = it._blobGeo || "";
+    const jamoGeo = it._jamoGeo || "";
+
+    const blobAll = it._blobAll || it._blob || "";
+    const jamoAll = it._jamoAll || it._jamo || "";
+
+    const blob = useGeo ? blobGeo : blobAll;
+    const jamo = useGeo ? jamoGeo : jamoAll;
+
+    // 1) 자모(contains)
+    if (qj && jamo && jamo.includes(qj)) return true;
 
     // 2) 정규화 포함
-    if (qn && it._blob && it._blob.includes(qn)) return true;
+    if (qn && blob && blob.includes(qn)) return true;
 
-    // 3) 행정구역 토큰은 "축약 변형" 금지 (강남구 -> 강남 등 느슨매칭 차단)
+    // 2-1) 행정명 alias 보정(Geo일 때만)
+    if (useGeo && qn){
+      const alts = adminAliasesForNorm(qn);
+      if (alts.length && alts.some(a => blob.includes(a))) return true;
+    }
+
+    // 3) 행정구역 접미 토큰은 "축약 변형" 금지
     if (isAdminSuffixToken(raw)) return false;
 
-    // 4) 그 외는 변형 토큰 허용
+    // 4) 지역성 토큰은 느슨 변형 매칭 자체를 금지(오탐 방지)
+    if (useGeo) return false;
+
+    // 5) 그 외는 변형 토큰 허용
     const vars = tokenVariantsForLoose(raw);
-    const blob = it._blob || "";
-    if (vars.length && vars.some(v => blob.includes(v))) return true;
+    if (vars.length && vars.some(v => blobAll.includes(v))) return true;
 
     return false;
   }
@@ -1695,7 +1798,6 @@
   }
 
   function stableHash(seed, str){
-    // 간단한 문자열 해시(안정 섞기)
     let h = 2166136261 ^ Math.floor(seed * 1e9);
     for (let i=0; i<str.length; i++){
       h ^= str.charCodeAt(i);
@@ -1724,7 +1826,6 @@
     const list = $("list");
     let arr = items.slice();
 
-    // neutral 상태에서만 "seed 기반 랜덤" (초기/초기화/F5마다 seed 변경)
     if (isNeutralState()){
       arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
@@ -1827,7 +1928,7 @@
   }
 
   function buildSuggestPool(){
-    const mapT = new Map(); // term -> {term,hint,count}
+    const mapT = new Map();
 
     const add = (term, hint) => {
       const t = (term ?? "").toString().trim();
@@ -1919,7 +2020,6 @@
 
     const qRaw = $("q").value.trim();
 
-    // 빈칸이면 "최근 검색어" 우선, 없으면 QUICK_SUGGEST
     if (!qRaw){
       const hist = loadQueryHistory();
       if (hist.length){
@@ -2049,10 +2149,8 @@
   }
 
   function buildMap(){
-    // 초기 줌/중앙: zoom 8, 대한민국 중심 (제주 하단 살짝 가려져도 OK)
     map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], 8);
 
-    // 밝은 베이스맵 (화이트톤) + 약간 프론티어 톤은 CSS filter로 처리
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
@@ -2080,7 +2178,6 @@
       hideClusterHint();
     });
 
-    // 클러스터 클릭: 자연스럽게 확대/중앙 이동
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2097,7 +2194,6 @@
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
-      // 방어: bounds가 비정상일 경우 latlng 기준 확대
       if (bb && bb.isValid && bb.isValid()){
         map.fitBounds(bb, { padding:[90,90], maxZoom: 18 });
       }else if (e.layer && e.layer.getLatLng){
@@ -2333,13 +2429,10 @@
     closeDetail(false);
     closeMiniPopup();
 
-    // 랜덤 seed 갱신(요청: 초기화/새로고침마다 랜덤)
     shuffleSeed = Math.random();
 
-    // 부드러운 초기 뷰 복귀(드드득 최소화)
     map.flyTo([36.25, 127.8], 8, { animate:true, duration:0.85 });
 
-    // 렌더
     fullRender(true);
   }
 
@@ -2350,7 +2443,6 @@
     buildMap();
     setupInfiniteScroll();
 
-    // 팝업 클릭 -> 상세
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -2365,7 +2457,6 @@
       openDetail(it, true);
     }, true);
 
-    // 데이터 로드
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
@@ -2381,9 +2472,22 @@
       const t = assignTaxonomy(it);
       const key = makeKey(it, idx);
       const row = { ...it, _key: key, _high: t.high, _low: t.low };
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._jamo = toJamo(row._blobText);
+
+      // v1.1.17: Geo/All 분리 생성
+      row._blobGeoText = makeSearchTextGeo(row);
+      row._blobAllText = makeSearchTextAll(row);
+
+      row._blobGeo = searchNorm(row._blobGeoText);
+      row._jamoGeo = toJamo(row._blobGeoText);
+
+      row._blobAll = searchNorm(row._blobAllText);
+      row._jamoAll = toJamo(row._blobAllText);
+
+      // backward compatibility
+      row._blobText = row._blobAllText;
+      row._blob = row._blobAll;
+      row._jamo = row._jamoAll;
+
       return row;
     });
 
@@ -2397,34 +2501,28 @@
     setCatHighOptions();
     buildSuggestPool();
 
-    // load recent/cart
     loadRecentAndCart();
     renderRecentPanel();
     renderCartSummary();
 
-    // Zoom UI init
     updateZoomUI();
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
 
-    // Recent events
     $("recentMore").addEventListener("click", openRecentModal);
     $("recentClose").addEventListener("click", closeRecentModal);
     $("recentModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "recentModalOverlay") closeRecentModal(); });
 
-    // Cart events
     $("cartBtn").addEventListener("click", openCartModal);
     $("cartClose").addEventListener("click", closeCartModal);
     $("cartModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "cartModalOverlay") closeCartModal(); });
 
-    // 상세에서 장바구니 담기
     $("dAddCart").addEventListener("click", ()=>{
       if (!currentOpenKey) return;
       addToCart(currentOpenKey);
       renderCartSummary();
     });
 
-    // filters
     $("catHigh").addEventListener("change", () => fullRender(true));
 
     const q = $("q");
@@ -2443,7 +2541,6 @@
       }
     });
 
-    // 입력 시: 지도/리스트 갱신 금지, 자동완성만 업데이트
     let sugTimer = null;
     q.addEventListener("input", () => {
       clearTimeout(sugTimer);
@@ -2454,7 +2551,6 @@
       if (e.key === "ArrowDown"){ e.preventDefault(); moveSugIndex(+1); return; }
       if (e.key === "ArrowUp"){ e.preventDefault(); moveSugIndex(-1); return; }
       if (e.key === "Enter"){
-        // 제안 선택이 있으면 그걸 적용, 아니면 검색 실행
         if (pickSugIndex()) return;
         e.preventDefault();
         applySearchFromUI();
@@ -2465,7 +2561,6 @@
         sugIndex = -1;
         return;
       }
-      // 백스페이스 초기화(요청): 입력창이 비어있고 backspace면 reset과 동일
       if (e.key === "Backspace" && !q.value){
         e.preventDefault();
         resetAll();
@@ -2477,7 +2572,6 @@
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
-    // 입력창 밖에서 Backspace가 "뒤로가기"로 동작하는 것 방지 + reset 처리
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Backspace") return;
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -2500,7 +2594,6 @@
       }
     });
 
-    // 최초 렌더
     fullRender(false);
     openDetailByHash();
   }
