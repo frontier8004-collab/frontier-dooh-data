@@ -581,7 +581,7 @@
       <div class="topbar">
         <div class="title">
           <div class="name">Frontier DOOH 전국 DB</div>
-          <div class="ver" id="verText">v1.1.19</div>
+          <div class="ver" id="verText">v1.1.20</div>
         </div>
         <div class="pill" id="loadedPill">Loaded: -</div>
       </div>
@@ -667,10 +667,10 @@
   (function(){
     "use strict";
 
-    const APP_VERSION = "v1.1.19";
+    const APP_VERSION = "v1.1.20";
     const DEFAULT_ZOOM = 8;
 
-    // IMPORTANT: v1.1.19
+    // IMPORTANT: v1.1.20
     // - 지도 초기 위치(초기화 포함) 보정
     // - 카테고리 변경 시 지도(위치/줌) 초기화 금지
     // - 검색 필터는 문자열 includes 기반(부산 오탐 방지)
@@ -877,7 +877,7 @@
       });
     }
 
-    // ---------- View Reset (v1.1.19 지도 위치 보정) ----------
+    // ---------- View Reset (v1.1.20 지도 위치 보정) ----------
     function resetViewToAllPoints(){
       if(!map || !all.length) return;
 
@@ -976,7 +976,7 @@
       if(cats.includes(current)) sel.value = current;
     }
 
-    // ---------- Filtering (v1.1.19: 카테고리 변경 시 지도 초기화 금지) ----------
+    // ---------- Filtering (v1.1.20: 카테고리 변경 시 지도 초기화 금지) ----------
     function applyFilters(){
       const q = norm($("q").value);
       const cat = $("cat").value;
@@ -1164,21 +1164,58 @@
 
     // ---------- Load ----------
     async function loadData(){
-      // data.json은 같은 폴더에 있다고 가정합니다.
-      const url = "data.json?v=" + encodeURIComponent(APP_VERSION) + "&_=" + Date.now();
-      const res = await fetch(url, {cache:"no-store"});
-      if(!res.ok){
-        throw new Error("data.json 로드 실패: " + res.status);
-      }
-      const raw = await res.json();
+      // data.json 위치를 "현재 index.html과 같은 폴더"로 가정하면,
+      // GitHub Pages 구성(하위 폴더에 index.html, 루트에 data.json)에서 404가 날 수 있습니다.
+      // 따라서 여러 후보 경로를 순서대로 시도해서 첫 성공 경로를 사용합니다.
 
-      const arr = Array.isArray(raw) ? raw : (raw.items || raw.data || []);
-      const out = [];
-      for(let i=0;i<arr.length;i++){
-        const p = normalizePoint(arr[i], i);
-        if(p) out.push(p);
+      const q = `v=${encodeURIComponent(APP_VERSION)}&_=${Date.now()}`;
+
+      const candidates = [
+      // 기존 배포 규칙(사용자 환경): data_public.json 우선
+      new URL(`data_public.json?${q}`, location.href).toString(),
+      new URL(`../data_public.json?${q}`, location.href).toString(),
+      `${location.origin}/data_public.json?${q}`,
+
+      // 예비: data.json (혹시 파일명을 data.json으로 두는 환경)
+      new URL(`data.json?${q}`, location.href).toString(),
+      new URL(`../data.json?${q}`, location.href).toString(),
+      `${location.origin}/data.json?${q}`,
+    ];
+
+      async function tryFetchJson(url){
+        const res = await fetch(url, { cache: "no-store" });
+        if(!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        const text = await res.text();
+        const trimmed = text.trim();
+
+        // 404 HTML, 에러 페이지 등 방어
+        if(
+          ct.includes("text/html") ||
+          trimmed.startsWith("<!doctype") ||
+          trimmed.startsWith("<html") ||
+          trimmed.startsWith("<")
+        ){
+          throw new Error("HTML response");
+        }
+
+        return JSON.parse(trimmed);
       }
-      return out;
+
+      let lastErr = null;
+      for(const url of candidates){
+        try{
+          const json = await tryFetchJson(url);
+          console.log("[data.json] loaded from:", url);
+          return json;
+        }catch(err){
+          lastErr = err;
+          console.warn("[data.json] failed:", url, err);
+        }
+      }
+
+      throw lastErr || new Error("data.json load failed");
     }
 
     // ---------- Events ----------
@@ -1194,7 +1231,7 @@
         t = setTimeout(()=>applyFilters(), 120);
       });
 
-      // v1.1.19: 카테고리 변경 시 지도 초기화 금지 (applyFilters만)
+      // v1.1.20: 카테고리 변경 시 지도 초기화 금지 (applyFilters만)
       $("cat").addEventListener("change", ()=>{
         applyFilters();
       });
@@ -1226,7 +1263,7 @@
       renderRecent();
       renderCartBadge();
 
-      // v1.1.19: 지도 기본 위치 보정(전체 데이터 기준)
+      // v1.1.20: 지도 기본 위치 보정(전체 데이터 기준)
       resetViewToAllPoints();
     }
 
