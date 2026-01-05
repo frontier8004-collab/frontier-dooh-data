@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.17</title>
+  <title>Frontier DOOH 전국 DB v1.1.18</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -365,7 +365,6 @@
     }
     #map{width:100%; height:100%; background:#0b0c0d;}
 
-    /* 지도 톤: 화이트~프론티어 중간 */
     .leaflet-tile-pane{
       filter: brightness(1.06) contrast(1.06) saturate(0.92);
     }
@@ -495,20 +494,23 @@
       overflow:hidden;
     }
 
+    /* v1.1.18: 줌 UI (← ZOOM 8 →) */
     .zoomCard{ padding:10px; }
-
-    /* v1.1.17: zoom UI -> (← ZOOM 8 →) 가로 중앙 정렬 */
-    .zoomRow{
+    .zoomBar{
       display:flex;
       align-items:center;
-      justify-content:center;
+      justify-content:space-between;
       gap:10px;
+      padding:6px;
+      border-radius:18px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
     }
-    .zBtn{
-      width:56px;
+    .zNav{
+      width:48px;
       height:44px;
       border-radius:14px;
-      border:1px solid rgba(162,222,204,.45);
+      border:1px solid rgba(162,222,204,.35);
       background:rgba(255,255,255,.06);
       color:#e9eef7;
       font-weight:1000;
@@ -518,9 +520,9 @@
       justify-content:center;
       user-select:none;
     }
-    .zBtn:active{ transform:translateY(1px); }
-    .zNum{
-      min-width:132px;
+    .zNav:active{ transform:translateY(1px); }
+    .zLabel{
+      flex:1 1 auto;
       height:44px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.12);
@@ -528,18 +530,22 @@
       display:flex;
       align-items:center;
       justify-content:center;
+      gap:10px;
+      user-select:none;
       color:#e9eef7;
       font-weight:1000;
       letter-spacing:.2px;
-      user-select:none;
-      padding:0 12px;
     }
-    .zNum small{
+    .zLabel span{
       font-size:11px;
       color:rgba(255,255,255,.55);
-      margin-right:8px;
       font-weight:900;
       letter-spacing:.6px;
+    }
+    .zLabel b{
+      font-size:14px;
+      font-weight:1000;
+      color:#e9eef7;
     }
 
     .sideSectionTitle{
@@ -553,7 +559,7 @@
       gap:10px;
     }
 
-    /* 장바구니 버튼 (최근본 위) */
+    /* 장바구니 버튼 */
     .cartBtn{
       width:100%;
       height:46px;
@@ -579,27 +585,39 @@
     }
     .cartBtn .meta b{ color:var(--mint); font-weight:1000; }
 
-    /* 최근 본 매체 */
+    /* v1.1.18: 최근 본 매체 (세로 4줄 + 페이지네이션) */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
-    .recentGrid{
-      display:grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap:10px;
+    .recentList{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
     }
-    .rCard{
+    .rRow{
+      position:relative;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:8px 8px;
       border-radius:14px;
-      overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.25);
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
-      position:relative;
-      min-height:148px;
+      min-height:58px;
     }
-    .rCard:hover{ transform:translateY(-2px); border-color:rgba(162,222,204,.30); }
-    .rImg{ width:100%; height:78px; background:#0d0f10; position:relative; }
-    .rImg img{ width:100%; height:100%; object-fit:cover; display:block; }
-    .rImg .fallback{
+    .rRow:hover{ transform:translateY(-1px); border-color:rgba(162,222,204,.30); }
+    .rThumb{
+      width:64px;
+      height:42px;
+      border-radius:10px;
+      overflow:hidden;
+      background:#0d0f10;
+      border:1px solid rgba(255,255,255,.10);
+      flex:0 0 auto;
+      position:relative;
+    }
+    .rThumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .rThumb .fallback{
       position:absolute; inset:0;
       display:flex; align-items:center; justify-content:center;
       color:rgba(255,255,255,.35);
@@ -607,7 +625,7 @@
       font-size:11px;
       letter-spacing:.4px;
     }
-    .rBody{ padding:8px 8px 10px; }
+    .rTxt{ min-width:0; flex:1 1 auto; }
     .rName{
       font-weight:1000;
       font-size:12px;
@@ -615,7 +633,6 @@
       color:#e9eef7;
       display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
       overflow:hidden;
-      min-height:30px;
     }
     .rPrice{
       margin-top:6px;
@@ -627,12 +644,9 @@
       text-overflow:ellipsis;
     }
     .rX{
-      position:absolute;
-      top:6px;
-      right:6px;
-      width:24px;
-      height:24px;
-      border-radius:10px;
+      width:28px;
+      height:28px;
+      border-radius:12px;
       border:1px solid rgba(255,255,255,.16);
       background:rgba(0,0,0,.45);
       color:#fff;
@@ -641,17 +655,41 @@
       justify-content:center;
       font-weight:1000;
       cursor:pointer;
+      flex:0 0 auto;
     }
-    .rMore{
-      border-radius:14px;
-      border:1px dashed rgba(255,255,255,.18);
-      background:rgba(255,255,255,.04);
-      color:rgba(255,255,255,.82);
+    .recentPager{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      padding-top:2px;
+    }
+    .pBtn{
+      width:44px;
+      height:34px;
+      border-radius:12px;
+      border:1px solid rgba(162,222,204,.30);
+      background:rgba(255,255,255,.06);
+      color:#e9eef7;
       font-weight:1000;
-      padding:12px 10px;
       cursor:pointer;
-      text-align:center;
+      display:flex;
+      align-items:center;
+      justify-content:center;
       user-select:none;
+    }
+    .pBtn:disabled{
+      opacity:.35;
+      cursor:not-allowed;
+    }
+    .pMeta{
+      font-size:12px;
+      color:rgba(255,255,255,.72);
+      font-weight:900;
+      letter-spacing:.2px;
+      user-select:none;
+      min-width:56px;
+      text-align:center;
     }
 
     /* ===== DETAIL OVERLAY ===== */
@@ -752,7 +790,7 @@
       padding:0 14px;
     }
 
-    /* ===== MODAL (RECENT / CART) ===== */
+    /* ===== MODAL (CART) ===== */
     .modalOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.62);
@@ -830,7 +868,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.17</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.18</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -878,10 +916,12 @@
         <!-- right side panel -->
         <div class="mapSide" id="mapSide">
           <div class="sideCard zoomCard">
-            <div class="zoomRow">
-              <button class="zBtn" id="zOut" aria-label="줌 아웃">←</button>
-              <div class="zNum" id="zNum"><small>ZOOM</small><span id="zVal">8</span></div>
-              <button class="zBtn" id="zIn" aria-label="줌 인">→</button>
+            <div class="zoomBar">
+              <button class="zNav" id="zOut" aria-label="줌 아웃">←</button>
+              <div class="zLabel" aria-label="현재 줌">
+                <span>ZOOM</span><b id="zVal">8</b>
+              </div>
+              <button class="zNav" id="zIn" aria-label="줌 인">→</button>
             </div>
           </div>
 
@@ -898,8 +938,12 @@
               <span style="color:rgba(255,255,255,.55); font-size:12px; font-weight:900;" id="recentMeta">0/4</span>
             </div>
             <div class="recentBody">
-              <div class="recentGrid" id="recentGrid"></div>
-              <div class="rMore" id="recentMore" style="display:none;"></div>
+              <div class="recentList" id="recentList"></div>
+              <div class="recentPager" id="recentPager" style="display:none;">
+                <button class="pBtn" id="recentPrev" aria-label="이전 페이지">←</button>
+                <div class="pMeta" id="recentPageMeta">1/1</div>
+                <button class="pBtn" id="recentNext" aria-label="다음 페이지">→</button>
+              </div>
             </div>
           </div>
         </div>
@@ -950,17 +994,6 @@
     </div>
   </div>
 
-  <!-- Recent Modal -->
-  <div class="modalOverlay" id="recentModalOverlay">
-    <div class="modal">
-      <div class="modalHead">
-        <div class="t">최근 본 매체</div>
-        <button class="x" id="recentClose">✕</button>
-      </div>
-      <div class="modalBody" id="recentModalBody"></div>
-    </div>
-  </div>
-
   <!-- Cart Modal -->
   <div class="modalOverlay" id="cartModalOverlay">
     <div class="modal">
@@ -983,18 +1016,7 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  // v1.1.17: "짧은 지역 토큰"이 카테고리 단어에 의해 geo로 오판되는 것을 방지
-  const CATEGORY_TERMS = new Set();
-  (function initCategoryTerms(){
-    for (const x of CATEGORY_TREE){
-      CATEGORY_TERMS.add(x.high);
-      (x.lows || []).forEach(v => CATEGORY_TERMS.add(v));
-    }
-    [
-      "전광판","빌보드","외벽","교통매체","버스","지하철","택시","공항","터미널","극장","레저","휴양","쇼핑몰","마트",
-      "엘리베이터","병원","편의점","운동","캠퍼스","식당","주점","약국","뷰티","드럭"
-    ].forEach(v => CATEGORY_TERMS.add(v));
-  })();
+  const HOME_ZOOM = 8;
 
   let ALL = [];
   let map = null;
@@ -1018,12 +1040,11 @@
   let isMapInteracting = false;
 
   /* 검색(렉 제거): 입력은 미리보기만, 적용은 Enter/돋보기 클릭 */
-  let activeQuery = "";     // 실제 필터에 반영되는 검색어
-  let qFocused = false;
+  let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
-  let SUG_POOL = [];  // {term,hint,count,_norm,_jamo}
-  let SUG_META = new Map(); // term -> {hint,count}
+  let SUG_POOL = [];
+  let SUG_META = new Map();
   let sugIndex = -1;
 
   /* 마커 상태 */
@@ -1038,8 +1059,15 @@
   const LS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
 
-  let recentKeys = []; // 최신순
-  let cartKeys = [];   // 담긴 순서
+  let recentKeys = [];
+  let cartKeys = [];
+
+  /* v1.1.18: 최근 본 페이지네이션 */
+  const RECENT_PAGE_SIZE = 4;
+  let recentPage = 0;
+
+  /* v1.1.18: 홈뷰 bounds 캐시 */
+  let HOME_BOUNDS = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -1065,7 +1093,14 @@
   }
   function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
 
-  // 한글 자모 분해: "호" → "ㅎㅗ", "홍대" → "ㅎㅗㅇㄷㅐ"
+  /* 단어(토큰) 추출: 공백/기호로 쪼개진 덩어리 */
+  function extractTokens(text){
+    const s = (text ?? "").toString();
+    const m = s.match(/[가-힣A-Za-z0-9]+/g);
+    return m ? m : [];
+  }
+
+  // 한글 자모 분해
   const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
   const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
   const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -1098,11 +1133,34 @@
   function stripRoadSuffix(t){
     return (t ?? "").toString().replace(/(대로|로|길)$/,"");
   }
+  function stripStationSuffix(t){
+    return (t ?? "").toString().replace(/(역)$/,"");
+  }
 
-  /* NOTE: v1.1.17 핵심 변경
-     - 검색 텍스트를 Geo(지역/주소 중심) / All(확장)로 분리
-     - 지역성 토큰은 Geo로만 매칭하여 "운영사/잡필드 지역명" 오탐 방지
-     - 초성(초성-only) 매칭은 사용하지 않음
+  /* v1.1.18: 짧은 지명 보호(“대구”가 “해운대구”에 포함되는 오탐 차단) */
+  const PROTECT_SHORT_NORM = new Set([
+    searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
+    searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
+  ]);
+  function isProtectedShortWord(raw){
+    const t = (raw ?? "").toString().trim();
+    if (!t) return false;
+
+    const n0 = searchNorm(t);
+    if (PROTECT_SHORT_NORM.has(n0)) return true;
+
+    const n1 = stripAdminSuffix(stripDigits(n0));
+    if (n1 && PROTECT_SHORT_NORM.has(n1)) return true;
+
+    const baseStation = searchNorm(stripStationSuffix(t));
+    if (baseStation && PROTECT_SHORT_NORM.has(baseStation)) return true;
+
+    return false;
+  }
+
+  /* NOTE:
+     - 초성 매칭 제거(요청 유지)
+     - v1.1.18: 토큰(단어) 단위 prefix 중심 매칭으로 오탐 감소
   */
   function tokenVariantsForLoose(tok){
     const raw = (tok ?? "").toString().trim();
@@ -1121,6 +1179,9 @@
     const r0 = stripRoadSuffix(t1);
     if (r0 && r0 !== t1) vars.add(r0);
 
+    const s0 = searchNorm(stripStationSuffix(raw));
+    if (s0 && s0 !== t1) vars.add(s0);
+
     if (/[동리가면읍구군시도]$/.test(raw)){
       const base = a0 || stripAdminSuffix(t1) || t1;
       if (base){
@@ -1136,6 +1197,14 @@
       if (base){
         vars.add(base);
         vars.add(base + "동");
+      }
+    }
+
+    if (/역$/.test(raw)){
+      const base = s0 || t1;
+      if (base){
+        vars.add(base);
+        vars.add(base + "역");
       }
     }
 
@@ -1227,8 +1296,7 @@
     CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
   }
 
-  // v1.1.17: Geo(지역/주소 중심) 검색 텍스트
-  function makeSearchTextGeo(it){
+  function makeSearchText(it){
     const parts = [];
     const add = (v) => {
       if (typeof v !== "string") return;
@@ -1239,40 +1307,8 @@
 
     add(it.title);
     add(it.address);
-    add(it.media_group);
-    add(it.category_low);
     add(it._high);
     add(it._low);
-
-    const commonKeys = [
-      "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
-      "sido","sigungu","si","gu","gun","dong","emd","eupmyeondong","legal_dong","admin_dong",
-      "region_1","region_2","region_3"
-    ];
-    for (const k of commonKeys) add(it[k]);
-
-    return parts.join(" ");
-  }
-
-  // v1.1.17: All(확장) 검색 텍스트 - 운영사/기타 필드 포함
-  function makeSearchTextAll(it){
-    const parts = [];
-    const add = (v) => {
-      if (typeof v !== "string") return;
-      const s = v.trim();
-      if (!s) return;
-      parts.push(s);
-    };
-
-    add(it.title);
-    add(it.address);
-    add(it.media_group);
-    add(it.category_low);
-    add(it._high);
-    add(it._low);
-
-    // 운영사/담당은 "확장 검색"에만 포함 (지역 토큰은 Geo로만 매칭)
-    add(it.operator);
 
     const commonKeys = [
       "address_road","road_address","addr_road","address_jibun","jibun_address","addr_jibun",
@@ -1314,8 +1350,8 @@
       const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
       const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
 
-      const base = 10; // meters
-      const step = 9;  // meters
+      const base = 10;
+      const step = 9;
 
       for (let i=0;i<arr.length;i++){
         const it = arr[i];
@@ -1344,78 +1380,61 @@
     return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
   }
 
-  // v1.1.17: 지역성 토큰 판별(짧은 한글/역/IC/행정접미 등)
-  function isLikelyGeoToken(raw){
-    const s = (raw ?? "").toString().trim();
-    if (!s) return false;
-
-    if (/(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s)) return true;
-    if (/(역|IC)$/.test(s)) return true;
-
-    // 2~3글자 한글은 대부분 지역(단, 카테고리 단어는 제외)
-    if (/^[가-힣]{2,3}$/.test(s)){
-      if (CATEGORY_TERMS.has(s)) return false;
-      return true;
-    }
-    return false;
-  }
-
-  // v1.1.17: "서울시" vs "서울특별시", "제주도" vs "제주특별자치도" 같은 행정명 보정
-  function adminAliasesForNorm(qn){
-    const out = [];
-    const s = (qn ?? "").toString();
-    if (!s) return out;
-    if (/시$/.test(s)){
-      out.push(s.replace(/시$/,"광역시"));
-      out.push(s.replace(/시$/,"특별시"));
-      out.push(s.replace(/시$/,"자치시"));
-    }
-    if (/도$/.test(s)){
-      out.push(s.replace(/도$/,"특별자치도"));
-      out.push(s.replace(/도$/,"자치도"));
-    }
-    return out;
-  }
-
+  /* v1.1.18: 토큰 단위 prefix 중심 매칭 + 짧은 지명 포함매칭 제한 */
   function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
 
     const qn = searchNorm(raw);
     const qj = toJamo(raw);
+    if (!qn && !qj) return true;
 
-    const useGeo = isLikelyGeoToken(raw);
+    const protectedShort = isProtectedShortWord(raw);
 
-    const blobGeo = it._blobGeo || "";
-    const jamoGeo = it._jamoGeo || "";
+    const tns = it._tokNorms || [];
+    const tjs = it._tokJamos || [];
 
-    const blobAll = it._blobAll || it._blob || "";
-    const jamoAll = it._jamoAll || it._jamo || "";
-
-    const blob = useGeo ? blobGeo : blobAll;
-    const jamo = useGeo ? jamoGeo : jamoAll;
-
-    // 1) 자모(contains)
-    if (qj && jamo && jamo.includes(qj)) return true;
-
-    // 2) 정규화 포함
-    if (qn && blob && blob.includes(qn)) return true;
-
-    // 2-1) 행정명 alias 보정(Geo일 때만)
-    if (useGeo && qn){
-      const alts = adminAliasesForNorm(qn);
-      if (alts.length && alts.some(a => blob.includes(a))) return true;
+    // 1) 토큰 prefix
+    if (qn){
+      for (const tn of tns){
+        if (tn && tn.startsWith(qn)) return true;
+      }
+    }
+    if (qj){
+      for (const tj of tjs){
+        if (tj && tj.startsWith(qj)) return true;
+      }
     }
 
-    // 3) 행정구역 접미 토큰은 "축약 변형" 금지
+    // 2) 토큰 contains (긴 쿼리만 + 보호 대상 제외)
+    if (!protectedShort){
+      if (qn && qn.length >= 3){
+        for (const tn of tns){
+          if (tn && tn.includes(qn)) return true;
+        }
+      }
+      if (qj && qj.length >= 6){
+        for (const tj of tjs){
+          if (tj && tj.includes(qj)) return true;
+        }
+      }
+    }
+
+    // 3) 레거시 블롭 contains (긴 쿼리만 + 보호 대상 제외)
+    if (!protectedShort){
+      if (qj && qj.length >= 6 && it._jamo && it._jamo.includes(qj)) return true;
+      if (qn && qn.length >= 3 && it._blob && it._blob.includes(qn)) return true;
+    }
+
+    // 4) 행정구역 토큰은 느슨 변형 금지
     if (isAdminSuffixToken(raw)) return false;
 
-    // 4) 지역성 토큰은 느슨 변형 매칭 자체를 금지(오탐 방지)
-    if (useGeo) return false;
-
-    // 5) 그 외는 변형 토큰 허용
-    const vars = tokenVariantsForLoose(raw);
-    if (vars.length && vars.some(v => blobAll.includes(v))) return true;
+    // 5) 변형 토큰 허용(도로/역 등) - 보호 대상 제외
+    if (!protectedShort){
+      const vars = tokenVariantsForLoose(raw);
+      const blob = it._blob || "";
+      if (vars.length && vars.some(v => blob.includes(v))) return true;
+    }
 
     return false;
   }
@@ -1435,8 +1454,8 @@
     return arr;
   }
 
-  function boundsOf(items){
-    const pts = items.slice(0, 600);
+  function boundsAll(items){
+    const pts = items.slice(0, 2500);
     if (!pts.length) return null;
     const b = L.latLngBounds([]);
     for (const it of pts){
@@ -1445,6 +1464,37 @@
       b.extend([la, ln]);
     }
     return b.isValid() ? b : null;
+  }
+
+  /* v1.1.18: 홈뷰 적용(춘천~제주가 보이도록) */
+  function getHomePadding(){
+    const sideW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sideW")) || 268;
+    return {
+      paddingTopLeft: L.point(58, 54),
+      paddingBottomRight: L.point(sideW + 88, 86)
+    };
+  }
+
+  function applyHomeView(animate){
+    if (!HOME_BOUNDS || !map) return;
+
+    const pad = getHomePadding();
+    const opt = { ...pad, maxZoom: HOME_ZOOM };
+
+    if (animate){
+      map.flyToBounds(HOME_BOUNDS, { ...opt, duration:0.85 });
+    }else{
+      map.fitBounds(HOME_BOUNDS, opt);
+    }
+
+    // ZOOM 8 고정(필요 시 보정)
+    map.once("moveend", () => {
+      if (map.getZoom() !== HOME_ZOOM){
+        map.setZoom(HOME_ZOOM);
+      }
+      updateZoomUI();
+      viewportUpdate();
+    });
   }
 
   /* ===== ICONS ===== */
@@ -1740,8 +1790,9 @@
     if (!key) return;
     recentKeys = recentKeys.filter(k => k !== key);
     recentKeys.unshift(key);
-    if (recentKeys.length > 20) recentKeys.length = 20;
+    if (recentKeys.length > 200) recentKeys.length = 200; /* 페이지네이션 전제: 충분히 보관 */
     try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+    recentPage = 0; /* 최신 추가 시 1페이지로 */
     renderRecentPanel();
   }
 
@@ -1904,7 +1955,7 @@
     }
 
     box.innerHTML = "";
-    arr.forEach((v, idx) => {
+    arr.forEach((v) => {
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
@@ -2013,10 +2064,7 @@
 
   function updateSuggest(){
     const box = $("qSuggest");
-    if (!qFocused){
-      box.style.display = "none";
-      return;
-    }
+    if (!box) return;
 
     const qRaw = $("q").value.trim();
 
@@ -2096,12 +2144,13 @@
     viewportUpdate();
 
     if (shouldFit && base.length){
-      const bb = boundsOf(base);
+      const bb = boundsAll(base);
       if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
     }
   }
 
   function viewportUpdate(){
+    if (!map) return;
     const b = map.getBounds();
     const inView = (curBase || []).filter(x => {
       const la = (x._latDisp ?? x.lat);
@@ -2130,6 +2179,7 @@
   }
 
   function updateZoomUI(){
+    if (!map) return;
     const z = map.getZoom();
     $("zVal").textContent = z;
   }
@@ -2149,7 +2199,7 @@
   }
 
   function buildMap(){
-    map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], 8);
+    map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
@@ -2178,6 +2228,7 @@
       hideClusterHint();
     });
 
+    // 클러스터 클릭: 자연스럽게 확대/중앙 이동 (회귀 금지)
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2238,29 +2289,44 @@
     }catch(_){ cartKeys = []; }
   }
 
+  /* v1.1.18: 최근 본 (4개 표시 + 페이지네이션) */
+  function clampRecentPage(total){
+    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+    if (recentPage < 0) recentPage = 0;
+    if (recentPage > pages - 1) recentPage = pages - 1;
+    return pages;
+  }
+
   function renderRecentPanel(){
-    const grid = $("recentGrid");
-    const more = $("recentMore");
+    const list = $("recentList");
+    const pager = $("recentPager");
+    const prev = $("recentPrev");
+    const next = $("recentNext");
+    const meta = $("recentPageMeta");
 
     const valid = recentKeys.filter(k => itemByKey.has(k));
     recentKeys = valid;
     try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
 
-    const top4 = valid.slice(0, 4);
-    $("recentMeta").textContent = `${top4.length}/4`;
+    const pages = clampRecentPage(valid.length);
 
-    grid.innerHTML = "";
-    top4.forEach((key) => {
+    const start = recentPage * RECENT_PAGE_SIZE;
+    const slice = valid.slice(start, start + RECENT_PAGE_SIZE);
+
+    $("recentMeta").textContent = `${slice.length}/4`;
+
+    list.innerHTML = "";
+    slice.forEach((key) => {
       const it = itemByKey.get(key);
       if (!it) return;
 
       const el = document.createElement("div");
-      el.className = "rCard";
+      el.className = "rRow";
       el.innerHTML = `
-        <div class="rImg">
+        <div class="rThumb">
           ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
         </div>
-        <div class="rBody">
+        <div class="rTxt">
           <div class="rName">${escapeHtml(it.title || "-")}</div>
           <div class="rPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
         </div>
@@ -2275,57 +2341,19 @@
         renderRecentPanel();
       });
 
-      grid.appendChild(el);
+      list.appendChild(el);
     });
 
-    if (valid.length > 4){
-      more.style.display = "block";
-      more.textContent = `더보기 (${valid.length - 4}개)`;
+    if (valid.length > RECENT_PAGE_SIZE){
+      pager.style.display = "flex";
+      meta.textContent = `${recentPage + 1}/${pages}`;
+      prev.disabled = (recentPage <= 0);
+      next.disabled = (recentPage >= pages - 1);
     }else{
-      more.style.display = "none";
+      pager.style.display = "none";
+      meta.textContent = "1/1";
     }
   }
-
-  function openRecentModal(){
-    const body = $("recentModalBody");
-    body.innerHTML = "";
-
-    const valid = recentKeys.filter(k => itemByKey.has(k));
-    if (!valid.length){
-      body.innerHTML = `<div style="color:rgba(255,255,255,.65); font-size:13px;">최근 본 매체가 없습니다.</div>`;
-    }else{
-      valid.forEach((key) => {
-        const it = itemByKey.get(key);
-        if (!it) return;
-
-        const row = document.createElement("div");
-        row.className = "mRow";
-        row.innerHTML = `
-          <div class="mLeft">
-            <div class="mThumb">${it.thumb ? `<img src="${it.thumb}" alt="">` : ``}</div>
-            <div class="mTitle">${escapeHtml(it.title || "-")}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div class="mPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <button class="mX" title="제거">✕</button>
-          </div>
-        `;
-        row.addEventListener("click", ()=>{ closeRecentModal(); openDetail(it, true); });
-        row.querySelector(".mX").addEventListener("click", (e)=>{
-          e.preventDefault(); e.stopPropagation();
-          recentKeys = recentKeys.filter(x => x !== key);
-          try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-          openRecentModal();
-          renderRecentPanel();
-        });
-
-        body.appendChild(row);
-      });
-    }
-
-    $("recentModalOverlay").style.display = "block";
-  }
-  function closeRecentModal(){ $("recentModalOverlay").style.display = "none"; }
 
   function saveCart(){
     try{ localStorage.setItem(LS_CART, JSON.stringify(cartKeys)); }catch(_){}
@@ -2431,18 +2459,24 @@
 
     shuffleSeed = Math.random();
 
-    map.flyTo([36.25, 127.8], 8, { animate:true, duration:0.85 });
-
-    fullRender(true);
+    applyHomeView(true);
+    fullRender(false);
   }
 
   async function init(){
     updateStickyHeights();
-    window.addEventListener("resize", updateStickyHeights);
+    window.addEventListener("resize", () => {
+      updateStickyHeights();
+      // 화면 크기 변경 시 홈뷰 패딩이 달라질 수 있으므로, "중립 상태"이면 홈뷰 유지
+      if (isNeutralState() && HOME_BOUNDS && map){
+        applyHomeView(false);
+      }
+    });
 
     buildMap();
     setupInfiniteScroll();
 
+    // 팝업 클릭 -> 상세
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -2457,6 +2491,7 @@
       openDetail(it, true);
     }, true);
 
+    // 데이터 로드
     const res = await fetch(DATA_URL, { cache:"no-store" });
     const json = await res.json();
     const items = Array.isArray(json) ? json : (json.items || []);
@@ -2472,21 +2507,14 @@
       const t = assignTaxonomy(it);
       const key = makeKey(it, idx);
       const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._jamo = toJamo(row._blobText);
 
-      // v1.1.17: Geo/All 분리 생성
-      row._blobGeoText = makeSearchTextGeo(row);
-      row._blobAllText = makeSearchTextAll(row);
-
-      row._blobGeo = searchNorm(row._blobGeoText);
-      row._jamoGeo = toJamo(row._blobGeoText);
-
-      row._blobAll = searchNorm(row._blobAllText);
-      row._jamoAll = toJamo(row._blobAllText);
-
-      // backward compatibility
-      row._blobText = row._blobAllText;
-      row._blob = row._blobAll;
-      row._jamo = row._jamoAll;
+      // v1.1.18: 토큰 캐시
+      const toks = extractTokens(row._blobText);
+      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
 
       return row;
     });
@@ -2501,36 +2529,56 @@
     setCatHighOptions();
     buildSuggestPool();
 
+    // load recent/cart
     loadRecentAndCart();
     renderRecentPanel();
     renderCartSummary();
 
+    // 홈뷰 bounds 계산 및 적용 (춘천~제주)
+    HOME_BOUNDS = boundsAll(ALL);
+    if (HOME_BOUNDS){
+      applyHomeView(false);
+    }else{
+      map.setView([36.25, 127.8], HOME_ZOOM);
+      updateZoomUI();
+    }
+
+    // Zoom UI init
     updateZoomUI();
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
 
-    $("recentMore").addEventListener("click", openRecentModal);
-    $("recentClose").addEventListener("click", closeRecentModal);
-    $("recentModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "recentModalOverlay") closeRecentModal(); });
+    // recent pager
+    $("recentPrev").addEventListener("click", ()=>{
+      recentPage = Math.max(0, recentPage - 1);
+      renderRecentPanel();
+    });
+    $("recentNext").addEventListener("click", ()=>{
+      const pages = Math.max(1, Math.ceil(recentKeys.length / RECENT_PAGE_SIZE));
+      recentPage = Math.min(pages - 1, recentPage + 1);
+      renderRecentPanel();
+    });
 
+    // Cart events
     $("cartBtn").addEventListener("click", openCartModal);
     $("cartClose").addEventListener("click", closeCartModal);
     $("cartModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "cartModalOverlay") closeCartModal(); });
 
+    // 상세에서 장바구니 담기
     $("dAddCart").addEventListener("click", ()=>{
       if (!currentOpenKey) return;
       addToCart(currentOpenKey);
       renderCartSummary();
     });
 
+    // filters
     $("catHigh").addEventListener("change", () => fullRender(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
 
-    q.addEventListener("focus", ()=>{ qFocused = true; updateSuggest(); });
+    q.addEventListener("focus", ()=>{ updateSuggest(); });
     q.addEventListener("blur", ()=>{
-      qFocused = false;
       setTimeout(()=>{ qBox.style.display = "none"; }, 140);
     });
 
@@ -2541,6 +2589,7 @@
       }
     });
 
+    // 입력 시: 지도/리스트 갱신 금지, 자동완성만 업데이트
     let sugTimer = null;
     q.addEventListener("input", () => {
       clearTimeout(sugTimer);
@@ -2561,6 +2610,7 @@
         sugIndex = -1;
         return;
       }
+      // 백스페이스 초기화(요청): 입력창이 비어있고 backspace면 reset과 동일
       if (e.key === "Backspace" && !q.value){
         e.preventDefault();
         resetAll();
@@ -2572,6 +2622,7 @@
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
+    // 입력창 밖 Backspace 뒤로가기 방지 + reset 처리
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Backspace") return;
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -2594,6 +2645,7 @@
       }
     });
 
+    // 최초 렌더
     fullRender(false);
     openDetailByHash();
   }
