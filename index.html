@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.18</title>
+  <title>Frontier DOOH 전국 DB v1.1.19</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -217,31 +217,6 @@
       background:rgba(162,222,204,.10);
       border-color:rgba(162,222,204,.25);
     }
-
-    /* ===== LOAD ERROR BANNER (v1.1.18+ 방어) ===== */
-    .loadErr{
-      display:none;
-      margin-top:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,90,90,.45);
-      background:rgba(255,90,90,.10);
-      color:#ffd9d9;
-      box-shadow:0 12px 30px rgba(0,0,0,.35);
-      max-width:1200px;
-      line-height:1.35;
-      font-size:12px;
-    }
-    .loadErr b{ color:#ffffff; font-weight:1000; }
-    .loadErr code{
-      color:#ffffff;
-      background:rgba(0,0,0,.30);
-      border:1px solid rgba(255,255,255,.10);
-      padding:2px 6px;
-      border-radius:8px;
-    }
-    .loadErr .row{ margin-top:6px; color:rgba(255,255,255,.88); }
-    .loadErr .hint{ margin-top:8px; color:rgba(255,255,255,.75); }
 
     /* ===== APP LAYOUT ===== */
     .app{
@@ -519,7 +494,7 @@
       overflow:hidden;
     }
 
-    /* v1.1.18: 줌 UI (← ZOOM 8 →) */
+    /* ZOOM UI (← ZOOM →) */
     .zoomCard{ padding:10px; }
     .zoomBar{
       display:flex;
@@ -610,7 +585,7 @@
     }
     .cartBtn .meta b{ color:var(--mint); font-weight:1000; }
 
-    /* v1.1.18: 최근 본 매체 (세로 4줄 + 페이지네이션) */
+    /* 최근 본 매체 (세로 4줄 + 페이지네이션) */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
     .recentList{
       display:flex;
@@ -893,7 +868,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.18</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.19</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -907,9 +882,6 @@
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
-
-    <!-- v1.1.18+ 방어: 데이터 로딩 실패 시에도 지도/줌 UI 유지 + 에러 메시지 표시 -->
-    <div class="loadErr" id="loadErr" role="alert" aria-live="polite"></div>
   </div>
 
   <div class="app">
@@ -1044,10 +1016,16 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
+  /* v1.1.19: 홈 기본 줌 목표값 = 8 */
   const HOME_ZOOM = 8;
 
-  /* v1.1.18+ 홈뷰 북쪽 상한(속초 수준까지만) */
-  const HOME_MAX_LAT = 38.35;
+  /* v1.1.19: 홈(초기화) 범위 고정 (lat 33.1~38.3 / lng 124~131) */
+  const HOME_BOUNDS_FIXED = {
+    south: 33.1000,
+    west:  124.0000,
+    north: 38.3000,
+    east:  131.0000
+  };
 
   let ALL = [];
   let map = null;
@@ -1093,11 +1071,11 @@
   let recentKeys = [];
   let cartKeys = [];
 
-  /* v1.1.18: 최근 본 페이지네이션 */
+  /* 최근 본 페이지네이션 */
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
-  /* v1.1.18: 홈뷰 bounds 캐시 */
+  /* v1.1.19: 홈뷰 bounds (고정) */
   let HOME_BOUNDS = null;
 
   const $ = (id) => document.getElementById(id);
@@ -1168,7 +1146,7 @@
     return (t ?? "").toString().replace(/(역)$/,"");
   }
 
-  /* v1.1.18: 짧은 지명 보호(“대구”가 “해운대구”에 포함되는 오탐 차단) */
+  /* 짧은 지명 보호(“대구”가 “해운대구”에 포함되는 오탐 차단) */
   const PROTECT_SHORT_NORM = new Set([
     searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
     searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
@@ -1407,7 +1385,6 @@
     return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
   }
 
-  /* v1.1.18: 토큰 단위 prefix 중심 매칭 + 짧은 지명 포함매칭 제한 */
   function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
@@ -1493,24 +1470,7 @@
     return b.isValid() ? b : null;
   }
 
-  /* v1.1.18+ 홈뷰 전용 bounds: 북쪽을 속초 수준까지만 캡 */
-  function boundsHome(items){
-    const b0 = boundsAll(items);
-    if (!b0 || !b0.isValid || !b0.isValid()) return null;
-
-    const sw = b0.getSouthWest();
-    const ne = b0.getNorthEast();
-
-    const cappedLat = Math.min(ne.lat, HOME_MAX_LAT);
-
-    // 캡이 과도하여 역전되면 원본 유지
-    if (cappedLat <= sw.lat + 0.05) return b0;
-
-    const b = L.latLngBounds([sw.lat, sw.lng], [cappedLat, ne.lng]);
-    return (b && b.isValid && b.isValid()) ? b : b0;
-  }
-
-  /* v1.1.18: 홈뷰 적용 */
+  /* 홈뷰 패딩 */
   function getHomePadding(){
     const sideW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sideW")) || 268;
     return {
@@ -1519,9 +1479,10 @@
     };
   }
 
-  /* v1.1.18+ 변경:
-     - fitBounds 우선
-     - ZOOM=8 강제(setZoom) 금지 (제주+속초 1화면 우선)
+  /* v1.1.19: 홈뷰 적용
+     1) HOME_BOUNDS(고정 bbox)로 fitBounds 우선
+     2) 이후 "가능하면" zoom 8 시도
+        - zoom 8로 올렸을 때 bbox가 깨지면(바운즈가 화면 밖으로 나가면) 즉시 롤백(=fitBounds 결과 유지)
   */
   function applyHomeView(animate){
     if (!HOME_BOUNDS || !map) return;
@@ -1529,15 +1490,58 @@
     const pad = getHomePadding();
     const opt = { ...pad, maxZoom: HOME_ZOOM };
 
-    if (animate){
-      map.flyToBounds(HOME_BOUNDS, { ...opt, duration:0.85 });
-    }else{
-      map.fitBounds(HOME_BOUNDS, opt);
-    }
+    const doFit = () => {
+      if (animate){
+        map.flyToBounds(HOME_BOUNDS, { ...opt, duration:0.85 });
+      }else{
+        map.fitBounds(HOME_BOUNDS, opt);
+      }
+    };
+
+    doFit();
 
     map.once("moveend", () => {
-      updateZoomUI();
-      viewportUpdate();
+      const z0 = map.getZoom();
+      // fitBounds 결과가 이미 8이면 그대로
+      if (z0 === HOME_ZOOM){
+        updateZoomUI();
+        viewportUpdate();
+        return;
+      }
+
+      // 8이 아니라면: "가능하면" 8 시도 (bounds가 유지되는 경우만)
+      const center = map.getCenter();
+      try{
+        map.setView(center, HOME_ZOOM, { animate:false });
+      }catch(_){
+        updateZoomUI();
+        viewportUpdate();
+        return;
+      }
+
+      // zoom 8 적용 후 bounds 유지 여부 체크
+      map.once("moveend", () => {
+        let ok = true;
+        try{
+          const nowB = map.getBounds();
+          ok = nowB && nowB.contains && nowB.contains(HOME_BOUNDS);
+        }catch(_){
+          ok = false;
+        }
+
+        if (!ok){
+          // 롤백: fitBounds 우선 보존
+          doFit();
+          map.once("moveend", () => {
+            updateZoomUI();
+            viewportUpdate();
+          });
+          return;
+        }
+
+        updateZoomUI();
+        viewportUpdate();
+      });
     });
   }
 
@@ -2243,6 +2247,7 @@
   }
 
   function buildMap(){
+    // 초기 세팅은 임시. 실제 홈뷰는 init()에서 applyHomeView로 잡는다.
     map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -2272,7 +2277,6 @@
       hideClusterHint();
     });
 
-    // 클러스터 클릭: 자연스럽게 확대/중앙 이동 (회귀 금지)
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2333,7 +2337,6 @@
     }catch(_){ cartKeys = []; }
   }
 
-  /* v1.1.18: 최근 본 (4개 표시 + 페이지네이션) */
   function clampRecentPage(total){
     const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
     if (recentPage < 0) recentPage = 0;
@@ -2503,71 +2506,9 @@
 
     shuffleSeed = Math.random();
 
+    // v1.1.19: 초기화 시 HOME_BOUNDS(고정 bbox)로 홈뷰 복귀
     applyHomeView(true);
     fullRender(false);
-  }
-
-  /* ===== v1.1.18+ 방어: 로딩 에러 표시(앱 생존) ===== */
-  function showLoadErrorUI(meta){
-    const box = $("loadErr");
-    if (!box) return;
-
-    const url = meta?.url || DATA_URL;
-    const status = meta?.status != null ? String(meta.status) : "-";
-    const ct = meta?.contentType || "-";
-    const msg = meta?.message || "데이터 로딩 실패";
-
-    box.innerHTML = `
-      <div><b>데이터 로딩 실패</b> — 지도/줌 UI는 유지됩니다.</div>
-      <div class="row">URL: <code>${escapeHtml(url)}</code></div>
-      <div class="row">HTTP: <code>${escapeHtml(status)}</code> / Content-Type: <code>${escapeHtml(ct)}</code></div>
-      <div class="row">Message: <code>${escapeHtml(msg)}</code></div>
-      <div class="hint">
-        확인: GitHub Pages에서 위 URL 경로에 파일이 실제로 존재하는지, 그리고 응답이 JSON인지(Network 탭 Response가 HTML이면 경로/파일명 문제 가능성이 큼) 확인하십시오.
-      </div>
-    `;
-    box.style.display = "block";
-  }
-
-  function hideLoadErrorUI(){
-    const box = $("loadErr");
-    if (!box) return;
-    box.style.display = "none";
-    box.innerHTML = "";
-  }
-
-  async function safeFetchJson(url){
-    const res = await fetch(url, { cache:"no-store" });
-
-    const status = res.status;
-    const contentType = (res.headers.get("content-type") || "").toLowerCase();
-
-    if (!res.ok){
-      const err = new Error("HTTP " + status);
-      err.__meta = { url, status, contentType, message: "HTTP " + status };
-      throw err;
-    }
-
-    // JSON이 아닌 경우(예: GitHub Pages 404 HTML) 방어
-    if (!contentType.includes("application/json") && !contentType.includes("text/json") && !contentType.includes("+json")){
-      let sample = "";
-      try{ sample = (await res.text()).slice(0, 120); }catch(_){}
-      const err = new Error("Non-JSON response");
-      err.__meta = {
-        url, status, contentType,
-        message: "응답이 JSON이 아닙니다(HTML/텍스트 가능). 샘플: " + sample.replace(/\s+/g," ").trim()
-      };
-      throw err;
-    }
-
-    try{
-      const json = await res.json();
-      return { json, meta: { url, status, contentType } };
-    }catch(e){
-      const err = new Error("JSON parse failed");
-      err.__meta = { url, status, contentType, message: "JSON 파싱 실패: " + (e && e.message ? e.message : "unknown") };
-      throw err;
-    }
   }
 
   async function init(){
@@ -2597,7 +2538,58 @@
       openDetail(it, true);
     }, true);
 
-    // Zoom UI init (데이터 로딩 실패와 무관하게 항상 살아있어야 함)
+    // 데이터 로드
+    const res = await fetch(DATA_URL, { cache:"no-store" });
+    const json = await res.json();
+    const items = Array.isArray(json) ? json : (json.items || []);
+
+    const pts = items.filter(x => {
+      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
+      if (x.lat < 32.0 || x.lat > 39.8) return false;
+      if (x.lng < 123.0 || x.lng > 132.5) return false;
+      return true;
+    });
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = makeKey(it, idx);
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._jamo = toJamo(row._blobText);
+
+      const toks = extractTokens(row._blobText);
+      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
+
+      return row;
+    });
+
+    applyOverlapJitter(ALL);
+
+    itemByKey.clear();
+    ALL.forEach(it => itemByKey.set(it._key, it));
+
+    $("pillLoaded").textContent = ALL.length;
+
+    setCatHighOptions();
+    buildSuggestPool();
+
+    // load recent/cart
+    loadRecentAndCart();
+    renderRecentPanel();
+    renderCartSummary();
+
+    // v1.1.19: 홈뷰 bounds 고정 생성
+    HOME_BOUNDS = L.latLngBounds(
+      [HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west],
+      [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]
+    );
+
+    // 고정 홈뷰 적용
+    applyHomeView(false);
+
+    // Zoom UI init
     updateZoomUI();
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
@@ -2625,8 +2617,8 @@
       renderCartSummary();
     });
 
-    // filters (카테고리 변경 시 지도 위치/줌 유지: fit 금지)
-    $("catHigh").addEventListener("change", () => fullRender(false));
+    // filters
+    $("catHigh").addEventListener("change", () => fullRender(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -2664,7 +2656,7 @@
         sugIndex = -1;
         return;
       }
-      // 백스페이스 초기화(요청): 입력창이 비어있고 backspace면 reset과 동일
+      // 백스페이스 초기화: 입력창이 비어있고 backspace면 reset과 동일
       if (e.key === "Backspace" && !q.value){
         e.preventDefault();
         resetAll();
@@ -2699,111 +2691,12 @@
       }
     });
 
-    // ===== 데이터 로드 (방어) =====
-    hideLoadErrorUI();
-
-    let items = [];
-    try{
-      const out = await safeFetchJson(DATA_URL);
-      const json = out.json;
-      items = Array.isArray(json) ? json : (json.items || []);
-    }catch(e){
-      const meta = (e && e.__meta) ? e.__meta : { url: DATA_URL, status: "-", contentType: "-", message: (e && e.message) ? e.message : "unknown" };
-      console.error("[Frontier DOOH] data load failed:", e);
-      showLoadErrorUI(meta);
-
-      // 앱 생존: 데이터 없는 상태로 정상 UI 유지
-      ALL = [];
-      itemByKey.clear();
-      $("pillLoaded").textContent = "0";
-      $("mAll").textContent = "0";
-      $("mFilter").textContent = "0";
-      $("mInView").textContent = "0";
-
-      setCatHighOptions();
-      buildSuggestPool();
-
-      loadRecentAndCart();
-      renderRecentPanel();
-      renderCartSummary();
-
-      // 홈뷰: 데이터 없으면 기본 센터/줌 유지
-      HOME_BOUNDS = null;
-      map.setView([36.25, 127.8], HOME_ZOOM);
-      updateZoomUI();
-
-      // 최초 렌더(빈 상태)
-      curBase = [];
-      fullRender(false);
-      openDetailByHash();
-      return; // 여기서 종료(죽지 않음)
-    }
-
-    // ===== 정상 로드 처리 =====
-    const pts = items.filter(x => {
-      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-      if (x.lat < 32.0 || x.lat > 39.8) return false;
-      if (x.lng < 123.0 || x.lng > 132.5) return false;
-      return true;
-    });
-
-    ALL = pts.map((it, idx) => {
-      const t = assignTaxonomy(it);
-      const key = makeKey(it, idx);
-      const row = { ...it, _key: key, _high: t.high, _low: t.low };
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._jamo = toJamo(row._blobText);
-
-      // v1.1.18: 토큰 캐시
-      const toks = extractTokens(row._blobText);
-      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
-      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
-
-      return row;
-    });
-
-    applyOverlapJitter(ALL);
-
-    itemByKey.clear();
-    ALL.forEach(it => itemByKey.set(it._key, it));
-
-    $("pillLoaded").textContent = ALL.length;
-
-    setCatHighOptions();
-    buildSuggestPool();
-
-    // load recent/cart
-    loadRecentAndCart();
-    renderRecentPanel();
-    renderCartSummary();
-
-    // 홈뷰 bounds 계산 및 적용 (속초 상한 캡 + 제주 포함)
-    HOME_BOUNDS = boundsHome(ALL);
-    if (HOME_BOUNDS){
-      applyHomeView(false);
-    }else{
-      map.setView([36.25, 127.8], HOME_ZOOM);
-      updateZoomUI();
-    }
-
     // 최초 렌더
     fullRender(false);
     openDetailByHash();
   }
 
-  // v1.1.18+ 방어: init 에러가 앱 전체를 죽이지 않도록 최상위 catch
-  init().catch((e) => {
-    console.error("[Frontier DOOH] init fatal error:", e);
-    try{
-      showLoadErrorUI({
-        url: DATA_URL,
-        status: "-",
-        contentType: "-",
-        message: "초기화 중 예외 발생: " + (e && e.message ? e.message : "unknown")
-      });
-    }catch(_){}
-  });
+  init();
 </script>
 </body>
 </html>
