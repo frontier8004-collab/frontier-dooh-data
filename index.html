@@ -98,18 +98,34 @@
       font-size:12px;
       color:#e9eef7;
       flex:0 0 auto;
-      white-space:nowrap;
     }
     .pill b{color:var(--mint); font-weight:1000}
 
-    /* v1.1.20: 데이터 로드 실패 에러 배너(침묵 금지) */
-    .errPill{
+    /* ===== LOAD ERROR BANNER ===== */
+    .loadError{
       display:none;
-      border-color:rgba(255,110,110,.45);
-      background:rgba(255,80,80,.10);
-      color:#ffd6d6;
+      position:sticky;
+      top:calc(var(--topbarH) + 54px);
+      z-index:5600;
+      margin:0 16px 0;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,70,70,.55);
+      background:rgba(60,0,0,.35);
+      color:#ffdede;
+      font-weight:900;
+      font-size:12px;
+      box-shadow:0 18px 44px rgba(0,0,0,.45);
     }
-    .errPill b{ color:#ffb3b3; }
+    .loadError small{
+      display:block;
+      margin-top:6px;
+      color:rgba(255,255,255,.75);
+      font-weight:800;
+      font-size:11px;
+      line-height:1.35;
+      white-space:pre-wrap;
+    }
 
     /* ===== FILTER BAR ===== */
     .filtersRow{
@@ -597,7 +613,11 @@
 
     /* 최근 본 매체 (세로 4줄 + 페이지네이션) */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
-    .recentList{ display:flex; flex-direction:column; gap:8px; }
+    .recentList{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
     .rRow{
       position:relative;
       display:flex;
@@ -684,7 +704,10 @@
       justify-content:center;
       user-select:none;
     }
-    .pBtn:disabled{ opacity:.35; cursor:not-allowed; }
+    .pBtn:disabled{
+      opacity:.35;
+      cursor:not-allowed;
+    }
     .pMeta{
       font-size:12px;
       color:rgba(255,255,255,.72);
@@ -750,7 +773,9 @@
       height:min(52vh, 520px);
       position:relative;
     }
-    @media (max-width: 920px){ .dimg{ height:min(46vh, 460px); } }
+    @media (max-width: 920px){
+      .dimg{ height:min(46vh, 460px); }
+    }
     .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
     .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
     .info{
@@ -870,11 +895,7 @@
 <body>
   <div class="topbar" id="topbar">
     <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.20</span></div>
-
-    <div style="display:flex; align-items:center; gap:10px;">
-      <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
-      <div class="pill errPill" id="errPill">DATA ERROR: <b id="errMsg">-</b></div>
-    </div>
+    <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
   <div class="filtersRow" id="filtersRow">
@@ -887,6 +908,11 @@
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
       <button class="btn" id="reset">초기화</button>
     </div>
+  </div>
+
+  <div class="loadError" id="loadError">
+    데이터 로드 실패
+    <small id="loadErrorDetail"></small>
   </div>
 
   <div class="app">
@@ -1011,8 +1037,15 @@
   </div>
 
 <script>
-  /* v1.1.20: data 경로 후보(혼동/변경 대비) */
-  const DATA_URL_CANDIDATES = ["./data_public.json", "./data.json"];
+  /* ===== v1.1.20 =====
+     - HOME_ZOOM: 8
+     - 홈 초기 위치: 고정 bounds (north/south/west/east)
+     - 카테고리 변경 시 지도 위치/줌 유지 (fitBounds 금지)
+     - data 로드 실패 시 앱이 죽지 않도록 방어 + 메시지 출력
+     - 드래그 후 자동으로 줌이 7로 떨어지는 “강제 복귀 로직” 제거
+  */
+
+  const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
@@ -1022,21 +1055,20 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  /* v1.1.20: 홈 줌 목표값 */
+  /* v1.1.20: HOME_ZOOM = 8 */
   const HOME_ZOOM = 8;
 
-  /* v1.1.20: 초기화/홈 화면 Bounds 고정(요구사항 3) */
+  /* v1.1.20: 홈 초기 위치(bounds 고정) */
   const HOME_BOUNDS_FIXED = {
-    south: 33.0000,
-    west:  123.5000,
-    north: 39.5000,
-    east:  130.5000
+    north: 39.5,
+    south: 33.0,
+    west: 123.5,
+    east: 130.5
   };
-
   const HOME_CENTER = [
-  (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2,
-  (HOME_BOUNDS_FIXED.east  + HOME_BOUNDS_FIXED.west ) / 2
- ];
+    (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2,
+    (HOME_BOUNDS_FIXED.east  + HOME_BOUNDS_FIXED.west ) / 2
+  ];
 
   let ALL = [];
   let map = null;
@@ -1086,31 +1118,25 @@
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
-  /* 홈뷰 bounds 캐시 */
-  let HOME_BOUNDS = null;
-
-  /* v1.1.20: 홈뷰 체인 토큰(사용자 드래그/줌 시 자동 취소) */
+  /* v1.1.20: 홈 적용 토큰 (resize 등에서 중복 적용 방지용) */
   let homeApplyToken = 0;
   let homeApplying = false;
 
   const $ = (id) => document.getElementById(id);
 
-  /* v1.1.20: 에러 배너 제어 */
-  function setDataError(message, detail){
-    const pill = $("errPill");
-    const msg  = $("errMsg");
-    if (!pill || !msg) return;
-
-    if (!message){
-      pill.style.display = "none";
-      msg.textContent = "-";
-      return;
-    }
-
-    msg.textContent = message;
-    pill.style.display = "inline-flex";
-
-    if (detail) console.error("[DATA LOAD ERROR]", detail);
+  function showLoadError(msg, detail){
+    const box = $("loadError");
+    const det = $("loadErrorDetail");
+    if (!box || !det) return;
+    det.textContent = (detail || "").toString().trim();
+    box.firstChild && (box.firstChild.textContent = msg);
+    box.style.display = "block";
+  }
+  function hideLoadError(){
+    const box = $("loadError");
+    if (!box) return;
+    box.style.display = "none";
+    $("loadErrorDetail").textContent = "";
   }
 
   function addOption(sel, value, label){
@@ -1135,7 +1161,6 @@
   }
   function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
 
-  /* 단어(토큰) 추출: 공백/기호로 쪼개진 덩어리 */
   function extractTokens(text){
     const s = (text ?? "").toString();
     const m = s.match(/[가-힣A-Za-z0-9]+/g);
@@ -1179,7 +1204,6 @@
     return (t ?? "").toString().replace(/(역)$/,"");
   }
 
-  /* 짧은 지명 보호(“대구”가 “해운대구”에 포함되는 오탐 차단) */
   const PROTECT_SHORT_NORM = new Set([
     searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
     searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
@@ -1431,7 +1455,6 @@
     const tns = it._tokNorms || [];
     const tjs = it._tokJamos || [];
 
-    // 1) 토큰 prefix
     if (qn){
       for (const tn of tns){
         if (tn && tn.startsWith(qn)) return true;
@@ -1443,7 +1466,6 @@
       }
     }
 
-    // 2) 토큰 contains (긴 쿼리만 + 보호 대상 제외)
     if (!protectedShort){
       if (qn && qn.length >= 3){
         for (const tn of tns){
@@ -1457,16 +1479,13 @@
       }
     }
 
-    // 3) 레거시 블롭 contains (긴 쿼리만 + 보호 대상 제외)
     if (!protectedShort){
       if (qj && qj.length >= 6 && it._jamo && it._jamo.includes(qj)) return true;
       if (qn && qn.length >= 3 && it._blob && it._blob.includes(qn)) return true;
     }
 
-    // 4) 행정구역 토큰은 느슨 변형 금지
     if (isAdminSuffixToken(raw)) return false;
 
-    // 5) 변형 토큰 허용(도로/역 등) - 보호 대상 제외
     if (!protectedShort){
       const vars = tokenVariantsForLoose(raw);
       const blob = it._blob || "";
@@ -1511,92 +1530,30 @@
     };
   }
 
-  /* v1.1.20: 홈뷰 적용(사용자 조작 시 체인 취소) + 가능하면 ZOOM 8 유지(단, bbox 깨지면 롤백) */
+  /* v1.1.20: 홈뷰는 “고정 center + zoom 8” (줌 강제복귀/드래그 개입 없음) */
   function applyHomeView(animate){
-  if (!map) return;
+    if (!map) return;
 
-  // 초기화(Home)는 무조건 줌 8로 고정
-  const myToken = ++homeApplyToken;
-  homeApplying = true;
+    homeApplyToken += 1;
+    const myToken = homeApplyToken;
+    homeApplying = true;
 
-  try{
-    if (animate){
-      map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
-    }else{
-      map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
-    }
-  }catch(_){}
-
-  // moveend 이후에도 줌이 바뀌면 즉시 8로 복귀(안전장치)
-  map.once("moveend", () => {
-    if (!homeApplying || homeApplyToken !== myToken) return;
     try{
-      if (map.getZoom() !== HOME_ZOOM){
-        map.setZoom(HOME_ZOOM, { animate:false });
+      if (animate){
+        map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.85 });
+      }else{
+        map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
       }
     }catch(_){}
-    homeApplying = false;
-    updateZoomUI();
-    viewportUpdate();
-  });
-}
-
-    };
-
-    doFit();
 
     map.once("moveend", () => {
       if (!homeApplying || homeApplyToken !== myToken) return;
-
-      const z0 = map.getZoom();
-
-      if (z0 === HOME_ZOOM){
-        homeApplying = false;
-        updateZoomUI();
-        viewportUpdate();
-        return;
-      }
-
-      const center = map.getCenter();
-      try{
-        map.setView(center, HOME_ZOOM, { animate:false });
-      }catch(_){
-        homeApplying = false;
-        updateZoomUI();
-        viewportUpdate();
-        return;
-      }
-
-      map.once("moveend", () => {
-        if (!homeApplying || homeApplyToken !== myToken) return;
-
-        let ok = true;
-        try{
-          const nowB = map.getBounds();
-          ok = nowB && nowB.contains && nowB.contains(HOME_BOUNDS);
-        }catch(_){
-          ok = false;
-        }
-
-        if (!ok){
-          doFit();
-          map.once("moveend", () => {
-            if (!homeApplying || homeApplyToken !== myToken) return;
-            homeApplying = false;
-            updateZoomUI();
-            viewportUpdate();
-          });
-          return;
-        }
-
-        homeApplying = false;
-        updateZoomUI();
-        viewportUpdate();
-      });
+      homeApplying = false;
+      updateZoomUI();
+      viewportUpdate();
     });
   }
 
-  /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -1835,7 +1792,6 @@
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
 
-      // 클릭: 1회=미니팝업, 동일 핀 재클릭=상세
       m.on("click", (ev) => {
         try{
           if (ev && ev.originalEvent){
@@ -2279,8 +2235,7 @@
 
   function updateZoomUI(){
     if (!map) return;
-    const z = map.getZoom();
-    $("zVal").textContent = z;
+    $("zVal").textContent = map.getZoom();
   }
 
   function showClusterHint(latlng){
@@ -2298,8 +2253,7 @@
   }
 
   function buildMap(){
-    /* 홈 화면의 “기본 중심/줌”은 임시값. 실제 홈뷰는 applyHomeView()가 담당 */
-    map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], HOME_ZOOM);
+    map = L.map("map", { zoomControl:false }).setView(HOME_CENTER, HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
@@ -2357,29 +2311,9 @@
 
     map.addLayer(markers);
 
-    map.on("dragstart", ()=>{
-      /* v1.1.20: 사용자가 조작하는 순간 홈뷰 적용 체인 즉시 취소 */
-      homeApplyToken++;
-      homeApplying = false;
-
-      isMapInteracting = true;
-      hideClusterHint();
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-    });
+    map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{
-      /* v1.1.20: 사용자가 조작하는 순간 홈뷰 적용 체인 즉시 취소 */
-      homeApplyToken++;
-      homeApplying = false;
-
-      isMapInteracting = true;
-      hideClusterHint();
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-    });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("zoomend",   ()=>{ isMapInteracting = false; updateZoomUI(); });
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
@@ -2564,7 +2498,7 @@
     const qVal = $("q").value.trim();
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
-    fullRender(true);
+    fullRender(true); // 검색은 fit 허용
   }
 
   function resetAll(){
@@ -2581,62 +2515,37 @@
     fullRender(false);
   }
 
-  /* v1.1.20: 안전한 JSON 로딩(HTML/404/빈응답 방어) */
   async function safeFetchJson(url){
     const res = await fetch(url, { cache:"no-store" });
 
-    const status = res.status;
-    const ct = (res.headers.get("content-type") || "").toLowerCase();
-
-    const text = await res.text();
+    const ctype = (res.headers.get("content-type") || "").toLowerCase();
 
     if (!res.ok){
-      const head = text.slice(0, 120).replace(/\s+/g, " ").trim();
-      throw new Error(`HTTP ${status} (${url}) / head: ${head || "-"}`);
+      const txt = await res.text().catch(()=> "");
+      throw new Error(`HTTP ${res.status} ${res.statusText}\n${txt.slice(0, 300)}`);
     }
 
-    // content-type이 json이 아니어도(일부 환경) 본문이 json이면 허용하되,
-    // HTML(예: GitHub 404 페이지) 같은 경우를 즉시 차단
-    const t = text.trim();
-
-    const looksJson = (t.startsWith("{") || t.startsWith("["));
-    const looksHtml = t.startsWith("<!doctype") || t.startsWith("<html") || t.startsWith("<");
-
-    if (!looksJson){
-      if (looksHtml){
-        const head = t.slice(0, 160).replace(/\s+/g, " ").trim();
-        throw new Error(`NOT JSON (HTML suspected) (${url}) / content-type: ${ct || "-"} / head: ${head || "-"}`);
+    // GitHub Pages에서 404가 나면 HTML이 올 때가 많음 -> JSON인지 확인
+    if (!ctype.includes("application/json") && !ctype.includes("text/json") && !ctype.includes("application/geo+json")){
+      const txt = await res.text().catch(()=> "");
+      const head = txt.slice(0, 80).trim();
+      if (head.startsWith("<")){
+        throw new Error(`응답이 JSON이 아니라 HTML입니다. (경로/파일명 확인 필요)\nURL: ${url}`);
       }
-      const head = t.slice(0, 160).replace(/\s+/g, " ").trim();
-      throw new Error(`NOT JSON (${url}) / content-type: ${ct || "-"} / head: ${head || "-"}`);
-    }
-
-    try{
-      return JSON.parse(t);
-    }catch(err){
-      const head = t.slice(0, 160).replace(/\s+/g, " ").trim();
-      throw new Error(`JSON PARSE FAIL (${url}) / head: ${head || "-"} / err: ${err && err.message ? err.message : err}`);
-    }
-  }
-
-  async function loadDataWithFallback(){
-    const errors = [];
-    for (const url of DATA_URL_CANDIDATES){
-      try{
-        const json = await safeFetchJson(url);
-        return { json, url };
-      }catch(err){
-        errors.push(String(err && err.message ? err.message : err));
+      // content-type이 비어있어도 JSON일 수 있으니 재시도
+      try{ return JSON.parse(txt); }catch(_){
+        throw new Error(`JSON 파싱 실패 (content-type: ${ctype || "없음"})\nURL: ${url}`);
       }
     }
-    throw new Error(errors.join(" | "));
+
+    return await res.json();
   }
 
   async function init(){
     updateStickyHeights();
     window.addEventListener("resize", () => {
       updateStickyHeights();
-      if (isNeutralState() && HOME_BOUNDS && map){
+      if (isNeutralState() && map){
         applyHomeView(false);
       }
     });
@@ -2659,25 +2568,8 @@
       openDetail(it, true);
     }, true);
 
-    // v1.1.20: 홈 Bounds는 데이터 유무와 무관하게 고정
-    HOME_BOUNDS = L.latLngBounds(
-      [HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west],
-      [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]
-    );
-
-    // 카테고리 옵션은 데이터 없이도 표시
-    setCatHighOptions();
-
-    // recent/cart는 데이터 없이도 로드 가능(표시만 비게 됨)
-    loadRecentAndCart();
-    renderRecentPanel();
-    renderCartSummary();
-
-    // 홈뷰 우선 적용(지도 UI 유지)
-    applyHomeView(false);
+    // Zoom UI init (데이터 로드 실패해도 항상 동작)
     updateZoomUI();
-
-    // Zoom UI init
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
 
@@ -2705,7 +2597,8 @@
     });
 
     // filters
-    $("catHigh").addEventListener("change", () => fullRender(true));
+    // v1.1.20: 카테고리 변경 시 지도 위치/줌 유지 => fit 금지
+    $("catHigh").addEventListener("change", () => fullRender(false));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -2722,7 +2615,6 @@
       }
     });
 
-    // 입력 시: 지도/리스트 갱신 금지, 자동완성만 업데이트
     let sugTimer = null;
     q.addEventListener("input", () => {
       clearTimeout(sugTimer);
@@ -2743,7 +2635,6 @@
         sugIndex = -1;
         return;
       }
-      // 백스페이스 초기화: 입력창이 비어있고 backspace면 reset과 동일
       if (e.key === "Backspace" && !q.value){
         e.preventDefault();
         resetAll();
@@ -2755,7 +2646,6 @@
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
-    // 입력창 밖 Backspace 뒤로가기 방지 + reset 처리
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Backspace") return;
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -2778,13 +2668,24 @@
       }
     });
 
-    // ===== 데이터 로드 (v1.1.20: 실패해도 앱 유지) =====
-    setDataError(null);
+    // 카테고리 옵션은 데이터 없어도 표시
+    setCatHighOptions();
 
+    // load recent/cart (데이터 없어도 UI는 유지)
+    loadRecentAndCart();
+    renderRecentPanel();
+    renderCartSummary();
+
+    // 홈뷰 적용
+    applyHomeView(false);
+
+    // ===== 데이터 로드 (방어) =====
     try{
-      const { json, url } = await loadDataWithFallback();
+      hideLoadError();
 
+      const json = await safeFetchJson(DATA_URL);
       const items = Array.isArray(json) ? json : (json.items || []);
+
       const pts = items.filter(x => {
         if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
         if (x.lat < 32.0 || x.lat > 39.8) return false;
@@ -2816,32 +2717,34 @@
 
       buildSuggestPool();
 
-      // recent/cart 재렌더(이제 itemByKey가 채워졌으니 유효 항목 표시)
-      renderRecentPanel();
-      renderCartSummary();
-
       // 최초 렌더
       fullRender(false);
       openDetailByHash();
 
-      console.log("[DATA LOADED]", url, "items:", ALL.length);
     }catch(err){
-      // 실패해도 지도/줌 UI는 유지되어야 한다.
       ALL = [];
       itemByKey.clear();
+      markerByKey.clear();
+
       $("pillLoaded").textContent = "0";
 
-      // 사용자에게 명시적으로 알려야 함(침묵 금지)
-      setDataError("LOAD FAIL", err);
+      // 지도/줌 UI는 유지, 에러 메시지 표시
+      const msg = "데이터 로드 실패 (data_public.json)";
+      const detail = (err && err.message) ? String(err.message) : String(err || "unknown error");
+      showLoadError(msg, detail);
 
-      // 리스트/마커는 비우되 앱은 살아있게 유지
-      SUG_POOL = [];
-      SUG_META = new Map();
-      fullRender(false);
+      // 빈 렌더로 상태 반영
+      curBase = [];
+      curInView = [];
+      $("mAll").textContent = "0";
+      $("mFilter").textContent = "0";
+      $("mInView").textContent = "0";
+      $("list").innerHTML = "";
+      $("empty").style.display = "block";
+      $("moreHint").style.display = "none";
 
-      // 상세/해시도 무효 처리
-      try{ closeDetail(false); }catch(_){}
-      try{ closeMiniPopup(); }catch(_){}
+      try{ markers && markers.clearLayers && markers.clearLayers(); }catch(_){}
+      updateZoomUI();
     }
   }
 
