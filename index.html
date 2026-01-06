@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.22</title>
+  <title>Frontier DOOH 전국 DB v1.1.23</title> <!-- // vNEXT: 버전 동기화 -->
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -898,7 +898,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.22</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.23</span></div> <!-- // vNEXT: 버전 동기화 -->
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -1048,14 +1048,13 @@
 
 <script>
   /* =========================================================
-     v1.1.22 변경점
-     1) 줌 표시/스냅: 7.99999999 방지 (정수 스냅/표시 정수화)
-     2) 지도 조작(moveend) 시 리스트 “롤링” 방지:
-        - moveend 렌더 시 패널 scrollTop 보존
-        - 핀 hover에서 자동 scrollIntoView 제거 (클릭에만 이동)
-     3) 초기화 홈센터 보정 방향 반대로 (사용자 체감 반대였음)
+     v1.1.23 변경점 (v1.1.22 최소변경)
+     1) “자동 줌 보정(setZoom)” 제거: 줌은 사용자 조작/초기화에 의해서만 변경
+     2) 핀 클릭 시 리스트 카드 “정중앙(5번)”으로 1회 정렬 (클릭에 의해서만)
+     3) 클러스터/핀 클릭 이동 시 viewportUpdate는 1회만 실행(롤링 체감 방지)
      ========================================================= */
 
+  const VERSION = "v1.1.23"; // vNEXT: 내부 버전 상수 추가(요구사항)
   const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
@@ -1077,8 +1076,8 @@
 
   /* v1.1.22: 방향 반대로 (사용자 체감 반대) */
   const HOME_CENTER_SHIFT = {
-    upPct: -0.07,     // (기존 +0.07) -> 반대로
-    leftPct: -0.10    // (기존 +0.10) -> 반대로
+    upPct: -0.07,
+    leftPct: -0.10
   };
 
   function computeHomeCenter(){
@@ -1139,6 +1138,10 @@
   let recentPage = 0;
 
   const $ = (id) => document.getElementById(id);
+
+  // vNEXT: 핀 클릭 중앙정렬을 “렌더 후 1회”로 고정하기 위한 상태값
+  let pendingCenterKey = null; // vNEXT: 클릭에 의한 중앙정렬 대상 key
+  let pendingCenterTry = 0;    // vNEXT: 렌더 타이밍 보정(최대 소수회)
 
   function showErrorBanner(msg){
     $("errMsg").textContent = msg || "알 수 없는 오류";
@@ -1695,6 +1698,41 @@
     `;
   }
 
+  // vNEXT: 핀 클릭 중앙정렬(리스트 5번 체감) - “렌더 완료 후 1회”만 실행
+  function centerCardInPanelOnce(key){
+    if (!key) return;
+
+    const panel = $("panel");
+    const card = cardByKey.get(key);
+    if (!panel || !card){
+      // 렌더 타이밍 보정 (최대 3회)
+      if (pendingCenterTry < 3){
+        pendingCenterTry += 1;
+        requestAnimationFrame(()=> centerCardInPanelOnce(key));
+      }else{
+        pendingCenterKey = null;
+        pendingCenterTry = 0;
+      }
+      return;
+    }
+
+    // 자동 스무스 금지: 즉시 scrollTop 1회만
+    const panelRect = panel.getBoundingClientRect();
+    const cardRect  = card.getBoundingClientRect();
+
+    const current = panel.scrollTop;
+    const deltaTop = (cardRect.top - panelRect.top);
+    const target = current + deltaTop - (panel.clientHeight / 2) + (cardRect.height / 2);
+
+    const maxTop = Math.max(0, panel.scrollHeight - panel.clientHeight);
+    const nextTop = Math.max(0, Math.min(maxTop, Math.round(target)));
+
+    panel.scrollTop = nextTop;
+
+    pendingCenterKey = null;
+    pendingCenterTry = 0;
+  }
+
   function openMiniPopupFor(it, marker){
     clearClusterHighlight();
 
@@ -1705,7 +1743,10 @@
 
     clearAllCardHighlights();
     ensureCardVisible(it._key);
-    highlightCard(it._key, true);
+
+    // vNEXT: 클릭에 의한 중앙정렬은 “moveend->viewportUpdate 렌더 후 1회”로만 수행
+    // (여기서 scrollIntoView로 먼저 움직이면 슬롯머신 체감 발생)
+    highlightCard(it._key, false); // vNEXT: 자동 스크롤 금지(클릭 중앙정렬은 별도 실행)
 
     try{
       marker.setPopupContent(miniPopupHtml(it));
@@ -1738,7 +1779,7 @@
         offset: L.point(0, -86)
       });
 
-      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다 (어지럽다고 함)
+      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
@@ -1746,7 +1787,7 @@
 
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key, false);   // <<< doScroll=false (중요)
+        highlightCard(it._key, false);
       });
 
       m.on("mouseout", () => {
@@ -1766,10 +1807,17 @@
           }
         }catch(_){}
 
-        suspendViewportOnce = true;
+        // vNEXT: “클릭에 의해서만” 중앙정렬 예약
+        pendingCenterKey = it._key; // vNEXT: 중앙정렬 대상 고정
+        pendingCenterTry = 0;       // vNEXT: 타이밍 보정 카운터 초기화
+
+        // vNEXT: 지도 이동 후 viewportUpdate는 1회만 (기본 moveend는 스킵)
+        suspendViewportOnce = true; // vNEXT: 클릭 이동 중간 렌더/롤링 방지
         map.once("moveend", () => {
-          suspendViewportOnce = false;
-          updateZoomUI();
+          suspendViewportOnce = false; // vNEXT: 다음부터는 정상 moveend
+          updateZoomUI();              // vNEXT: 표기만 정수화(자동 줌 변경 금지)
+          viewportUpdate();            // vNEXT: 클릭에 의한 리스트 갱신은 1회만
+          if (pendingCenterKey) centerCardInPanelOnce(pendingCenterKey); // vNEXT: 렌더 후 1회 중앙정렬
         });
 
         try{
@@ -1849,10 +1897,11 @@
 
     $("dOverlay").style.display = "block";
 
+    // 상세보기는 의도적으로 줌 변경(확대) => “자동”이 아니라 기능 요구에 해당
     suspendViewportOnce = true;
     map.once("moveend", () => {
       suspendViewportOnce = false;
-      updateZoomUI();
+      updateZoomUI(); // vNEXT: 표기만 업데이트
     });
 
     const la = (it._latDisp ?? it.lat);
@@ -2095,72 +2144,6 @@
     try{ localStorage.setItem(LS_QHIST, JSON.stringify(arr)); }catch(_){}
   }
 
-  function updateSuggest(){
-    const box = $("qSuggest");
-    if (!box) return;
-
-    const qRaw = $("q").value.trim();
-
-    if (!qRaw){
-      const hist = loadQueryHistory();
-      if (hist.length){
-        showSuggest(hist.slice(0, 10));
-      }else{
-        showSuggest(QUICK_SUGGEST);
-      }
-      return;
-    }
-
-    const qNorm = searchNorm(qRaw);
-    const qJ = toJamo(qRaw);
-
-    const scored = [];
-    for (const it of SUG_POOL){
-      const sc = suggestScore(qNorm, qJ, it);
-      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
-    }
-
-    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
-
-    const out = [];
-    const seen = new Set();
-    for (const x of scored){
-      if (seen.has(x.v)) continue;
-      seen.add(x.v);
-      out.push(x.v);
-      if (out.length >= 10) break;
-    }
-
-    showSuggest(out);
-  }
-
-  function moveSugIndex(delta){
-    const box = $("qSuggest");
-    if (box.style.display !== "block") return;
-    const items = Array.from(box.querySelectorAll(".qSugItem"));
-    if (!items.length) return;
-
-    sugIndex = Math.max(-1, Math.min(items.length-1, sugIndex + delta));
-    items.forEach((el, i) => el.classList.toggle("isActive", i === sugIndex));
-    if (sugIndex >= 0){
-      items[sugIndex].scrollIntoView({block:"nearest"});
-    }
-  }
-
-  function pickSugIndex(){
-    const box = $("qSuggest");
-    if (box.style.display !== "block") return false;
-    const items = Array.from(box.querySelectorAll(".qSugItem"));
-    if (!items.length) return false;
-    if (sugIndex < 0 || sugIndex >= items.length) return false;
-    const v = items[sugIndex].dataset.value;
-    if (!v) return false;
-    $("q").value = v;
-    box.style.display = "none";
-    applySearchFromUI();
-    return true;
-  }
-
   function renderMarkersAndListFromBase(base){
     curBase = base;
 
@@ -2195,7 +2178,6 @@
     renderList(inView);
 
     if (panel){
-      // 즉시 복구 (애니메이션 없음)
       panel.scrollTop = st;
     }
 
@@ -2214,22 +2196,11 @@
     document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
   }
 
-  // v1.1.22: 줌 UI는 “정수”로만 표기
+  // vNEXT: 줌 표기는 “정수 반올림”만 (줌 자체를 setZoom으로 강제 변경 금지)
   function updateZoomUI(){
     if (!map) return;
     const zi = Math.round(map.getZoom());
     $("zVal").textContent = zi;
-  }
-
-  // v1.1.22: zoomend에서 정수 스냅 강제 (7.999999 방지)
-  function forceIntegerZoom(){
-    if (!map) return;
-    const z = map.getZoom();
-    const zi = Math.round(z);
-    if (Math.abs(z - zi) > 1e-6){
-      try{ map.setZoom(zi, { animate:false }); }catch(_){}
-    }
-    updateZoomUI();
   }
 
   function showClusterHint(latlng){
@@ -2247,7 +2218,7 @@
   }
 
   function buildMap(){
-    // v1.1.22: zoomSnap/zoomDelta로 fractional zoom 억제
+    // zoomSnap/zoomDelta로 fractional zoom 억제 (줌 자체 자동보정 로직은 추가하지 않음)
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
@@ -2296,10 +2267,12 @@
       clearAllCardHighlights();
       clearClusterHighlight();
 
-      suspendViewportOnce = true;
+      // vNEXT: 클러스터 클릭 이동은 viewportUpdate 1회만 (중간 롤링 방지)
+      suspendViewportOnce = true; // vNEXT: 기본 moveend 렌더 스킵
       map.once("moveend", () => {
         suspendViewportOnce = false;
-        forceIntegerZoom();
+        updateZoomUI();   // vNEXT: 표기만 업데이트(자동 줌 변경 금지)
+        viewportUpdate(); // vNEXT: 리스트는 1회에 딱 갱신
       });
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
@@ -2320,7 +2293,7 @@
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
+    map.on("zoomend",   ()=>{ isMapInteracting = false; updateZoomUI(); }); // vNEXT: 표기만 갱신
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
 
@@ -2336,8 +2309,7 @@
     map.on("moveend", () => {
       if (suspendViewportOnce) return;
       viewportUpdate();
-      // moveend 뒤에도 혹시 떠있는 소수줌 제거
-      forceIntegerZoom();
+      updateZoomUI(); // vNEXT: 표기만 정수화(자동 줌 변경 금지)
     });
   }
 
@@ -2528,8 +2500,8 @@
 
     map.once("moveend", () => {
       suspendViewportOnce = false;
-      forceIntegerZoom();
-      viewportUpdate();
+      updateZoomUI();   // vNEXT: 표기만 정수화(자동 줌 변경 금지)
+      viewportUpdate(); // (초기화 버튼에 의한 홈복귀이므로 1회 갱신)
     });
   }
 
@@ -2637,10 +2609,10 @@
     renderCartSummary();
 
     applyHomeView(false);
-    forceIntegerZoom();
+    updateZoomUI(); // vNEXT: 초기 표기만
 
-    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
-    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
+    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(updateZoomUI, 0); });  // vNEXT: 표기만
+    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(updateZoomUI, 0); }); // vNEXT: 표기만
 
     $("recentPrev").addEventListener("click", ()=>{
       recentPage = Math.max(0, recentPage - 1);
