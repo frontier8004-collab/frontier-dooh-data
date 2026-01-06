@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.21</title>
+  <title>Frontier DOOH 전국 DB v1.1.22</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,7 +30,6 @@
       --inputPh:rgba(255,255,255,.45);
 
       --topbarH:72px;
-
       --sideW: 268px;
     }
 
@@ -287,6 +286,7 @@
       overflow:auto;
       padding:0;
       min-height:0;
+      scroll-behavior:auto !important; /* v1.1.22: “롤링/부드러운 이동” 방지 강제 */
     }
     @media (max-width: 980px){
       .panel{border-right:none; border-bottom:1px solid var(--line);}
@@ -630,13 +630,9 @@
     }
     .cartBtn .meta b{ color:var(--mint); font-weight:1000; }
 
-    /* 최근 본 매체 (세로 4줄 + 페이지네이션) */
+    /* 최근 본 매체 */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
-    .recentList{
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
+    .recentList{ display:flex; flex-direction:column; gap:8px; }
     .rRow{
       position:relative;
       display:flex;
@@ -723,10 +719,7 @@
       justify-content:center;
       user-select:none;
     }
-    .pBtn:disabled{
-      opacity:.35;
-      cursor:not-allowed;
-    }
+    .pBtn:disabled{ opacity:.35; cursor:not-allowed; }
     .pMeta{
       font-size:12px;
       color:rgba(255,255,255,.72);
@@ -788,13 +781,10 @@
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:#0d0f10;
-      aspect-ratio:auto;
       height:min(52vh, 520px);
       position:relative;
     }
-    @media (max-width: 920px){
-      .dimg{ height:min(46vh, 460px); }
-    }
+    @media (max-width: 920px){ .dimg{ height:min(46vh, 460px); } }
     .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
     .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
     .info{
@@ -818,12 +808,7 @@
       font-size:12px;
     }
 
-    .dActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
+    .dActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
     .dAddCart{
       height:44px;
       border-radius:14px;
@@ -913,7 +898,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.21</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.22</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -968,10 +953,8 @@
       <div class="mapInner">
         <div id="map"></div>
 
-        <!-- cluster hover hint -->
         <div class="clusterHint" id="clusterHint">클릭해서 확대</div>
 
-        <!-- right side panel -->
         <div class="mapSide" id="mapSide">
           <div class="sideCard zoomCard">
             <div class="zoomBar">
@@ -1065,10 +1048,12 @@
 
 <script>
   /* =========================================================
-     Frontier DOOH v1.1.21
-     - 홈뷰: fitBounds 제거 -> "줌 8 고정" (7로 내려갈 여지 제거)
-     - 핀/클러스터/상세 등 "프로그램 이동"에서는 moveend로 리스트 재렌더 금지
-     - 랜덤(섞기) 정렬은 유지 (요청 유지)
+     v1.1.22 변경점
+     1) 줌 표시/스냅: 7.99999999 방지 (정수 스냅/표시 정수화)
+     2) 지도 조작(moveend) 시 리스트 “롤링” 방지:
+        - moveend 렌더 시 패널 scrollTop 보존
+        - 핀 hover에서 자동 scrollIntoView 제거 (클릭에만 이동)
+     3) 초기화 홈센터 보정 방향 반대로 (사용자 체감 반대였음)
      ========================================================= */
 
   const DATA_URL = "./data_public.json";
@@ -1081,7 +1066,6 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  /* v1.1.21: 홈뷰 bounds (요청값) */
   const HOME_ZOOM = 8;
 
   const HOME_BOUNDS_FIXED = {
@@ -1091,10 +1075,10 @@
     east: 130.5
   };
 
-  /* 사용자가 원하는 “위로 7% / 좌로 10%” 보정 (bounds span 기준) */
+  /* v1.1.22: 방향 반대로 (사용자 체감 반대) */
   const HOME_CENTER_SHIFT = {
-    upPct: 0.07,
-    leftPct: 0.10
+    upPct: -0.07,     // (기존 +0.07) -> 반대로
+    leftPct: -0.10    // (기존 +0.10) -> 반대로
   };
 
   function computeHomeCenter(){
@@ -1103,12 +1087,11 @@
     const latSpan = (HOME_BOUNDS_FIXED.north - HOME_BOUNDS_FIXED.south);
     const lngSpan = (HOME_BOUNDS_FIXED.east - HOME_BOUNDS_FIXED.west);
 
-    const latShift = latSpan * HOME_CENTER_SHIFT.upPct;     // 위로 이동: +lat
-    const lngShift = lngSpan * HOME_CENTER_SHIFT.leftPct;   // 좌로 이동: -lng
+    const latShift = latSpan * HOME_CENTER_SHIFT.upPct;
+    const lngShift = lngSpan * HOME_CENTER_SHIFT.leftPct;
 
     return [ midLat + latShift, midLng - lngShift ];
   }
-
   const HOME_CENTER = computeHomeCenter();
 
   let ALL = [];
@@ -1131,11 +1114,8 @@
   let highlightedClusterEl = null;
   let isMapInteracting = false;
 
-  /* v1.1.21: 프로그램 이동(핀 클릭/클러스터 클릭/상세열기/홈뷰 등)에서는
-     moveend로 리스트 재렌더(=다른 리스트로 바뀌는 현상) 1회 차단 */
   let suspendViewportOnce = false;
 
-  /* 검색(렉 제거): 입력은 미리보기만, 적용은 Enter/돋보기 클릭 */
   let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
@@ -1143,14 +1123,11 @@
   let SUG_META = new Map();
   let sugIndex = -1;
 
-  /* 마커 상태 */
   let hoverKey = null;
   let activeMiniKey = null;
 
-  /* 랜덤 리스트: (초기 접속/초기화/F5마다) seed 새로 생성, 그 seed로 안정적 섞기 */
   let shuffleSeed = Math.random();
 
-  /* 최근 본 / 장바구니 (개별 방문자 localStorage) */
   const LS_RECENT = "frontier_recent_viewed_v1";
   const LS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
@@ -1158,7 +1135,6 @@
   let recentKeys = [];
   let cartKeys = [];
 
-  /* 최근 본 페이지네이션 */
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
@@ -1169,9 +1145,7 @@
     $("errUrl").textContent = DATA_URL;
     $("errBanner").style.display = "block";
   }
-  function hideErrorBanner(){
-    $("errBanner").style.display = "none";
-  }
+  function hideErrorBanner(){ $("errBanner").style.display = "none"; }
 
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -1238,7 +1212,6 @@
     return (t ?? "").toString().replace(/(역)$/,"");
   }
 
-  /* 짧은 지명 보호 */
   const PROTECT_SHORT_NORM = new Set([
     searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
     searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
@@ -1607,7 +1580,6 @@
     if (!el) return;
     el.classList.add("isActive");
     if (doScroll){
-      // v1.1.21: “롤링/슬롯머신 느낌” 방지 -> 즉시 이동, 상단 기준
       el.scrollIntoView({ block:"start", behavior:"auto" });
     }
   }
@@ -1648,14 +1620,11 @@
     if (next) updateMarkerVisual(next);
   }
 
-  let currentOpenKeyPrev = null;
-
   function ensureCardVisible(key){
     if (cardByKey.has(key)) return;
 
     const idx = curInView.findIndex(x => x._key === key);
     if (idx < 0) return;
-
     if (idx < renderLimit) return;
 
     let next = renderLimit;
@@ -1769,6 +1738,7 @@
         offset: L.point(0, -86)
       });
 
+      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다 (어지럽다고 함)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
@@ -1776,7 +1746,7 @@
 
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key, true);
+        highlightCard(it._key, false);   // <<< doScroll=false (중요)
       });
 
       m.on("mouseout", () => {
@@ -1796,7 +1766,6 @@
           }
         }catch(_){}
 
-        // v1.1.21: 핀 클릭으로 지도만 살짝 이동할 때 moveend로 리스트가 바뀌지 않게 1회 차단
         suspendViewportOnce = true;
         map.once("moveend", () => {
           suspendViewportOnce = false;
@@ -1880,7 +1849,6 @@
 
     $("dOverlay").style.display = "block";
 
-    // v1.1.21: 상세로 들어가며 줌/센터 이동은 하되, 그 moveend로 리스트가 재구성되지는 않게 차단
     suspendViewportOnce = true;
     map.once("moveend", () => {
       suspendViewportOnce = false;
@@ -2208,6 +2176,7 @@
     viewportUpdate();
   }
 
+  // v1.1.22: 리스트 “롤링” 방지 핵심 -> scrollTop 보존/복구
   function viewportUpdate(){
     if (!map) return;
     const b = map.getBounds();
@@ -2220,7 +2189,15 @@
     curInView = inView;
     $("mInView").textContent = inView.length;
 
+    const panel = $("panel");
+    const st = panel ? panel.scrollTop : 0;
+
     renderList(inView);
+
+    if (panel){
+      // 즉시 복구 (애니메이션 없음)
+      panel.scrollTop = st;
+    }
 
     if (activeMiniKey){
       ensureCardVisible(activeMiniKey);
@@ -2237,10 +2214,22 @@
     document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
   }
 
+  // v1.1.22: 줌 UI는 “정수”로만 표기
   function updateZoomUI(){
     if (!map) return;
+    const zi = Math.round(map.getZoom());
+    $("zVal").textContent = zi;
+  }
+
+  // v1.1.22: zoomend에서 정수 스냅 강제 (7.999999 방지)
+  function forceIntegerZoom(){
+    if (!map) return;
     const z = map.getZoom();
-    $("zVal").textContent = z;
+    const zi = Math.round(z);
+    if (Math.abs(z - zi) > 1e-6){
+      try{ map.setZoom(zi, { animate:false }); }catch(_){}
+    }
+    updateZoomUI();
   }
 
   function showClusterHint(latlng){
@@ -2258,8 +2247,13 @@
   }
 
   function buildMap(){
-    // v1.1.21: 최초 setView는 HOME_CENTER + HOME_ZOOM (줌 8 고정)
-    map = L.map("map", { zoomControl:false }).setView(HOME_CENTER, HOME_ZOOM);
+    // v1.1.22: zoomSnap/zoomDelta로 fractional zoom 억제
+    map = L.map("map", {
+      zoomControl:false,
+      zoomSnap: 1,
+      zoomDelta: 1,
+      wheelPxPerZoomLevel: 80
+    }).setView(HOME_CENTER, HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
@@ -2288,7 +2282,6 @@
       hideClusterHint();
     });
 
-    // 클러스터 클릭: 확대/중앙 이동 (단, moveend로 리스트 자동 재렌더는 하지 않게 차단)
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2306,7 +2299,7 @@
       suspendViewportOnce = true;
       map.once("moveend", () => {
         suspendViewportOnce = false;
-        updateZoomUI();
+        forceIntegerZoom();
       });
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
@@ -2327,7 +2320,7 @@
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; updateZoomUI(); });
+    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
 
@@ -2341,9 +2334,10 @@
     }, { passive:true });
 
     map.on("moveend", () => {
-      // v1.1.21: 프로그램 이동(핀/클러스터/상세/홈뷰 등)일 때는 리스트 자동갱신 금지
       if (suspendViewportOnce) return;
       viewportUpdate();
+      // moveend 뒤에도 혹시 떠있는 소수줌 제거
+      forceIntegerZoom();
     });
   }
 
@@ -2522,7 +2516,6 @@
   function applyHomeView(animate){
     if (!map) return;
 
-    // 홈뷰는 “프로그램 이동”이므로, moveend에서 리스트 자동갱신 금지
     suspendViewportOnce = true;
 
     try{
@@ -2535,8 +2528,8 @@
 
     map.once("moveend", () => {
       suspendViewportOnce = false;
-      updateZoomUI();
-      viewportUpdate(); // 홈뷰에서는 1회만 갱신
+      forceIntegerZoom();
+      viewportUpdate();
     });
   }
 
@@ -2552,7 +2545,7 @@
 
     applyHomeView(true);
 
-    const base = getFilteredBase(); // = ALL
+    const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
   }
 
@@ -2564,12 +2557,10 @@
       throw new Error(`HTTP ${res.status} ${res.statusText} (응답 일부: ${text.slice(0, 80)})`);
     }
 
-    // GitHub Pages에서 content-type이 애매할 수 있어, text로 받아서 JSON 파싱을 한 번 더 안전하게 처리
     const raw = await res.text();
     try{
       return JSON.parse(raw);
     }catch(e){
-      // HTML이 돌아오는 흔한 케이스(404 페이지 등)
       const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
       throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
     }
@@ -2577,16 +2568,13 @@
 
   async function init(){
     updateStickyHeights();
-    window.addEventListener("resize", () => {
-      updateStickyHeights();
-    });
+    window.addEventListener("resize", () => { updateStickyHeights(); });
 
     $("errClose").addEventListener("click", hideErrorBanner);
 
     buildMap();
     setupInfiniteScroll();
 
-    // 팝업 클릭 -> 상세
     document.addEventListener("click", (e) => {
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
@@ -2601,7 +2589,6 @@
       openDetail(it, true);
     }, true);
 
-    // (1) 데이터 로드 (실패해도 UI는 유지)
     let items = [];
     try{
       const json = await fetchJsonRobust(DATA_URL);
@@ -2610,12 +2597,11 @@
     }catch(err){
       console.error("[DATA LOAD FAIL]", err);
       showErrorBanner(err?.message || "data 로드 실패");
-      items = []; // 빈 배열로 계속 진행
+      items = [];
     }
 
     const pts = items.filter(x => {
       if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-      // 한국 주변 대략 필터 (원본 유지)
       if (x.lat < 32.0 || x.lat > 39.8) return false;
       if (x.lng < 123.0 || x.lng > 132.5) return false;
       return true;
@@ -2646,20 +2632,16 @@
     setCatHighOptions();
     buildSuggestPool();
 
-    // load recent/cart
     loadRecentAndCart();
     renderRecentPanel();
     renderCartSummary();
 
-    // (2) 홈뷰 적용: "줌 8 고정" + center 보정 반영
     applyHomeView(false);
+    forceIntegerZoom();
 
-    // Zoom UI init
-    updateZoomUI();
-    $("zIn").addEventListener("click", ()=> map.zoomIn());
-    $("zOut").addEventListener("click", ()=> map.zoomOut());
+    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
+    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
 
-    // recent pager
     $("recentPrev").addEventListener("click", ()=>{
       recentPage = Math.max(0, recentPage - 1);
       renderRecentPanel();
@@ -2670,19 +2652,16 @@
       renderRecentPanel();
     });
 
-    // Cart events
     $("cartBtn").addEventListener("click", openCartModal);
     $("cartClose").addEventListener("click", closeCartModal);
     $("cartModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "cartModalOverlay") closeCartModal(); });
 
-    // 상세에서 장바구니 담기
     $("dAddCart").addEventListener("click", ()=>{
       if (!currentOpenKey) return;
       addToCart(currentOpenKey);
       renderCartSummary();
     });
 
-    // filters
     $("catHigh").addEventListener("change", () => {
       const base = getFilteredBase();
       renderMarkersAndListFromBase(base);
@@ -2692,9 +2671,7 @@
     const qBox = $("qSuggest");
 
     q.addEventListener("focus", ()=>{ updateSuggest(); });
-    q.addEventListener("blur", ()=>{
-      setTimeout(()=>{ qBox.style.display = "none"; }, 140);
-    });
+    q.addEventListener("blur", ()=>{ setTimeout(()=>{ qBox.style.display = "none"; }, 140); });
 
     document.addEventListener("click", (e)=>{
       const wrap = q.parentElement;
@@ -2703,7 +2680,6 @@
       }
     });
 
-    // 입력 시: 자동완성만 업데이트
     let sugTimer = null;
     q.addEventListener("input", () => {
       clearTimeout(sugTimer);
@@ -2731,11 +2707,9 @@
     });
 
     $("qGo").addEventListener("click", ()=> applySearchFromUI());
-
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
-    // 입력창 밖 Backspace 뒤로가기 방지 + reset 처리
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Backspace") return;
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -2758,7 +2732,6 @@
       }
     });
 
-    // 최초 렌더
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
     openDetailByHash();
