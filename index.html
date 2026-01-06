@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.23</title> <!-- // vNEXT: 버전 동기화 -->
+  <title>Frontier DOOH 전국 DB v1.1.24</title> <!-- vNEXT: 버전 동기화 -->
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,7 +30,7 @@
       --inputPh:rgba(255,255,255,.45);
 
       --topbarH:72px;
-      --sideW: 268px;
+      --sideW: 160px; /* vNEXT: 우측 빌딩 폭 40% 축소(268px -> 160px) */
     }
 
     *{box-sizing:border-box}
@@ -51,6 +51,7 @@
     .leaflet-marker-icon, .leaflet-marker-icon *{
       user-select:none;
       -webkit-user-select:none;
+      -webkit-user-drag:none;
       -webkit-user-drag:none;
       -webkit-tap-highlight-color: transparent;
     }
@@ -539,21 +540,26 @@
       overflow:hidden;
     }
 
+    /* vNEXT: 빌딩(줌/장바구니/최근본) 단일 카드 + 칸 분리 */
+    .sideBuilding{ padding:0; }
+    .sidePart{ padding:10px; }
+    .sideDivider{ height:1px; background:rgba(255,255,255,.08); }
+
     /* 줌 UI (← ZOOM 8 →) */
-    .zoomCard{ padding:10px; }
+    .zoomCard{ padding:0; } /* vNEXT: 빌딩 내부로 편입 */
     .zoomBar{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:8px;
       padding:6px;
-      border-radius:18px;
+      border-radius:16px;
       background:rgba(0,0,0,.18);
       border:1px solid rgba(255,255,255,.10);
     }
     .zNav{
-      width:48px;
-      height:44px;
+      width:36px; /* vNEXT: 축소폭 대응 */
+      height:40px;
       border-radius:14px;
       border:1px solid rgba(162,222,204,.35);
       background:rgba(255,255,255,.06);
@@ -564,44 +570,47 @@
       align-items:center;
       justify-content:center;
       user-select:none;
+      padding:0;
     }
     .zNav:active{ transform:translateY(1px); }
     .zLabel{
       flex:1 1 auto;
-      height:44px;
+      height:40px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.28);
       display:flex;
       align-items:center;
       justify-content:center;
-      gap:10px;
+      gap:8px;
       user-select:none;
       color:#e9eef7;
       font-weight:1000;
       letter-spacing:.2px;
+      min-width:0;
     }
     .zLabel span{
-      font-size:11px;
+      font-size:10px;
       color:rgba(255,255,255,.55);
       font-weight:900;
       letter-spacing:.6px;
     }
     .zLabel b{
-      font-size:14px;
+      font-size:13px;
       font-weight:1000;
       color:#e9eef7;
     }
 
     .sideSectionTitle{
-      padding:10px 12px;
+      padding:10px 10px; /* vNEXT: 축소폭 대응 */
       border-bottom:1px solid rgba(255,255,255,.08);
       font-weight:1000;
       color:#e9eef7;
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:8px;
+      font-size:12px; /* vNEXT: 축소폭 대응 */
     }
 
     /* 장바구니 버튼 */
@@ -622,35 +631,47 @@
       user-select:none;
     }
     .cartBtn .meta{
-      display:flex; align-items:baseline; gap:10px;
-      color:rgba(255,255,255,.78);
-      font-weight:900;
+      display:flex; align-items:baseline; gap:8px;
+      color:rgba(255,255,255,.92);
+      font-weight:1000;
       font-size:12px;
       white-space:nowrap;
     }
-    .cartBtn .meta b{ color:var(--mint); font-weight:1000; }
+    .cartBtn .meta b{
+      color:var(--mint);
+      font-weight:1000;
+      font-size:14px;
+      padding:2px 8px;
+      border-radius:999px;
+      background:rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.12);
+    }
 
     /* 최근 본 매체 */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
-    .recentList{ display:flex; flex-direction:column; gap:8px; }
+    .recentList{ display:flex; flex-direction:column; gap:10px; }
+
+    /* vNEXT: 최근본 UI를 "상단 이미지 / 중단 매체명 / 하단 가격" 세로형으로 */
     .rRow{
       position:relative;
       display:flex;
-      align-items:center;
-      gap:10px;
-      padding:8px 8px;
+      flex-direction:column; /* vNEXT */
+      align-items:stretch;   /* vNEXT */
+      gap:8px;
+      padding:8px 8px 10px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.25);
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
-      min-height:58px;
+      min-height:0; /* vNEXT */
     }
     .rRow:hover{ transform:translateY(-1px); border-color:rgba(162,222,204,.30); }
+
     .rThumb{
-      width:64px;
-      height:42px;
-      border-radius:10px;
+      width:100%;            /* vNEXT */
+      height:70px;           /* vNEXT */
+      border-radius:12px;
       overflow:hidden;
       background:#0d0f10;
       border:1px solid rgba(255,255,255,.10);
@@ -670,10 +691,11 @@
     .rName{
       font-weight:1000;
       font-size:12px;
-      line-height:1.2;
+      line-height:1.25;
       color:#e9eef7;
       display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
       overflow:hidden;
+      margin-top:2px;
     }
     .rPrice{
       margin-top:6px;
@@ -685,11 +707,13 @@
       text-overflow:ellipsis;
     }
     .rX{
+      position:absolute; /* vNEXT */
+      top:8px; right:8px; /* vNEXT */
       width:28px;
       height:28px;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.16);
-      background:rgba(0,0,0,.45);
+      background:rgba(0,0,0,.55);
       color:#fff;
       display:flex;
       align-items:center;
@@ -698,6 +722,7 @@
       cursor:pointer;
       flex:0 0 auto;
     }
+
     .recentPager{
       display:flex;
       align-items:center;
@@ -898,7 +923,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.23</span></div> <!-- // vNEXT: 버전 동기화 -->
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.24</span></div> <!-- vNEXT: 버전 동기화 -->
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -956,37 +981,45 @@
         <div class="clusterHint" id="clusterHint">클릭해서 확대</div>
 
         <div class="mapSide" id="mapSide">
-          <div class="sideCard zoomCard">
-            <div class="zoomBar">
-              <button class="zNav" id="zOut" aria-label="줌 아웃">←</button>
-              <div class="zLabel" aria-label="현재 줌">
-                <span>ZOOM</span><b id="zVal">8</b>
-              </div>
-              <button class="zNav" id="zIn" aria-label="줌 인">→</button>
-            </div>
-          </div>
-
-          <div class="sideCard" style="padding:10px;">
-            <button class="cartBtn" id="cartBtn">
-              <span>장바구니</span>
-              <span class="meta"><span>담김</span> <b id="cartCount">0</b> · <span id="cartTotal">0원</span></span>
-            </button>
-          </div>
-
-          <div class="sideCard">
-            <div class="sideSectionTitle">
-              <span>최근 본 매체</span>
-              <span style="color:rgba(255,255,255,.55); font-size:12px; font-weight:900;" id="recentMeta">0/4</span>
-            </div>
-            <div class="recentBody">
-              <div class="recentList" id="recentList"></div>
-              <div class="recentPager" id="recentPager" style="display:none;">
-                <button class="pBtn" id="recentPrev" aria-label="이전 페이지">←</button>
-                <div class="pMeta" id="recentPageMeta">1/1</div>
-                <button class="pBtn" id="recentNext" aria-label="다음 페이지">→</button>
+          <!-- vNEXT: 줌/장바구니/최근본 매체를 "빌딩" 형태로 하나로 묶고 칸 분리 -->
+          <div class="sideCard sideBuilding">
+            <div class="sidePart">
+              <div class="zoomBar">
+                <button class="zNav" id="zOut" aria-label="줌 아웃">←</button>
+                <div class="zLabel" aria-label="현재 줌">
+                  <span>ZOOM</span><b id="zVal">8</b>
+                </div>
+                <button class="zNav" id="zIn" aria-label="줌 인">→</button>
               </div>
             </div>
+
+            <div class="sideDivider"></div>
+
+            <div class="sidePart">
+              <button class="cartBtn" id="cartBtn">
+                <span>장바구니</span>
+                <span class="meta"><b id="cartCount">0</b></span> <!-- vNEXT: '담김/가격' 제거, 숫자만 -->
+              </button>
+            </div>
+
+            <div class="sideDivider"></div>
+
+            <div>
+              <div class="sideSectionTitle">
+                <span>최근 본 매체</span>
+                <span style="color:rgba(255,255,255,.55); font-size:12px; font-weight:900;" id="recentMeta">0/4</span>
+              </div>
+              <div class="recentBody">
+                <div class="recentList" id="recentList"></div>
+                <div class="recentPager" id="recentPager" style="display:none;">
+                  <button class="pBtn" id="recentPrev" aria-label="이전 페이지">←</button>
+                  <div class="pMeta" id="recentPageMeta">1/1</div>
+                  <button class="pBtn" id="recentNext" aria-label="다음 페이지">→</button>
+                </div>
+              </div>
+            </div>
           </div>
+          <!-- /빌딩 -->
         </div>
       </div>
     </div>
@@ -1048,13 +1081,17 @@
 
 <script>
   /* =========================================================
-     v1.1.23 변경점 (v1.1.22 최소변경)
-     1) “자동 줌 보정(setZoom)” 제거: 줌은 사용자 조작/초기화에 의해서만 변경
-     2) 핀 클릭 시 리스트 카드 “정중앙(5번)”으로 1회 정렬 (클릭에 의해서만)
-     3) 클러스터/핀 클릭 이동 시 viewportUpdate는 1회만 실행(롤링 체감 방지)
+     v1.1.24 변경점 (v1.1.22 기준 최소 변경)
+     1) moveend에서 viewportUpdate 중복 호출 차단(스케줄 1회) -> “롤링/흔들림” 제거 // vNEXT
+     2) 핀 클릭 시 리스트 중앙(3x3의 5번 체감) 정렬: 클릭에 의해서만 1회 실행 // vNEXT
+     3) 줌은 "표기만" 정수화(자동 보정/복귀 0 유지) // vNEXT
+     4) 우측 줌/장바구니/최근본을 빌딩 카드로 통합 + 폭 40% 축소 + UI 개선 // vNEXT
+     5) 장바구니 버튼: '장바구니' + 숫자만 유지(담김/가격 제거) // vNEXT
+     6) 최근본: 상단 이미지/중단 매체명/하단 가격 형태로 변경 // vNEXT
      ========================================================= */
 
-  const VERSION = "v1.1.23"; // vNEXT: 내부 버전 상수 추가(요구사항)
+  const VERSION = "v1.1.24"; // vNEXT: 내부 버전 상수
+
   const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
@@ -1076,8 +1113,8 @@
 
   /* v1.1.22: 방향 반대로 (사용자 체감 반대) */
   const HOME_CENTER_SHIFT = {
-    upPct: -0.07,
-    leftPct: -0.10
+    upPct: -0.07,     // (기존 +0.07) -> 반대로
+    leftPct: -0.10    // (기존 +0.10) -> 반대로
   };
 
   function computeHomeCenter(){
@@ -1138,10 +1175,6 @@
   let recentPage = 0;
 
   const $ = (id) => document.getElementById(id);
-
-  // vNEXT: 핀 클릭 중앙정렬을 “렌더 후 1회”로 고정하기 위한 상태값
-  let pendingCenterKey = null; // vNEXT: 클릭에 의한 중앙정렬 대상 key
-  let pendingCenterTry = 0;    // vNEXT: 렌더 타이밍 보정(최대 소수회)
 
   function showErrorBanner(msg){
     $("errMsg").textContent = msg || "알 수 없는 오류";
@@ -1698,39 +1731,38 @@
     `;
   }
 
-  // vNEXT: 핀 클릭 중앙정렬(리스트 5번 체감) - “렌더 완료 후 1회”만 실행
-  function centerCardInPanelOnce(key){
-    if (!key) return;
-
+  // vNEXT: 핀 클릭 시 리스트를 "중앙(5번 체감)"으로 1회 정렬 (클릭에 의해서만)
+  function scrollCardToCenter(key){
     const panel = $("panel");
     const card = cardByKey.get(key);
-    if (!panel || !card){
-      // 렌더 타이밍 보정 (최대 3회)
-      if (pendingCenterTry < 3){
-        pendingCenterTry += 1;
-        requestAnimationFrame(()=> centerCardInPanelOnce(key));
-      }else{
-        pendingCenterKey = null;
-        pendingCenterTry = 0;
-      }
-      return;
-    }
+    if (!panel || !card) return false;
 
-    // 자동 스무스 금지: 즉시 scrollTop 1회만
-    const panelRect = panel.getBoundingClientRect();
-    const cardRect  = card.getBoundingClientRect();
-
+    const pr = panel.getBoundingClientRect();
+    const cr = card.getBoundingClientRect();
     const current = panel.scrollTop;
-    const deltaTop = (cardRect.top - panelRect.top);
-    const target = current + deltaTop - (panel.clientHeight / 2) + (cardRect.height / 2);
+
+    const delta = (cr.top - pr.top) - (panel.clientHeight / 2 - cr.height / 2);
+    let target = current + delta;
 
     const maxTop = Math.max(0, panel.scrollHeight - panel.clientHeight);
-    const nextTop = Math.max(0, Math.min(maxTop, Math.round(target)));
+    if (target < 0) target = 0;
+    if (target > maxTop) target = maxTop;
 
-    panel.scrollTop = nextTop;
+    panel.scrollTop = target; // behavior:auto (즉시)
+    return true;
+  }
 
-    pendingCenterKey = null;
-    pendingCenterTry = 0;
+  function centerCardOnClickOnce(key){
+    if (!key) return;
+    ensureCardVisible(key);
+
+    requestAnimationFrame(() => {
+      ensureCardVisible(key);
+      const ok = scrollCardToCenter(key);
+      if (!ok){
+        requestAnimationFrame(() => { scrollCardToCenter(key); });
+      }
+    });
   }
 
   function openMiniPopupFor(it, marker){
@@ -1743,10 +1775,7 @@
 
     clearAllCardHighlights();
     ensureCardVisible(it._key);
-
-    // vNEXT: 클릭에 의한 중앙정렬은 “moveend->viewportUpdate 렌더 후 1회”로만 수행
-    // (여기서 scrollIntoView로 먼저 움직이면 슬롯머신 체감 발생)
-    highlightCard(it._key, false); // vNEXT: 자동 스크롤 금지(클릭 중앙정렬은 별도 실행)
+    highlightCard(it._key, false); // vNEXT: 자동 스크롤 금지(중앙정렬은 "클릭"에서만 별도 수행)
 
     try{
       marker.setPopupContent(miniPopupHtml(it));
@@ -1779,7 +1808,7 @@
         offset: L.point(0, -86)
       });
 
-      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다
+      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다 (어지럽다고 함)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
@@ -1787,7 +1816,7 @@
 
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key, false);
+        highlightCard(it._key, false);   // <<< doScroll=false (중요)
       });
 
       m.on("mouseout", () => {
@@ -1807,17 +1836,10 @@
           }
         }catch(_){}
 
-        // vNEXT: “클릭에 의해서만” 중앙정렬 예약
-        pendingCenterKey = it._key; // vNEXT: 중앙정렬 대상 고정
-        pendingCenterTry = 0;       // vNEXT: 타이밍 보정 카운터 초기화
-
-        // vNEXT: 지도 이동 후 viewportUpdate는 1회만 (기본 moveend는 스킵)
-        suspendViewportOnce = true; // vNEXT: 클릭 이동 중간 렌더/롤링 방지
+        suspendViewportOnce = true;
         map.once("moveend", () => {
-          suspendViewportOnce = false; // vNEXT: 다음부터는 정상 moveend
-          updateZoomUI();              // vNEXT: 표기만 정수화(자동 줌 변경 금지)
-          viewportUpdate();            // vNEXT: 클릭에 의한 리스트 갱신은 1회만
-          if (pendingCenterKey) centerCardInPanelOnce(pendingCenterKey); // vNEXT: 렌더 후 1회 중앙정렬
+          suspendViewportOnce = false;
+          updateZoomUI();
         });
 
         try{
@@ -1828,7 +1850,10 @@
           openDetail(it, true);
           return;
         }
+
         openMiniPopupFor(it, m);
+
+        centerCardOnClickOnce(it._key); // vNEXT: 핀 클릭에 의해서만 리스트 중앙 정렬(5번 체감)
       });
 
       m.on("popupclose", () => {
@@ -1897,11 +1922,10 @@
 
     $("dOverlay").style.display = "block";
 
-    // 상세보기는 의도적으로 줌 변경(확대) => “자동”이 아니라 기능 요구에 해당
     suspendViewportOnce = true;
     map.once("moveend", () => {
       suspendViewportOnce = false;
-      updateZoomUI(); // vNEXT: 표기만 업데이트
+      updateZoomUI();
     });
 
     const la = (it._latDisp ?? it.lat);
@@ -2144,6 +2168,72 @@
     try{ localStorage.setItem(LS_QHIST, JSON.stringify(arr)); }catch(_){}
   }
 
+  function updateSuggest(){
+    const box = $("qSuggest");
+    if (!box) return;
+
+    const qRaw = $("q").value.trim();
+
+    if (!qRaw){
+      const hist = loadQueryHistory();
+      if (hist.length){
+        showSuggest(hist.slice(0, 10));
+      }else{
+        showSuggest(QUICK_SUGGEST);
+      }
+      return;
+    }
+
+    const qNorm = searchNorm(qRaw);
+    const qJ = toJamo(qRaw);
+
+    const scored = [];
+    for (const it of SUG_POOL){
+      const sc = suggestScore(qNorm, qJ, it);
+      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
+    }
+
+    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
+
+    const out = [];
+    const seen = new Set();
+    for (const x of scored){
+      if (seen.has(x.v)) continue;
+      seen.add(x.v);
+      out.push(x.v);
+      if (out.length >= 10) break;
+    }
+
+    showSuggest(out);
+  }
+
+  function moveSugIndex(delta){
+    const box = $("qSuggest");
+    if (box.style.display !== "block") return;
+    const items = Array.from(box.querySelectorAll(".qSugItem"));
+    if (!items.length) return;
+
+    sugIndex = Math.max(-1, Math.min(items.length-1, sugIndex + delta));
+    items.forEach((el, i) => el.classList.toggle("isActive", i === sugIndex));
+    if (sugIndex >= 0){
+      items[sugIndex].scrollIntoView({block:"nearest"});
+    }
+  }
+
+  function pickSugIndex(){
+    const box = $("qSuggest");
+    if (box.style.display !== "block") return false;
+    const items = Array.from(box.querySelectorAll(".qSugItem"));
+    if (!items.length) return false;
+    if (sugIndex < 0 || sugIndex >= items.length) return false;
+    const v = items[sugIndex].dataset.value;
+    if (!v) return false;
+    $("q").value = v;
+    box.style.display = "none";
+    applySearchFromUI();
+    return true;
+  }
+
   function renderMarkersAndListFromBase(base){
     curBase = base;
 
@@ -2178,6 +2268,7 @@
     renderList(inView);
 
     if (panel){
+      // 즉시 복구 (애니메이션 없음)
       panel.scrollTop = st;
     }
 
@@ -2190,17 +2281,34 @@
     }
   }
 
+  // vNEXT: moveend/zoomend 연쇄에서 viewportUpdate가 2번 이상 실행되는 것을 방지(롤링 제거)
+  let _vpScheduled = false;
+  function scheduleViewportUpdate(){
+    if (_vpScheduled) return;
+    _vpScheduled = true;
+    requestAnimationFrame(() => {
+      _vpScheduled = false;
+      if (suspendViewportOnce) return;
+      viewportUpdate();
+    });
+  }
+
   function updateStickyHeights(){
     const topbar = $("topbar");
     const h = topbar ? topbar.getBoundingClientRect().height : 72;
     document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
   }
 
-  // vNEXT: 줌 표기는 “정수 반올림”만 (줌 자체를 setZoom으로 강제 변경 금지)
+  // 줌 UI는 “정수”로만 표기 (표기만 정수화)
   function updateZoomUI(){
     if (!map) return;
     const zi = Math.round(map.getZoom());
     $("zVal").textContent = zi;
+  }
+
+  // vNEXT: 줌은 표기만 정수화(자동 보정/복귀 0) — setZoom 금지
+  function forceIntegerZoom(){
+    updateZoomUI(); // vNEXT: 의도적으로 줌 자체는 건드리지 않음
   }
 
   function showClusterHint(latlng){
@@ -2218,7 +2326,7 @@
   }
 
   function buildMap(){
-    // zoomSnap/zoomDelta로 fractional zoom 억제 (줌 자체 자동보정 로직은 추가하지 않음)
+    // v1.1.22: zoomSnap/zoomDelta로 fractional zoom 억제
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
@@ -2267,12 +2375,10 @@
       clearAllCardHighlights();
       clearClusterHighlight();
 
-      // vNEXT: 클러스터 클릭 이동은 viewportUpdate 1회만 (중간 롤링 방지)
-      suspendViewportOnce = true; // vNEXT: 기본 moveend 렌더 스킵
+      suspendViewportOnce = true;
       map.once("moveend", () => {
         suspendViewportOnce = false;
-        updateZoomUI();   // vNEXT: 표기만 업데이트(자동 줌 변경 금지)
-        viewportUpdate(); // vNEXT: 리스트는 1회에 딱 갱신
+        forceIntegerZoom();
       });
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
@@ -2293,7 +2399,7 @@
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; updateZoomUI(); }); // vNEXT: 표기만 갱신
+    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
 
@@ -2308,8 +2414,8 @@
 
     map.on("moveend", () => {
       if (suspendViewportOnce) return;
-      viewportUpdate();
-      updateZoomUI(); // vNEXT: 표기만 정수화(자동 줌 변경 금지)
+      scheduleViewportUpdate(); // vNEXT: 1회 스케줄로 롤링/흔들림 방지
+      updateZoomUI();           // vNEXT: moveend에서도 표기만 갱신(줌 강제 변경 없음)
     });
   }
 
@@ -2428,7 +2534,7 @@
     try{ localStorage.setItem(LS_CART, JSON.stringify(cartKeys)); }catch(_){}
 
     $("cartCount").textContent = String(cartKeys.length);
-    $("cartTotal").textContent = cartTotalText();
+    // vNEXT: 버튼에서 '가격' 표기를 제거했으므로 cartTotal DOM 업데이트는 생략
   }
 
   function openCartModal(){
@@ -2500,8 +2606,8 @@
 
     map.once("moveend", () => {
       suspendViewportOnce = false;
-      updateZoomUI();   // vNEXT: 표기만 정수화(자동 줌 변경 금지)
-      viewportUpdate(); // (초기화 버튼에 의한 홈복귀이므로 1회 갱신)
+      forceIntegerZoom();
+      viewportUpdate();
     });
   }
 
@@ -2609,10 +2715,10 @@
     renderCartSummary();
 
     applyHomeView(false);
-    updateZoomUI(); // vNEXT: 초기 표기만
+    forceIntegerZoom();
 
-    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(updateZoomUI, 0); });  // vNEXT: 표기만
-    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(updateZoomUI, 0); }); // vNEXT: 표기만
+    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
+    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
 
     $("recentPrev").addEventListener("click", ()=>{
       recentPage = Math.max(0, recentPage - 1);
