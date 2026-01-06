@@ -1033,6 +1033,11 @@
     east:  130.5000
   };
 
+  const HOME_CENTER = [
+  (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2,
+  (HOME_BOUNDS_FIXED.east  + HOME_BOUNDS_FIXED.west ) / 2
+ ];
+
   let ALL = [];
   let map = null;
   let markers = null;
@@ -1508,20 +1513,34 @@
 
   /* v1.1.20: 홈뷰 적용(사용자 조작 시 체인 취소) + 가능하면 ZOOM 8 유지(단, bbox 깨지면 롤백) */
   function applyHomeView(animate){
-    if (!HOME_BOUNDS || !map) return;
+  if (!map) return;
 
-    const myToken = ++homeApplyToken;
-    homeApplying = true;
+  // 초기화(Home)는 무조건 줌 8로 고정
+  const myToken = ++homeApplyToken;
+  homeApplying = true;
 
-    const pad = getHomePadding();
-    const opt = { ...pad, maxZoom: HOME_ZOOM };
+  try{
+    if (animate){
+      map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
+    }else{
+      map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
+    }
+  }catch(_){}
 
-    const doFit = () => {
-      if (animate){
-        map.flyToBounds(HOME_BOUNDS, { ...opt, duration:0.85 });
-      }else{
-        map.fitBounds(HOME_BOUNDS, opt);
+  // moveend 이후에도 줌이 바뀌면 즉시 8로 복귀(안전장치)
+  map.once("moveend", () => {
+    if (!homeApplying || homeApplyToken !== myToken) return;
+    try{
+      if (map.getZoom() !== HOME_ZOOM){
+        map.setZoom(HOME_ZOOM, { animate:false });
       }
+    }catch(_){}
+    homeApplying = false;
+    updateZoomUI();
+    viewportUpdate();
+  });
+}
+
     };
 
     doFit();
