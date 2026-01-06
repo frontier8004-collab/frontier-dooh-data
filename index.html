@@ -14,1081 +14,600 @@
 
   <style>
     :root{
-      --bg:#0b0d10;
-      --panel:#12161b;
-      --panel2:#0f1318;
-      --stroke:rgba(255,255,255,.08);
-      --stroke2:rgba(255,255,255,.12);
-      --text:#e7edf7;
-      --muted:rgba(231,237,247,.65);
-      --mint:#7de3c6;
-      --mint2:#a2decc;
-      --danger:#ff5c5c;
-      --radius:18px;
-      --shadow:0 20px 50px rgba(0,0,0,.45);
+      --bg:#0b0e10;
+      --panel:#0f1417cc;
+      --panel2:#0f1417;
+      --stroke:#1e2a30;
+      --text:#d7e2e8;
+      --muted:#95a6b3;
+      --mint:#a2decc;
+      --shadow:0 14px 40px rgba(0,0,0,.55);
+      --r:18px;
     }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,NanumGothic,Arial}
+    #app{position:fixed;inset:0;display:flex;overflow:hidden}
+    #map{flex:1;background:#000}
 
-    @import url('https://webfontworld.github.io/NanumSquare/NanumSquare.css');
+    .panel{
+      position:absolute;left:12px;top:12px;bottom:12px;width:310px;
+      background:linear-gradient(180deg,var(--panel),rgba(15,20,23,.55));
+      border:1px solid rgba(162,222,204,.10);
+      border-radius:24px;box-shadow:var(--shadow);
+      overflow:hidden;backdrop-filter: blur(10px);
+      display:flex;flex-direction:column;
+    }
+    .panel .section{padding:12px 12px 0 12px}
+    .panel .section:last-child{padding-bottom:12px}
 
-    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
-    body{font-family:'NanumSquare',system-ui,-apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden;}
-
-    #app{position:fixed; inset:0; display:flex; align-items:stretch; justify-content:stretch;}
-
-    /* Map */
-    #map{
-      position:relative;
-      flex:1;
-      height:100%;
-      z-index:1;
-      background: #000;
-    }
-
-    /* Floating search bar */
-    #topbar{
-      position:absolute;
-      left:50%;
-      top:14px;
-      transform:translateX(-50%);
-      width:min(980px, calc(100% - 44px));
-      z-index:9999;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 12px;
-      border-radius:999px;
-      background:rgba(18,22,27,.80);
-      border:1px solid var(--stroke);
-      backdrop-filter: blur(10px);
-      box-shadow:0 12px 30px rgba(0,0,0,.35);
-    }
-    #searchInput{
-      flex:1;
-      height:40px;
-      padding:0 14px;
-      border-radius:999px;
-      outline:none;
-      border:1px solid var(--stroke);
-      background:rgba(0,0,0,.25);
-      color:var(--text);
-      font-size:14px;
-    }
-    #searchInput::placeholder{color:rgba(231,237,247,.45);}
-    .btn{
-      height:40px;
-      padding:0 14px;
-      border-radius:999px;
-      border:1px solid var(--stroke);
-      background:rgba(0,0,0,.18);
-      color:var(--text);
-      cursor:pointer;
-      font-size:13px;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      user-select:none;
-    }
-    .btn:hover{border-color:var(--stroke2);}
-    .btn.mint{
-      border-color:rgba(125,227,198,.35);
-      box-shadow:0 0 0 1px rgba(125,227,198,.16) inset;
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-width:26px;
-      padding:0 10px;
-      height:24px;
-      border-radius:999px;
-      background:rgba(125,227,198,.14);
-      border:1px solid rgba(125,227,198,.35);
-      color:var(--mint2);
-      font-weight:800;
-      font-size:12px;
-    }
-
-    /* Left “building” panel */
-    #side{
-      position:absolute;
-      left:14px;
-      top:14px;
-      bottom:14px;
-      width:320px;
-      max-width:calc(100% - 28px);
-      z-index:9998;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      pointer-events:none;
-    }
-    #side .building{
-      pointer-events:auto;
-      height:100%;
-      border-radius:22px;
-      background:rgba(18,22,27,.86);
-      border:1px solid var(--stroke);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-    }
-    #sideHeader{
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .hTitle{
-      font-size:12px;
-      letter-spacing:.12em;
-      color:rgba(231,237,247,.55);
-      text-transform:uppercase;
-    }
-    .miniRow{
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-
-    /* Zoom UI (v1.1.26 style already applied) */
-    .zoomCard{
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      display:flex;
-      gap:10px;
-      align-items:stretch;
-      justify-content:space-between;
-    }
-    .zoomLeft{
-      flex:1;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:10px;
-      padding:10px 12px;
-      min-height:44px;
-    }
-    .zoomLabel{
-      font-size:12px;
-      letter-spacing:.12em;
-      color:rgba(231,237,247,.55);
-      text-transform:uppercase;
-    }
-    .zoomNum{
-      font-weight:900;
-      font-size:18px;
-      color:var(--text);
-    }
-    .zoomRight{
-      width:56px;
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
-    .zBtn{
-      flex:1;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
-      color:var(--text);
-      cursor:pointer;
-      font-weight:900;
-      font-size:18px;
-    }
-    .zBtn:hover{border-color:rgba(255,255,255,.14);}
-
-    /* Cart + Recent sections */
-    .section{
-      padding:10px 12px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-    }
-    .sectionHead{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:8px;
-    }
-    .sectionTitle{
-      font-weight:800;
-      font-size:13px;
-      color:rgba(231,237,247,.90);
-    }
-    .cartRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(125,227,198,.25);
-      background:rgba(125,227,198,.08);
-    }
-    .cartRow .label{font-weight:900;}
-    .cartRow .count{
-      min-width:34px;
-      height:24px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:999px;
-      background:rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.10);
-      font-weight:900;
-    }
-
-    /* Recent list */
-    .recentList{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      max-height:calc(100vh - 360px);
-      overflow:auto;
-      padding-right:6px;
-    }
-    .recentCard{
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
-      overflow:hidden;
-    }
-    .recentImg{
-      width:100%;
-      aspect-ratio: 16 / 9;
-      background:rgba(255,255,255,.04);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      color:rgba(231,237,247,.35);
-      font-size:12px;
-    }
-    .recentBody{padding:10px 12px; display:flex; flex-direction:column; gap:6px;}
-    .recentName{
-      font-weight:900;
-      font-size:13px;
-      line-height:1.25;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
-    .recentPrice{
-      font-weight:900;
-      font-size:14px;
-      color:var(--mint2);
-    }
-    .bottomPager{
-      margin-top:auto;
-      padding:10px 12px;
-      border-top:1px solid rgba(255,255,255,.06);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-
-    /* Right list panel (search results) */
-    #results{
-      position:absolute;
-      right:14px;
-      top:14px;
-      bottom:14px;
-      width:520px;
-      max-width:calc(100% - 28px);
-      z-index:9998;
-      border-radius:22px;
-      background:rgba(18,22,27,.86);
-      border:1px solid var(--stroke);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      pointer-events:auto;
-    }
-    #resultsHeader{
-      padding:12px 14px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    #resultsHeader .title{
-      font-weight:900;
-      font-size:14px;
-    }
-    #resultsList{
-      flex:1;
-      overflow:auto;
-      padding:12px 14px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
-    .item{
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.18);
-      padding:12px 12px;
-      cursor:pointer;
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      transition: transform .12s ease, border-color .12s ease;
-    }
-    .item:hover{
-      transform:translateY(-1px);
-      border-color:rgba(125,227,198,.22);
-    }
-    .item .name{
-      font-weight:900;
-      font-size:15px;
-      line-height:1.25;
-    }
-    .item .sub{
-      color:rgba(231,237,247,.65);
-      font-size:12px;
-      line-height:1.3;
-    }
-    .item .price{
-      margin-top:2px;
-      font-weight:900;
-      color:var(--mint2);
-    }
-
-    /* Mini modal (marker popup) */
-    .miniPopup{
-      width:240px;
-      font-family:'NanumSquare',sans-serif;
-      color:var(--text);
-    }
-    .miniPopup .pName{
-      font-weight:900;
-      margin:0 0 6px;
-      font-size:14px;
-      line-height:1.25;
-    }
-    .miniPopup .pPrice{
-      font-weight:900;
-      color:var(--mint2);
+    .box{
+      background:rgba(0,0,0,.22);
+      border:1px solid rgba(162,222,204,.12);
+      border-radius:16px;
+      padding:10px;
       margin-bottom:10px;
     }
-    .miniPopup .pBtns{
-      display:flex;
-      gap:8px;
-    }
-    .miniPopup .pBtns button{
-      flex:1;
-      height:34px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.18);
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .pill{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:6px 10px;border-radius:999px;
+      border:1px solid rgba(162,222,204,.18);
+      background:rgba(162,222,204,.08);
       color:var(--text);
-      cursor:pointer;
-      font-weight:800;
-      font-size:12px;
+      font-weight:700;
+      min-width:44px;
     }
-    .miniPopup .pBtns button:hover{
-      border-color:rgba(125,227,198,.22);
+    .muted{color:var(--muted);font-size:12px;line-height:1.4}
+
+    .zoomWrap{display:flex;align-items:center;gap:10px}
+    .zoomLabel{font-weight:800;letter-spacing:.02em}
+    .zoomBtns{
+      margin-left:auto;
+      width:42px;
+      display:flex;flex-direction:column;
+      border:1px solid rgba(162,222,204,.18);
+      border-radius:14px;overflow:hidden;
+      background:rgba(0,0,0,.25);
+    }
+    .zbtn{
+      height:34px;border:0;background:transparent;color:var(--text);
+      cursor:pointer;font-size:16px;font-weight:900;
+    }
+    .zbtn + .zbtn{border-top:1px solid rgba(162,222,204,.12)}
+    .zbtn:hover{background:rgba(162,222,204,.10)}
+
+    .cartRow{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      font-weight:800;
     }
 
-    /* Modal overlay */
-    .overlay{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.55);
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:10000;
-      padding:22px;
+    .recentHead{display:flex;align-items:center;justify-content:space-between}
+    .recentGrid{
+      display:flex;flex-direction:column;gap:10px;
+      max-height:460px;overflow:auto;padding-right:4px;
     }
-    .overlay.show{display:flex;}
-    .modal{
-      width:min(1100px, 100%);
-      max-height:min(86vh, 860px);
-      border-radius:24px;
-      background:rgba(18,22,27,.96);
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 30px 90px rgba(0,0,0,.55);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-    }
-    .modalHead{
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .modalHead .mTitle{
-      font-weight:900;
-      font-size:14px;
-      letter-spacing:.02em;
-    }
-    .xBtn{
-      width:38px; height:38px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.22);
-      color:var(--text);
+    .recentItem{
+      display:grid;grid-template-columns:70px 1fr;gap:10px;
+      padding:10px;border-radius:16px;
+      border:1px solid rgba(162,222,204,.10);
+      background:rgba(0,0,0,.20);
       cursor:pointer;
-      font-size:18px;
-      font-weight:900;
     }
-    .modalBody{
-      padding:14px 16px;
-      overflow:auto;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
+    .recentItem:hover{background:rgba(162,222,204,.06);border-color:rgba(162,222,204,.22)}
+    .thumb{
+      width:70px;height:54px;border-radius:12px;
+      background:rgba(0,0,0,.35);
+      border:1px solid rgba(162,222,204,.10);
+      overflow:hidden;display:flex;align-items:center;justify-content:center;
+      color:rgba(215,226,232,.45);font-size:11px;font-weight:800;
+    }
+    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .title{
+      font-weight:900;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+      max-width:100%;
+    }
+    .price{color:var(--mint);font-weight:900;margin-top:4px}
+
+    .pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
+    .pbtn{
+      width:42px;height:34px;border-radius:12px;border:1px solid rgba(162,222,204,.18);
+      background:rgba(0,0,0,.25);color:var(--text);cursor:pointer;font-weight:900;
+    }
+    .pbtn:hover{background:rgba(162,222,204,.10)}
+
+    .searchbar{
+      position:absolute;left:340px;top:14px;right:340px;height:44px;
+      background:rgba(0,0,0,.32);
+      border:1px solid rgba(162,222,204,.14);
+      border-radius:999px;
+      display:flex;align-items:center;gap:10px;
+      padding:0 14px;
+      backdrop-filter:blur(10px);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    .searchbar input{
+      flex:1;border:0;outline:0;background:transparent;color:var(--text);
+      font-size:14px;font-weight:700;
+    }
+    .searchbar .sbtn{
+      height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(162,222,204,.18);
+      background:rgba(162,222,204,.10);
+      color:var(--text);font-weight:900;cursor:pointer;
+    }
+    .searchbar .sbtn:hover{background:rgba(162,222,204,.18)}
+
+    .results{
+      position:absolute;right:12px;top:12px;bottom:12px;width:360px;
+      background:linear-gradient(180deg,var(--panel),rgba(15,20,23,.55));
+      border:1px solid rgba(162,222,204,.10);
+      border-radius:24px;box-shadow:var(--shadow);
+      overflow:hidden;backdrop-filter: blur(10px);
+      display:flex;flex-direction:column;
+    }
+    .results .head{padding:12px 14px;font-weight:900;display:flex;align-items:center;justify-content:space-between}
+    .results .list{flex:1;overflow:auto;padding:0 10px 12px 10px}
+    .card{
+      padding:12px;margin:10px 0;border-radius:18px;
+      border:1px solid rgba(162,222,204,.10);
+      background:rgba(0,0,0,.20);
+      cursor:pointer;
+    }
+    .card:hover{background:rgba(162,222,204,.06);border-color:rgba(162,222,204,.22)}
+    .card .cTitle{font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .card .cAddr{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.4}
+    .card .cPrice{color:var(--mint);font-weight:950;margin-top:8px}
+
+    .glow{
+      filter: drop-shadow(0 0 10px rgba(162,222,204,.8)) drop-shadow(0 0 18px rgba(162,222,204,.55));
     }
 
     /* Leaflet tweaks */
-    .leaflet-control-attribution{display:none;}
-    .leaflet-container{background:#0b0d10;}
+    .leaflet-control-zoom{display:none !important;}
+    .leaflet-popup-content{margin:10px 12px}
     .leaflet-popup-content-wrapper{
-      background:rgba(18,22,27,.95);
+      background:#0e1417;
       color:var(--text);
+      border:1px solid rgba(162,222,204,.18);
       border-radius:16px;
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow:0 18px 50px rgba(0,0,0,.45);
+      box-shadow:0 14px 40px rgba(0,0,0,.6);
     }
-    .leaflet-popup-tip{
-      background:rgba(18,22,27,.95);
-      border:1px solid rgba(255,255,255,.10);
+    .leaflet-popup-tip{background:#0e1417;border:1px solid rgba(162,222,204,.18)}
+    .miniBtn{
+      margin-top:10px;
+      width:100%;
+      height:34px;
+      border-radius:12px;
+      border:1px solid rgba(162,222,204,.22);
+      background:rgba(162,222,204,.10);
+      color:var(--text);
+      font-weight:900;
+      cursor:pointer;
     }
-
-    /* Responsive */
-    @media (max-width:1100px){
-      #results{display:none;}
-      #side{width:320px;}
-      #topbar{width:calc(100% - 28px);}
-    }
-    @media (max-width:520px){
-      #side{left:10px; top:10px; bottom:10px; width:280px;}
-      #topbar{top:10px;}
-    }
+    .miniBtn:hover{background:rgba(162,222,204,.18)}
   </style>
 </head>
 
 <body>
-  <div id="app">
-    <div id="map"></div>
+<div id="app">
+  <div id="map"></div>
 
-    <div id="topbar">
-      <input id="searchInput" placeholder="지역/매체명을 검색하세요 (예: 인천공항, 강남, KT SQUARE)" />
-      <button id="btnReset" class="btn">초기화</button>
-      <button id="btnToggleResults" class="btn mint">검색결과</button>
-    </div>
-
-    <div id="side">
-      <div class="building">
-        <div id="sideHeader">
-          <div class="hTitle">ZOOM</div>
-          <div class="miniRow">
-            <span class="pill" id="clusterCount">0</span>
-          </div>
-        </div>
-
-        <div class="zoomCard">
-          <div class="zoomLeft">
+  <div class="panel" id="leftPanel">
+    <div class="section">
+      <div class="box">
+        <div class="row">
+          <div class="zoomWrap">
             <div class="zoomLabel">ZOOM</div>
-            <div class="zoomNum" id="zoomNum">0</div>
+            <div class="pill" id="zoomNum">0</div>
           </div>
-          <div class="zoomRight">
-            <button class="zBtn" id="zoomIn">+</button>
-            <button class="zBtn" id="zoomOut">−</button>
-          </div>
-        </div>
 
-        <div class="section">
-          <div class="sectionHead">
-            <div class="sectionTitle">제안서</div>
-            <button id="btnCartOpen" class="btn" style="height:30px;padding:0 10px;font-size:12px;">열기</button>
+          <div class="zoomBtns">
+            <button class="zbtn" id="zoomIn">▲</button>
+            <button class="zbtn" id="zoomOut">▼</button>
           </div>
-          <div class="cartRow">
-            <div class="label">장바구니</div>
-            <div class="count" id="cartCount">0</div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="sectionHead">
-            <div class="sectionTitle">최근 본 매체</div>
-            <div style="font-weight:900;color:rgba(231,237,247,.65);font-size:12px;" id="recentCount">0/4</div>
-          </div>
-          <div class="recentList" id="recentList"></div>
-        </div>
-
-        <div class="bottomPager">
-          <button class="btn" id="recentPrev" style="height:34px;">←</button>
-          <div style="font-weight:900;color:rgba(231,237,247,.65);" id="recentPage">1/1</div>
-          <button class="btn" id="recentNext" style="height:34px;">→</button>
         </div>
       </div>
-    </div>
 
-    <div id="results">
-      <div id="resultsHeader">
-        <div class="title">검색 결과</div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <span class="pill" id="resultsCount">0</span>
-          <button id="btnCloseResults" class="btn" style="height:34px;">닫기</button>
+      <div class="box">
+        <div class="cartRow">
+          <div>장바구니</div>
+          <div class="pill" id="cartCount">0</div>
+        </div>
+        <div class="muted" style="margin-top:8px">
+          장바구니는 이 브라우저(이용자) 기준으로 저장됩니다.<br/>
+          (같은 PC의 다른 사람이 접속해도 그대로 보일 수 있습니다.)
         </div>
       </div>
-      <div id="resultsList"></div>
+
+      <div class="box">
+        <div class="recentHead">
+          <div style="font-weight:900">최근 본 매체</div>
+          <div class="muted"><span id="recentNow">0</span>/<span id="recentMax">4</span></div>
+        </div>
+      </div>
+
+      <div class="box" style="padding-top:0">
+        <div class="recentGrid" id="recentGrid"></div>
+        <div class="pager">
+          <button class="pbtn" id="recentPrev">←</button>
+          <div class="muted"><span id="recentPage">1</span>/<span id="recentPageMax">1</span></div>
+          <button class="pbtn" id="recentNext">→</button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Cart Modal -->
-  <div class="overlay" id="cartOverlay">
-    <div class="modal">
-      <div class="modalHead">
-        <div class="mTitle">장바구니</div>
-        <button class="xBtn" id="cartClose">×</button>
-      </div>
-      <div class="modalBody" id="cartBody"></div>
-    </div>
+  <div class="searchbar">
+    <input id="q" placeholder="지역/매체명/키워드 검색 (예: 인천공항, 강남, KT SQUARE)" />
+    <button class="sbtn" id="btnSearch">검색</button>
+    <button class="sbtn" id="btnReset" style="opacity:.85">초기화</button>
   </div>
 
-  <!-- Hash Modal (detail) -->
-  <div class="overlay" id="hashOverlay">
-    <div class="modal">
-      <div class="modalHead">
-        <div class="mTitle" id="hashTitle">상세</div>
-        <button class="xBtn" id="hashClose">×</button>
-      </div>
-      <div class="modalBody" id="hashBody"></div>
+  <div class="results">
+    <div class="head">
+      <div>검색 결과</div>
+      <div class="muted" id="resultCount">0개</div>
     </div>
+    <div class="list" id="resultList"></div>
   </div>
+</div>
 
-  <script>
-    // v1.1.26 restore build (data loader hardened)
-    (async () => {
-      const VERSION = "v1.1.26";
+<script>
+(() => {
+  const VERSION = "v1.1.26";
 
-      // Utils
-      const qs = (s, el=document) => el.querySelector(s);
-      const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
-      const fmtPrice = (v) => {
-        if(v===null || v===undefined || v==="" || isNaN(Number(v))) return "문의";
-        const n = Number(v);
-        if(!isFinite(n) || n<=0) return "문의";
-        return n.toLocaleString("ko-KR") + "원";
+  const __FETCH_TIMEOUT_MS = 20000;
+  async function fetchJsonWithTimeout(url, timeoutMs){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort("timeout"), timeoutMs);
+    try{
+      const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP "+res.status+" "+res.statusText);
+      const txt = await res.text();
+      const cleaned = txt.replace(/^\uFEFF/, "");
+      return JSON.parse(cleaned);
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function loadDataJson(){
+    try{
+      const baseDir = location.pathname.replace(/[^\/]+$/, "");
+      const candidates = [
+        { label: "rel:data_public.json", url: "data_public.json" },
+        { label: "rel:data.json",        url: "data.json" },
+        { label: "./data_public.json",   url: "./data_public.json" },
+        { label: "./data.json",          url: "./data.json" },
+        { label: "base:data_public",     url: baseDir + "data_public.json" },
+        { label: "base:data",            url: baseDir + "data.json" },
+        { label: "ghraw:data_public",    url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data_public.json" },
+        { label: "ghraw:data",           url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data.json" },
+        { label: "jsdelivr:data_public", url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data_public.json" },
+        { label: "jsdelivr:data",        url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data.json" },
+      ];
+
+      const normalizeData = (j) => {
+        if (Array.isArray(j)) return j;
+        if (j && Array.isArray(j.items)) return j.items;
+        if (j && Array.isArray(j.data)) return j.data;
+        if (j && Array.isArray(j.points)) return j.points;
+        return null;
       };
 
-      const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-      // DOM
-      const elZoomNum = qs("#zoomNum");
-      const elClusterCount = qs("#clusterCount");
-      const elSearch = qs("#searchInput");
-      const elResults = qs("#results");
-      const elResultsList = qs("#resultsList");
-      const elResultsCount = qs("#resultsCount");
-      const elRecentList = qs("#recentList");
-      const elRecentCount = qs("#recentCount");
-      const elRecentPage = qs("#recentPage");
-      const elCartCount = qs("#cartCount");
-
-      // Modals
-      const cartOverlay = qs("#cartOverlay");
-      const cartBody = qs("#cartBody");
-      const hashOverlay = qs("#hashOverlay");
-      const hashTitle = qs("#hashTitle");
-      const hashBody = qs("#hashBody");
-
-      // State
-      const RECENT_MAX = 4;
-      const RECENT_PAGE_SIZE = 2;
-      let recent = [];
-      let recentPage = 1;
-
-      // Cart storage (A안: 사용자(브라우저) 단위 localStorage)
-      const CART_KEY = "frontier_dooh_cart_v1";
-      let cart = [];
-      function loadCart(){
-        try{
-          const raw = localStorage.getItem(CART_KEY);
-          cart = raw ? JSON.parse(raw) : [];
-          if(!Array.isArray(cart)) cart = [];
-        }catch(e){ cart = []; }
-        elCartCount.textContent = String(cart.length || 0);
-      }
-      function saveCart(){
-        try{ localStorage.setItem(CART_KEY, JSON.stringify(cart)); }catch(e){}
-        elCartCount.textContent = String(cart.length || 0);
-      }
-
-      function addToCart(item){
-        // IMPORTANT: "같은 위치/몰려있는 핀"이 하나로 합쳐지는 문제를 피하려면
-        // 개별 고유키가 필요합니다. data.json에 id가 없다면 아래처럼 fallback 키를 만든다.
-        const key = item.id || item.media_id || item.uid || item._uid || (item.name + "|" + item.address + "|" + item.lat + "|" + item.lng + "|" + (item.price||""));
-        if(cart.some(x => (x._key || x.id || x.media_id || x.uid) === key)) return;
-        cart.push({ ...item, _key: key });
-        saveCart();
-      }
-
-      // Recent
-      function pushRecent(item){
-        const key = item.id || item.media_id || item.uid || item._uid || (item.name + "|" + item.address + "|" + item.lat + "|" + item.lng);
-        recent = recent.filter(x => (x._key||x.id||x.media_id||x.uid) !== key);
-        recent.unshift({ ...item, _key: key });
-        if(recent.length > RECENT_MAX) recent = recent.slice(0, RECENT_MAX);
-        recentPage = 1;
-        renderRecent();
-      }
-
-      function renderRecent(){
-        const total = recent.length;
-        elRecentCount.textContent = `${total}/${RECENT_MAX}`;
-        const totalPages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
-        recentPage = clamp(recentPage, 1, totalPages);
-        elRecentPage.textContent = `${recentPage}/${totalPages}`;
-
-        const start = (recentPage-1)*RECENT_PAGE_SIZE;
-        const items = recent.slice(start, start+RECENT_PAGE_SIZE);
-
-        elRecentList.innerHTML = items.map(x => {
-          const img = (x.image_url || x.img || x.image || "").trim();
-          const imgHtml = img
-            ? `<div class="recentImg" style="background-image:url('${img}');background-size:cover;background-position:center;"></div>`
-            : `<div class="recentImg">NO IMAGE</div>`;
-          return `
-            <div class="recentCard" data-key="${x._key}">
-              ${imgHtml}
-              <div class="recentBody">
-                <div class="recentName" title="${(x.name||"").replace(/"/g,'&quot;')}">${x.name || "-"}</div>
-                <div class="recentPrice">${fmtPrice(x.price)}</div>
-              </div>
-            </div>
-          `;
-        }).join("");
-
-        qsa(".recentCard", elRecentList).forEach(card=>{
-          card.addEventListener("click", ()=>{
-            const key = card.getAttribute("data-key");
-            const item = recent.find(r => r._key === key);
-            if(item) openHashModal(item);
-          });
-        });
-      }
-
-      qs("#recentPrev").addEventListener("click", ()=>{ recentPage--; renderRecent(); });
-      qs("#recentNext").addEventListener("click", ()=>{ recentPage++; renderRecent(); });
-
-      // Results panel toggle
-      qs("#btnToggleResults").addEventListener("click", ()=> elResults.style.display = (elResults.style.display==="none" ? "flex" : "none"));
-      qs("#btnCloseResults").addEventListener("click", ()=> elResults.style.display="none");
-
-      // Reset
-      qs("#btnReset").addEventListener("click", ()=>{
-        elSearch.value = "";
-        renderResults([]);
-        // Default view (South Korea)
-        map.setView([36.4, 127.9], 7);
-      });
-
-      // Cart modal open/close
-      qs("#btnCartOpen").addEventListener("click", ()=>{ openCartModal(); });
-      qs("#cartClose").addEventListener("click", ()=>{ closeCartModal(); });
-      qs("#hashClose").addEventListener("click", ()=>{
-        closeHashModal();
-        // v1.1.26 요구: 해시모달 X 닫으면 장바구니로 복귀 (장바구니가 열려있던 경우)
-        if(cartOverlay.classList.contains("show")){
-          // already open
-        }
-      });
-
-      cartOverlay.addEventListener("click", (e)=>{ if(e.target===cartOverlay) closeCartModal(); });
-      hashOverlay.addEventListener("click", (e)=>{ if(e.target===hashOverlay) closeHashModal(); });
-
-      function openCartModal(){
-        renderCartModal();
-        cartOverlay.classList.add("show");
-      }
-      function closeCartModal(){
-        cartOverlay.classList.remove("show");
-      }
-      function openHashModal(item){
-        // UI 1차 자율 변경 영역(요청사항 9) - 현재는 임시 기본 구성
-        hashTitle.textContent = item.name || "상세";
-        const img = (item.image_url || item.img || item.image || "").trim();
-        const imgBlock = img
-          ? `<div style="border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);">
-               <img src="${img}" alt="" style="width:100%;display:block;max-height:360px;object-fit:cover;">
-             </div>`
-          : `<div style="border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);height:260px;display:flex;align-items:center;justify-content:center;color:rgba(231,237,247,.35);font-weight:900;">NO IMAGE</div>`;
-
-        hashBody.innerHTML = `
-          ${imgBlock}
-          <div style="display:flex;gap:10px;flex-wrap:wrap;">
-            <div class="pill">업데이트 ${(item.updated_at || item.update || "-")}</div>
-            <div class="pill">${(item.media_group || item.group || "미분류")}</div>
-          </div>
-          <div style="color:rgba(231,237,247,.75);line-height:1.6;font-size:13px;">
-            ${(item.description || item.desc || item.note || "").toString().replace(/\n/g,"<br>")}
-          </div>
-          <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;">
-            <button class="btn mint" id="hashAddCart">제안서 담기</button>
-          </div>
-        `;
-        qs("#hashAddCart").addEventListener("click", ()=>{
-          addToCart(item);
-          // 담기 후 장바구니 모달로
-          closeHashModal();
-          openCartModal();
-        });
-
-        hashOverlay.classList.add("show");
-      }
-      function closeHashModal(){
-        hashOverlay.classList.remove("show");
-      }
-
-      function renderCartModal(){
-        if(!cart.length){
-          cartBody.innerHTML = `<div style="color:rgba(231,237,247,.55);padding:14px 2px;">장바구니가 비어 있습니다.</div>`;
-          return;
-        }
-
-        // v1.1.26 요구: 이미지 크기를 미니모달(팝업) 수준으로, 폰트 크기 조절
-        // 적용 폰트 포인트(대략):
-        // - 제목: 13px, 부제: 12px, 가격: 13px
-        cartBody.innerHTML = cart.map((x, idx)=>{
-          const img = (x.image_url || x.img || x.image || "").trim();
-          const imgHtml = img
-            ? `<img src="${img}" style="width:240px;height:135px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.10);">`
-            : `<div style="width:240px;height:135px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:rgba(231,237,247,.35);font-weight:900;">NO IMAGE</div>`;
-
-          return `
-            <div class="item" data-idx="${idx}" style="cursor:default;">
-              <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-                ${imgHtml}
-                <div style="flex:1;min-width:240px;">
-                  <div style="font-weight:900;font-size:13px;line-height:1.25;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(x.name||"").replace(/"/g,'&quot;')}">${x.name || "-"}</div>
-                  <div style="color:rgba(231,237,247,.65);font-size:12px;line-height:1.4;margin-bottom:8px;">${x.address || x.addr || "-"}</div>
-                  <div style="font-weight:900;color:var(--mint2);font-size:13px;margin-bottom:12px;">${fmtPrice(x.price)}</div>
-
-                  <div style="display:flex;gap:10px;justify-content:flex-end;">
-                    <button class="btn" data-act="open">상세</button>
-                    <button class="btn" data-act="remove">삭제</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("");
-
-        qsa(".item", cartBody).forEach(row=>{
-          const idx = Number(row.getAttribute("data-idx"));
-          qsa("button", row).forEach(btn=>{
-            btn.addEventListener("click", ()=>{
-              const act = btn.getAttribute("data-act");
-              if(act==="open"){
-                // 장바구니 → 상세(해시모달)로 이동, 그리고 X 닫으면 다시 장바구니로 돌아오는 동작은:
-                // 해시모달을 닫을 때 cartOverlay가 show 상태라면 그대로 유지되므로 자연스럽게 복귀됨.
-                openHashModal(cart[idx]);
-              }else if(act==="remove"){
-                cart.splice(idx,1);
-                saveCart();
-                renderCartModal();
-              }
-            });
-          });
-        });
-      }
-
-      // Map init
-      const map = L.map('map', {
-        zoomControl:false,
-        preferCanvas:true
-      });
-
-      const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      });
-      tiles.addTo(map);
-
-      map.setView([36.4, 127.9], 7);
-
-      // Zoom controls
-      qs("#zoomIn").addEventListener("click", ()=> map.zoomIn());
-      qs("#zoomOut").addEventListener("click", ()=> map.zoomOut());
-
-      map.on("zoomend", ()=>{
-        elZoomNum.textContent = String(map.getZoom());
-      });
-      elZoomNum.textContent = String(map.getZoom());
-
-      // Cluster
-      const cluster = L.markerClusterGroup({
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-        // "드래곤볼" 방지 성격: 애니메이션을 줄이면 순간 퍼짐/사라짐 현상이 감소
-        animate: false,
-        animateAddingMarkers: false,
-        spiderfyDistanceMultiplier: 1.0,
-        disableClusteringAtZoom: 18
-      });
-
-      map.addLayer(cluster);
-
-      // --- DATA LOADING (RESTORE CORE FIX) ---
-      // Load data
-      let data = [];
-      const __FETCH_TIMEOUT_MS = 20000;
-
-      async function fetchJsonWithTimeout(url, ms){
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), ms);
-        try{
-          const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
-          if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-          const text = await res.text();
-          try{
-            return JSON.parse(text);
-          }catch(parseErr){
-            throw new Error(`JSON parse error: ${parseErr.message}`);
-          }
-        }finally{
-          clearTimeout(t);
+      let lastErr = null;
+      for(const c of candidates){
+        try {
+          const loaded = await fetchJsonWithTimeout(c.url, __FETCH_TIMEOUT_MS);
+          const norm = normalizeData(loaded);
+          if (!norm) throw new Error("data json root must be Array OR an object with items[]/data[]/points[]");
+          window.__DATA_SOURCE = c.label;
+          console.log("[DATA] loaded via", c.label, c.url, "(items:", norm.length, ")");
+          return norm;
+        } catch (err) {
+          lastErr = err;
+          console.warn("[DATA] failed", c.label, c.url, err);
         }
       }
 
-      async function loadDataJson(){
-        // Candidate URLs (try in order)
-        const baseDir = location.href.replace(/[?#].*$/, "").replace(/\/[^\/]*$/, "/");
-        const candidates = [
-          { label: "relative", url: "data.json" },
-          { label: "dot-relative", url: "./data.json" },
-          { label: "baseDir", url: baseDir + "data.json" },
-          // Fallbacks (in case GitHub Pages path or cache gets weird)
-          { label: "raw-github", url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data.json" },
-          { label: "jsdelivr", url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data.json" },
-        ];
+      const msg =
+        "데이터(JSON) 로드 실패.\n" +
+        "1) index.html과 같은 폴더에 data_public.json 또는 data.json 이 있는지 확인\n" +
+        "2) GitHub Pages 배포가 최신 커밋을 반영했는지 확인(몇 분 지연 가능)\n" +
+        "3) 파일명이 대소문자까지 정확한지 확인\n\n" +
+        "마지막 에러: " + (lastErr ? (lastErr.message || String(lastErr)) : "unknown");
+      alert(msg);
+      return [];
+    } catch(e){
+      alert("데이터 로드 중 예외: " + (e.message || String(e)));
+      return [];
+    }
+  }
 
-        let lastErr = null;
-        for(const c of candidates){
-          try{
-            const loaded = await fetchJsonWithTimeout(c.url, __FETCH_TIMEOUT_MS);
-            console.log("[DATA] loaded via", c.label, c.url, "(items:", Array.isArray(loaded) ? loaded.length : "n/a", ")");
-            return loaded;
-          }catch(err){
-            lastErr = err;
-            console.warn("[DATA] load failed:", c.label, c.url, String(err && err.message ? err.message : err));
-          }
+  const map = L.map("map", {
+    zoomControl:false,
+    preferCanvas:true
+  }).setView([36.5, 127.8], 7);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+
+  const cluster = L.markerClusterGroup({
+    chunkedLoading: true,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    removeOutsideVisibleBounds: true,
+  });
+  map.addLayer(cluster);
+
+  const zoomNum = document.getElementById("zoomNum");
+  function updateZoomUI(){ zoomNum.textContent = String(map.getZoom()); }
+  map.on("zoomend", updateZoomUI);
+  updateZoomUI();
+
+  document.getElementById("zoomIn").onclick = () => map.zoomIn();
+  document.getElementById("zoomOut").onclick = () => map.zoomOut();
+
+  const q = document.getElementById("q");
+  const btnSearch = document.getElementById("btnSearch");
+  const btnReset = document.getElementById("btnReset");
+
+  const resultList = document.getElementById("resultList");
+  const resultCount = document.getElementById("resultCount");
+
+  const recentGrid = document.getElementById("recentGrid");
+  const recentNow = document.getElementById("recentNow");
+  const recentMax = document.getElementById("recentMax");
+  const recentPrev = document.getElementById("recentPrev");
+  const recentNext = document.getElementById("recentNext");
+  const recentPage = document.getElementById("recentPage");
+  const recentPageMax = document.getElementById("recentPageMax");
+
+  const cartCount = document.getElementById("cartCount");
+
+  const RECENT_LIMIT = 4;
+  recentMax.textContent = String(RECENT_LIMIT);
+
+  const LS_RECENT = "frontier_recent_v1";
+  const LS_CART = "frontier_cart_v1";
+
+  function safeParse(json, fallback){
+    try{ return JSON.parse(json); }catch{ return fallback; }
+  }
+
+  function loadRecent(){
+    return safeParse(localStorage.getItem(LS_RECENT) || "[]", []);
+  }
+  function saveRecent(arr){
+    localStorage.setItem(LS_RECENT, JSON.stringify(arr.slice(0, RECENT_LIMIT)));
+  }
+
+  function loadCart(){
+    return safeParse(localStorage.getItem(LS_CART) || "[]", []);
+  }
+  function saveCart(arr){
+    localStorage.setItem(LS_CART, JSON.stringify(arr));
+  }
+  function updateCartUI(){
+    cartCount.textContent = String(loadCart().length);
+  }
+
+  let __recentPage = 1;
+  const RECENT_PAGE_SIZE = 4;
+
+  function renderRecent(){
+    const arr = loadRecent();
+    recentNow.textContent = String(arr.length);
+
+    const pageMax = Math.max(1, Math.ceil(arr.length / RECENT_PAGE_SIZE));
+    __recentPage = Math.min(__recentPage, pageMax);
+    recentPage.textContent = String(__recentPage);
+    recentPageMax.textContent = String(pageMax);
+
+    const start = (__recentPage - 1) * RECENT_PAGE_SIZE;
+    const pageItems = arr.slice(start, start + RECENT_PAGE_SIZE);
+
+    recentGrid.innerHTML = "";
+    pageItems.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "recentItem";
+      el.innerHTML = `
+        <div class="thumb">${item.thumb ? `<img src="${item.thumb}" alt="">` : "NO IMAGE"}</div>
+        <div>
+          <div class="title" title="${escapeHtml(item.title||"")}">${escapeHtml(item.title||"")}</div>
+          <div class="price">${formatPrice(item.price)}</div>
+        </div>
+      `;
+      el.onclick = () => focusItem(item, { zoom: 14, glow: true, pin: true });
+      recentGrid.appendChild(el);
+    });
+  }
+
+  recentPrev.onclick = () => { __recentPage = Math.max(1, __recentPage - 1); renderRecent(); };
+  recentNext.onclick = () => { __recentPage = Math.min(Number(recentPageMax.textContent), __recentPage + 1); renderRecent(); };
+
+  function formatPrice(p){
+    if(p === null || p === undefined || p === "") return "문의";
+    const n = Number(p);
+    if(Number.isFinite(n)){
+      return n.toLocaleString("ko-KR") + "원";
+    }
+    return String(p);
+  }
+
+  function escapeHtml(s){
+    return String(s)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#039;");
+  }
+
+  function addRecent(item){
+    const arr = loadRecent().filter(x => x && x.id !== item.id);
+    arr.unshift(pickRecent(item));
+    saveRecent(arr);
+    __recentPage = 1;
+    renderRecent();
+  }
+
+  function pickRecent(item){
+    return {
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      lat: item.lat,
+      lng: item.lng,
+      thumb: item.thumb || null,
+      address: item.address || ""
+    };
+  }
+
+  function addToCart(item){
+    const cart = loadCart();
+    if(!cart.find(x => x && x.id === item.id)){
+      cart.unshift({ id:item.id, title:item.title, price:item.price, thumb:item.thumb||null });
+      saveCart(cart);
+      updateCartUI();
+    }
+  }
+
+  function focusItem(item, opt={}){
+    const zoom = opt.zoom ?? Math.min(16, Math.max(10, map.getZoom()));
+    if(Number.isFinite(item.lat) && Number.isFinite(item.lng)){
+      map.setView([item.lat, item.lng], zoom, { animate:true });
+    }
+    if(opt.glow && item.__marker){
+      item.__marker._icon && item.__marker._icon.classList.add("glow");
+      setTimeout(() => {
+        item.__marker._icon && item.__marker._icon.classList.remove("glow");
+      }, 900);
+    }
+    if(opt.pin && item.__marker){
+      item.__marker.openPopup();
+    }
+  }
+
+  function makePopupHtml(item){
+    const title = escapeHtml(item.title||"");
+    const addr = escapeHtml(item.address||"");
+    const price = formatPrice(item.price);
+
+    return `
+      <div style="min-width:220px">
+        <div style="font-weight:950;font-size:14px">${title}</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:6px;line-height:1.35">${addr}</div>
+        <div style="color:var(--mint);font-weight:950;margin-top:8px">${price}</div>
+        <button class="miniBtn" data-addcart="1">담기</button>
+      </div>
+    `;
+  }
+
+  function renderResults(items){
+    resultCount.textContent = `${items.length}개`;
+    resultList.innerHTML = "";
+    items.forEach(item => {
+      const el = document.createElement("div");
+      el.className = "card";
+      el.innerHTML = `
+        <div class="cTitle" title="${escapeHtml(item.title||"")}">${escapeHtml(item.title||"")}</div>
+        <div class="cAddr">${escapeHtml(item.address||"")}</div>
+        <div class="cPrice">${formatPrice(item.price)}</div>
+      `;
+      el.onclick = () => focusItem(item, { zoom: 14, glow: true, pin: true });
+      resultList.appendChild(el);
+    });
+  }
+
+  function normalizeItem(raw){
+    const lat = Number(raw.lat ?? raw.latitude);
+    const lng = Number(raw.lng ?? raw.longitude ?? raw.lon);
+    return {
+      id: raw.id ?? raw.media_id ?? raw.uid ?? (raw.title + "_" + lat + "_" + lng),
+      title: raw.title ?? raw.name ?? raw.media_name ?? "",
+      address: raw.address ?? raw.addr ?? "",
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null,
+      price: raw.price ?? raw.price_krw ?? raw.cost ?? "",
+      thumb: raw.thumb ?? raw.thumbnail ?? raw.image_url ?? raw.img ?? null,
+      raw
+    };
+  }
+
+  function doSearch(all, keyword){
+    const kw = (keyword||"").trim().toLowerCase();
+    if(!kw) return [];
+
+    const hits = all.filter(item => {
+      const t = (item.title||"").toLowerCase();
+      const a = (item.address||"").toLowerCase();
+      return t.includes(kw) || a.includes(kw);
+    });
+
+    renderResults(hits);
+
+    if(hits.length){
+      const first = hits[0];
+      focusItem(first, { zoom: 12, glow: true, pin: false });
+    }
+    return hits;
+  }
+
+  btnSearch.onclick = () => doSearch(window.__ALL_ITEMS || [], q.value);
+  q.addEventListener("keydown", (e)=>{ if(e.key==="Enter") btnSearch.click(); });
+
+  btnReset.onclick = () => {
+    q.value = "";
+    renderResults([]);
+    map.setView([36.5, 127.8], 7);
+  };
+
+  (async function init(){
+    console.log("Frontier DOOH", VERSION);
+    updateCartUI();
+    renderRecent();
+
+    let data = await loadDataJson();
+    if (!Array.isArray(data) || data.length === 0) {
+      alert("데이터를 불러오지 못했습니다. data_public.json 또는 data.json 이 정상인지 확인하세요.");
+      data = [];
+    }
+
+    const items = data.map(normalizeItem).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
+    window.__ALL_ITEMS = items;
+
+    items.forEach(item => {
+      const m = L.marker([item.lat, item.lng], { title: item.title });
+      m.bindPopup(makePopupHtml(item), { closeButton:true });
+      m.on("click", () => {
+        addRecent(item);
+        // 클릭한 매체를 우상(1번 위치)에 띄우고 빛나게
+        focusItem(item, { zoom: map.getZoom(), glow: true, pin: true });
+      });
+      m.on("popupopen", (e) => {
+        const root = e.popup.getElement();
+        const btn = root && root.querySelector('[data-addcart="1"]');
+        if(btn){
+          btn.onclick = () => {
+            addToCart(item);
+            updateCartUI();
+            btn.textContent = "담김";
+            setTimeout(()=>btn.textContent="담기", 800);
+          };
         }
-
-        const msg =
-          "data.json 로드 실패.\n" +
-          "1) index.html과 같은 폴더에 data.json이 있는지 확인\n" +
-          "2) GitHub Pages 캐시/배포 상태 확인\n\n" +
-          "마지막 에러: " + (lastErr ? (lastErr.message || String(lastErr)) : "unknown");
-        alert(msg);
-        return [];
-      }
-
-      data = await loadDataJson();
-
-      if(!Array.isArray(data)){
-        alert("data.json 형식이 올바르지 않습니다. 배열(Array) 형태여야 합니다.");
-        data = [];
-      }
-
-      // Build markers
-      const markers = [];
-      function glowMarker(marker){
-        // "빛나라" 효과: 간단한 CSS pulse를 marker element에 적용
-        const el = marker.getElement && marker.getElement();
-        if(!el) return;
-        el.style.filter = "drop-shadow(0 0 10px rgba(125,227,198,.95)) drop-shadow(0 0 18px rgba(125,227,198,.55))";
-        el.style.transform = "translate3d(0,0,0) scale(1.12)";
-        setTimeout(()=>{
-          el.style.filter = "";
-          el.style.transform = "";
-        }, 900);
-      }
-
-      function toLatLng(item){
-        const lat = Number(item.lat ?? item.latitude);
-        const lng = Number(item.lng ?? item.lon ?? item.longitude);
-        if(!isFinite(lat) || !isFinite(lng)) return null;
-        return [lat,lng];
-      }
-
-      function makePopup(item, marker){
-        const div = document.createElement("div");
-        div.className = "miniPopup";
-        div.innerHTML = `
-          <div class="pName">${item.name || "-"}</div>
-          <div class="pPrice">${fmtPrice(item.price)}</div>
-          <div class="pBtns">
-            <button data-act="open">상세</button>
-            <button data-act="cart">담기</button>
-          </div>
-        `;
-        div.querySelectorAll("button").forEach(btn=>{
-          btn.addEventListener("click", ()=>{
-            const act = btn.getAttribute("data-act");
-            if(act==="open"){
-              openHashModal(item);
-            }else if(act==="cart"){
-              addToCart(item);
-            }
-          });
-        });
-        return div;
-      }
-
-      // Create markers and attach events
-      data.forEach(item=>{
-        const ll = toLatLng(item);
-        if(!ll) return;
-
-        const m = L.marker(ll);
-        m.on("click", ()=>{
-          // 요구: 핀 클릭시 해당 매체가 1번 위치(우상)으로 이동 + 빛나라
-          // 여기서는 "검색결과 패널 상단(첫번째)"로 올리는 동작을 수행
-          pushRecent(item);
-          glowMarker(m);
-
-          // 우측 리스트를 현재 클릭한 항목 단일로 보여주며 1번에 고정
-          renderResults([item], {pinFocus:true});
-        });
-
-        m.on("mouseover", ()=>{
-          // 몰려있는 핀 개별 발광은 markercluster 내부 상태/아이콘 관리에 따라 제한이 있으나
-          // 개별 마커 엘리먼트가 있는 경우 glow를 적용
-          glowMarker(m);
-        });
-
-        m.bindPopup(makePopup(item, m));
-        cluster.addLayer(m);
-        markers.push({ item, marker:m });
       });
+      item.__marker = m;
+      cluster.addLayer(m);
+    });
 
-      // Cluster count update
-      function updateClusterCount(){
-        const cnt = cluster.getVisibleParent ? cluster.getVisibleParent({}).length : cluster.getLayers().length;
-        elClusterCount.textContent = String(cluster.getLayers().length || 0);
-      }
-      updateClusterCount();
+    renderResults([]);
 
-      // Render results
-      function renderResults(items, opts={}){
-        const arr = Array.isArray(items) ? items : [];
-        elResultsCount.textContent = String(arr.length);
+  })();
 
-        elResultsList.innerHTML = arr.map((x, idx)=>{
-          return `
-            <div class="item" data-idx="${idx}">
-              <div class="name">${x.name || "-"}</div>
-              <div class="sub">${x.address || x.addr || "-"}</div>
-              <div class="price">${fmtPrice(x.price)}</div>
-            </div>
-          `;
-        }).join("");
-
-        qsa(".item", elResultsList).forEach(row=>{
-          row.addEventListener("click", ()=>{
-            const idx = Number(row.getAttribute("data-idx"));
-            const item = arr[idx];
-            if(!item) return;
-
-            // 지도 이동 + 확대(기본 로직)
-            const ll = toLatLng(item);
-            if(ll){
-              map.setView(ll, Math.max(map.getZoom(), 12), { animate:true });
-            }
-            pushRecent(item);
-            openHashModal(item);
-          });
-        });
-
-        // 1번 위치(우상)에 “고정”: 패널 자체는 항상 우상단이므로 별도 이동 불필요
-        // 단, 스크롤 잔상 방지 위해 리스트 스크롤을 항상 최상단으로 리셋 (요청사항)
-        elResultsList.scrollTop = 0;
-      }
-
-      // Search
-      function normalize(s){ return (s||"").toString().trim().toLowerCase(); }
-
-      function searchData(q){
-        const nq = normalize(q);
-        if(!nq) return [];
-        return data.filter(x=>{
-          const name = normalize(x.name);
-          const addr = normalize(x.address || x.addr);
-          const group = normalize(x.media_group || x.group);
-          return name.includes(nq) || addr.includes(nq) || group.includes(nq);
-        }).slice(0, 200);
-      }
-
-      function computeZoomForResults(items){
-        // v1.1.26 개선요구: 검색 시 무조건 12 고정이 아니라,
-        // 결과들의 분포를 보고 "적절한 줌"을 준다.
-        const llList = items.map(toLatLng).filter(Boolean);
-        if(llList.length===0) return {center:null, zoom:12};
-        if(llList.length===1) return {center:llList[0], zoom:14};
-
-        const lats = llList.map(v=>v[0]);
-        const lngs = llList.map(v=>v[1]);
-        const minLat=Math.min(...lats), maxLat=Math.max(...lats);
-        const minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
-        const center=[(minLat+maxLat)/2, (minLng+maxLng)/2];
-
-        // spread 기반 줌 추정(대략)
-        const dLat = Math.abs(maxLat-minLat);
-        const dLng = Math.abs(maxLng-minLng);
-        const spread = Math.max(dLat,dLng);
-
-        let zoom = 12;
-        if(spread < 0.002) zoom = 16;
-        else if(spread < 0.01) zoom = 15;
-        else if(spread < 0.03) zoom = 14;
-        else if(spread < 0.08) zoom = 13;
-        else zoom = 12;
-
-        return {center, zoom};
-      }
-
-      elSearch.addEventListener("keydown", (e)=>{
-        if(e.key === "Enter"){
-          const q = elSearch.value;
-          const results = searchData(q);
-          renderResults(results);
-
-          // 지도 이동
-          const {center, zoom} = computeZoomForResults(results);
-          if(center){
-            map.setView(center, zoom, { animate:true });
-          }
-
-          // 우측 패널 오픈 보장
-          elResults.style.display = "flex";
-        }
-      });
-
-      // Initial render
-      renderRecent();
-      loadCart();
-
-      // On drag map: (요청) 지도 드래그 시 리스트 스크롤을 최상단으로 고정해 잔상 제거
-      map.on("movestart", ()=>{
-        elResultsList.scrollTop = 0;
-      });
-
-      console.log("Frontier DOOH", VERSION, "loaded. items:", data.length);
-    })();
-  </script>
+})();
+</script>
 </body>
 </html>
