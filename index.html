@@ -101,32 +101,6 @@
     }
     .pill b{color:var(--mint); font-weight:1000}
 
-    /* ===== LOAD ERROR BANNER ===== */
-    .loadError{
-      display:none;
-      position:sticky;
-      top:calc(var(--topbarH) + 54px);
-      z-index:5600;
-      margin:0 16px 0;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,70,70,.55);
-      background:rgba(60,0,0,.35);
-      color:#ffdede;
-      font-weight:900;
-      font-size:12px;
-      box-shadow:0 18px 44px rgba(0,0,0,.45);
-    }
-    .loadError small{
-      display:block;
-      margin-top:6px;
-      color:rgba(255,255,255,.75);
-      font-weight:800;
-      font-size:11px;
-      line-height:1.35;
-      white-space:pre-wrap;
-    }
-
     /* ===== FILTER BAR ===== */
     .filtersRow{
       flex:0 0 auto;
@@ -910,11 +884,6 @@
     </div>
   </div>
 
-  <div class="loadError" id="loadError">
-    데이터 로드 실패
-    <small id="loadErrorDetail"></small>
-  </div>
-
   <div class="app">
     <div class="panel" id="panel">
       <div class="statsSticky">
@@ -1037,13 +1006,16 @@
   </div>
 
 <script>
-  /* ===== v1.1.20 =====
-     - HOME_ZOOM: 8
-     - 홈 초기 위치: 고정 bounds (north/south/west/east)
-     - 카테고리 변경 시 지도 위치/줌 유지 (fitBounds 금지)
-     - data 로드 실패 시 앱이 죽지 않도록 방어 + 메시지 출력
-     - 드래그 후 자동으로 줌이 7로 떨어지는 “강제 복귀 로직” 제거
-  */
+  /* ===========================
+     v1.1.20 변경 요약
+     1) 홈(초기화) bounds: 위로 7%, 좌로 10% 이동 반영
+        - north: 39.955 / south: 33.455 / west: 122.8 / east: 129.8
+     2) "슬롯머신/롤링" 체감 제거:
+        - hover 시 리스트 자동 스크롤 금지
+        - scrollIntoView smooth 제거(즉시 이동)
+        - 클릭(미니팝업/상세)에서만 필요한 경우에만 즉시 스크롤
+     3) 줌 8 유지(사용자 드래그/줌 후 강제 7로 내려가는 로직 없음)
+     =========================== */
 
   const DATA_URL = "./data_public.json";
 
@@ -1055,20 +1027,16 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  /* v1.1.20: HOME_ZOOM = 8 */
+  /* v1.1.20: 줌 8 */
   const HOME_ZOOM = 8;
 
-  /* v1.1.20: 홈 초기 위치(bounds 고정) */
+  /* v1.1.20: 초기화 범위(현 기준에서 위로 7%, 좌로 10% 이동) */
   const HOME_BOUNDS_FIXED = {
-    north: 39.5,
-    south: 33.0,
-    west: 123.5,
-    east: 130.5
+    north: 39.955,
+    south: 33.455,
+    west: 122.800,
+    east: 129.800
   };
-  const HOME_CENTER = [
-    (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2,
-    (HOME_BOUNDS_FIXED.east  + HOME_BOUNDS_FIXED.west ) / 2
-  ];
 
   let ALL = [];
   let map = null;
@@ -1118,26 +1086,7 @@
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
-  /* v1.1.20: 홈 적용 토큰 (resize 등에서 중복 적용 방지용) */
-  let homeApplyToken = 0;
-  let homeApplying = false;
-
   const $ = (id) => document.getElementById(id);
-
-  function showLoadError(msg, detail){
-    const box = $("loadError");
-    const det = $("loadErrorDetail");
-    if (!box || !det) return;
-    det.textContent = (detail || "").toString().trim();
-    box.firstChild && (box.firstChild.textContent = msg);
-    box.style.display = "block";
-  }
-  function hideLoadError(){
-    const box = $("loadError");
-    if (!box) return;
-    box.style.display = "none";
-    $("loadErrorDetail").textContent = "";
-  }
 
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -1161,6 +1110,7 @@
   }
   function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
 
+  /* 단어(토큰) 추출 */
   function extractTokens(text){
     const s = (text ?? "").toString();
     const m = s.match(/[가-힣A-Za-z0-9]+/g);
@@ -1204,6 +1154,7 @@
     return (t ?? "").toString().replace(/(역)$/,"");
   }
 
+  /* 짧은 지명 보호(“대구”가 “해운대구”에 포함되는 오탐 차단) */
   const PROTECT_SHORT_NORM = new Set([
     searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
     searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
@@ -1442,6 +1393,7 @@
     return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
   }
 
+  /* 토큰 단위 prefix 중심 매칭 + 짧은 지명 포함매칭 제한 */
   function tokenMatchItem(tok, it){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return true;
@@ -1455,6 +1407,7 @@
     const tns = it._tokNorms || [];
     const tjs = it._tokJamos || [];
 
+    // 1) 토큰 prefix
     if (qn){
       for (const tn of tns){
         if (tn && tn.startsWith(qn)) return true;
@@ -1466,6 +1419,7 @@
       }
     }
 
+    // 2) 토큰 contains (긴 쿼리만 + 보호 대상 제외)
     if (!protectedShort){
       if (qn && qn.length >= 3){
         for (const tn of tns){
@@ -1479,13 +1433,16 @@
       }
     }
 
+    // 3) 레거시 블롭 contains (긴 쿼리만 + 보호 대상 제외)
     if (!protectedShort){
       if (qj && qj.length >= 6 && it._jamo && it._jamo.includes(qj)) return true;
       if (qn && qn.length >= 3 && it._blob && it._blob.includes(qn)) return true;
     }
 
+    // 4) 행정구역 토큰은 느슨 변형 금지
     if (isAdminSuffixToken(raw)) return false;
 
+    // 5) 변형 토큰 허용(도로/역 등) - 보호 대상 제외
     if (!protectedShort){
       const vars = tokenVariantsForLoose(raw);
       const blob = it._blob || "";
@@ -1530,30 +1487,34 @@
     };
   }
 
-  /* v1.1.20: 홈뷰는 “고정 center + zoom 8” (줌 강제복귀/드래그 개입 없음) */
+  /* v1.1.20: 초기화는 고정 bounds를 "딱" 적용 (flyToBounds 사용하지 않음) */
+  function getFixedHomeBounds(){
+    const b = L.latLngBounds(
+      [HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west],
+      [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]
+    );
+    return b.isValid() ? b : null;
+  }
+
   function applyHomeView(animate){
     if (!map) return;
 
-    homeApplyToken += 1;
-    const myToken = homeApplyToken;
-    homeApplying = true;
+    const pad = getHomePadding();
+    const bb = getFixedHomeBounds();
 
-    try{
-      if (animate){
-        map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.85 });
-      }else{
-        map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
-      }
-    }catch(_){}
+    if (bb){
+      // "딱" 맞춰서 한 번에 이동: animate=false 권장
+      map.fitBounds(bb, { ...pad, animate: !!animate, maxZoom: HOME_ZOOM });
+    }else{
+      map.setView([36.25, 127.8], HOME_ZOOM, { animate: !!animate });
+    }
 
-    map.once("moveend", () => {
-      if (!homeApplying || homeApplyToken !== myToken) return;
-      homeApplying = false;
-      updateZoomUI();
-      viewportUpdate();
-    });
+    // 홈뷰 적용 직후 UI 갱신
+    updateZoomUI();
+    viewportUpdate();
   }
 
+  /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -1615,7 +1576,8 @@
     if (!el) return;
     el.classList.add("isActive");
     if (doScroll){
-      el.scrollIntoView({ block:"center", behavior:"smooth" });
+      // v1.1.20: smooth 제거(롤링 체감 제거) => 즉시 이동
+      el.scrollIntoView({ block:"center", behavior:"auto" });
     }
   }
   function unhighlightCard(key){
@@ -1741,6 +1703,8 @@
 
     clearAllCardHighlights();
     ensureCardVisible(it._key);
+
+    // v1.1.20: 클릭(미니팝업)에서는 "즉시" 스크롤만 허용
     highlightCard(it._key, true);
 
     try{
@@ -1779,9 +1743,10 @@
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
 
+        // v1.1.20 핵심: hover에서는 리스트 자동 스크롤 금지(롤링 체감 제거)
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key, true);
+        highlightCard(it._key, false); // doScroll=false
       });
 
       m.on("mouseout", () => {
@@ -1792,6 +1757,7 @@
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
 
+      // 클릭: 1회=미니팝업, 동일 핀 재클릭=상세
       m.on("click", (ev) => {
         try{
           if (ev && ev.originalEvent){
@@ -1932,6 +1898,7 @@
     const list = $("list");
     let arr = items.slice();
 
+    // 랜덤/섞기 정렬 유지(법적 리스크 완화 목적) — seed 기반 stable shuffle
     if (isNeutralState()){
       arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
@@ -1970,6 +1937,7 @@
         highlightCard(it._key, false);
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
+        // v1.1.20: hover에서는 자동 스크롤 금지
       });
       el.addEventListener("mouseleave", () => {
         unhighlightCard(it._key);
@@ -2183,27 +2151,6 @@
     return true;
   }
 
-  function fullRender(shouldFit){
-    const base = getFilteredBase();
-    curBase = base;
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-
-    renderMarkers(base);
-    viewportUpdate();
-
-    if (shouldFit && base.length){
-      const bb = boundsAll(base);
-      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
-    }
-  }
-
   function viewportUpdate(){
     if (!map) return;
     const b = map.getBounds();
@@ -2235,7 +2182,8 @@
 
   function updateZoomUI(){
     if (!map) return;
-    $("zVal").textContent = map.getZoom();
+    const z = map.getZoom();
+    $("zVal").textContent = z;
   }
 
   function showClusterHint(latlng){
@@ -2252,8 +2200,29 @@
     hint.style.display = "none";
   }
 
+  function fullRender(shouldFit){
+    const base = getFilteredBase();
+    curBase = base;
+
+    if (currentOpenKey){
+      const exists = base.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
+
+    renderMarkers(base);
+    viewportUpdate();
+
+    if (shouldFit && base.length){
+      const bb = boundsAll(base);
+      if (bb) map.fitBounds(bb, { padding:[60,60], maxZoom: 14 });
+    }
+  }
+
   function buildMap(){
-    map = L.map("map", { zoomControl:false }).setView(HOME_CENTER, HOME_ZOOM);
+    map = L.map("map", { zoomControl:false }).setView([36.25, 127.8], HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
@@ -2282,6 +2251,7 @@
       hideClusterHint();
     });
 
+    // 클러스터 클릭: 자연스럽게 확대/중앙 이동
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2498,7 +2468,7 @@
     const qVal = $("q").value.trim();
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
-    fullRender(true); // 검색은 fit 허용
+    fullRender(true);
   }
 
   function resetAll(){
@@ -2511,40 +2481,15 @@
 
     shuffleSeed = Math.random();
 
-    applyHomeView(true);
+    applyHomeView(false); // v1.1.20: 초기화는 "딱" 맞춤(기본 animate=false)
     fullRender(false);
-  }
-
-  async function safeFetchJson(url){
-    const res = await fetch(url, { cache:"no-store" });
-
-    const ctype = (res.headers.get("content-type") || "").toLowerCase();
-
-    if (!res.ok){
-      const txt = await res.text().catch(()=> "");
-      throw new Error(`HTTP ${res.status} ${res.statusText}\n${txt.slice(0, 300)}`);
-    }
-
-    // GitHub Pages에서 404가 나면 HTML이 올 때가 많음 -> JSON인지 확인
-    if (!ctype.includes("application/json") && !ctype.includes("text/json") && !ctype.includes("application/geo+json")){
-      const txt = await res.text().catch(()=> "");
-      const head = txt.slice(0, 80).trim();
-      if (head.startsWith("<")){
-        throw new Error(`응답이 JSON이 아니라 HTML입니다. (경로/파일명 확인 필요)\nURL: ${url}`);
-      }
-      // content-type이 비어있어도 JSON일 수 있으니 재시도
-      try{ return JSON.parse(txt); }catch(_){
-        throw new Error(`JSON 파싱 실패 (content-type: ${ctype || "없음"})\nURL: ${url}`);
-      }
-    }
-
-    return await res.json();
   }
 
   async function init(){
     updateStickyHeights();
     window.addEventListener("resize", () => {
       updateStickyHeights();
+      // 화면 크기 변경 시 패딩이 달라질 수 있으므로 중립 상태면 홈뷰를 다시 맞춤(딱)
       if (isNeutralState() && map){
         applyHomeView(false);
       }
@@ -2568,7 +2513,76 @@
       openDetail(it, true);
     }, true);
 
-    // Zoom UI init (데이터 로드 실패해도 항상 동작)
+    // 데이터 로드 (로드 실패 방어 + UI 유지)
+    let json = null;
+    try{
+      const res = await fetch(DATA_URL, { cache:"no-store" });
+      if (!res.ok){
+        throw new Error(`DATA HTTP ${res.status}`);
+      }
+      json = await res.json();
+    }catch(err){
+      console.error("[DATA LOAD FAIL]", err);
+
+      // UI는 유지하고, 상단 pill에 에러를 명시
+      $("pillLoaded").textContent = "0";
+      $("pillLoaded").style.color = "#ff8a8a";
+      $("pillLoaded").title = "data_public.json 로드 실패. Network 탭에서 data_public.json 상태/Response 확인 필요.";
+
+      setCatHighOptions();
+      buildSuggestPool();
+      loadRecentAndCart();
+      renderRecentPanel();
+      renderCartSummary();
+
+      // 홈뷰만 잡아두고 종료
+      applyHomeView(false);
+      updateZoomUI();
+      return;
+    }
+
+    const items = Array.isArray(json) ? json : (json.items || []);
+
+    const pts = items.filter(x => {
+      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
+      return true;
+    });
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = makeKey(it, idx);
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._jamo = toJamo(row._blobText);
+
+      // 토큰 캐시
+      const toks = extractTokens(row._blobText);
+      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
+
+      return row;
+    });
+
+    applyOverlapJitter(ALL);
+
+    itemByKey.clear();
+    ALL.forEach(it => itemByKey.set(it._key, it));
+
+    $("pillLoaded").textContent = ALL.length;
+
+    setCatHighOptions();
+    buildSuggestPool();
+
+    // load recent/cart
+    loadRecentAndCart();
+    renderRecentPanel();
+    renderCartSummary();
+
+    // 최초 홈뷰 적용(딱)
+    applyHomeView(false);
+
+    // Zoom UI init
     updateZoomUI();
     $("zIn").addEventListener("click", ()=> map.zoomIn());
     $("zOut").addEventListener("click", ()=> map.zoomOut());
@@ -2597,8 +2611,7 @@
     });
 
     // filters
-    // v1.1.20: 카테고리 변경 시 지도 위치/줌 유지 => fit 금지
-    $("catHigh").addEventListener("change", () => fullRender(false));
+    $("catHigh").addEventListener("change", () => fullRender(true));
 
     const q = $("q");
     const qBox = $("qSuggest");
@@ -2615,6 +2628,7 @@
       }
     });
 
+    // 입력 시: 지도/리스트 갱신 금지, 자동완성만 업데이트
     let sugTimer = null;
     q.addEventListener("input", () => {
       clearTimeout(sugTimer);
@@ -2635,6 +2649,7 @@
         sugIndex = -1;
         return;
       }
+      // 백스페이스 초기화: 입력창이 비어있고 backspace면 reset과 동일
       if (e.key === "Backspace" && !q.value){
         e.preventDefault();
         resetAll();
@@ -2646,6 +2661,7 @@
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
+    // 입력창 밖 Backspace 뒤로가기 방지 + reset 처리
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Backspace") return;
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
@@ -2668,87 +2684,20 @@
       }
     });
 
-    // 카테고리 옵션은 데이터 없어도 표시
-    setCatHighOptions();
-
-    // load recent/cart (데이터 없어도 UI는 유지)
-    loadRecentAndCart();
-    renderRecentPanel();
-    renderCartSummary();
-
-    // 홈뷰 적용
-    applyHomeView(false);
-
-    // ===== 데이터 로드 (방어) =====
-    try{
-      hideLoadError();
-
-      const json = await safeFetchJson(DATA_URL);
-      const items = Array.isArray(json) ? json : (json.items || []);
-
-      const pts = items.filter(x => {
-        if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-        if (x.lat < 32.0 || x.lat > 39.8) return false;
-        if (x.lng < 123.0 || x.lng > 132.5) return false;
-        return true;
-      });
-
-      ALL = pts.map((it, idx) => {
-        const t = assignTaxonomy(it);
-        const key = makeKey(it, idx);
-        const row = { ...it, _key: key, _high: t.high, _low: t.low };
-        row._blobText = makeSearchText(row);
-        row._blob = searchNorm(row._blobText);
-        row._jamo = toJamo(row._blobText);
-
-        const toks = extractTokens(row._blobText);
-        row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
-        row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
-
-        return row;
-      });
-
-      applyOverlapJitter(ALL);
-
-      itemByKey.clear();
-      ALL.forEach(it => itemByKey.set(it._key, it));
-
-      $("pillLoaded").textContent = ALL.length;
-
-      buildSuggestPool();
-
-      // 최초 렌더
-      fullRender(false);
-      openDetailByHash();
-
-    }catch(err){
-      ALL = [];
-      itemByKey.clear();
-      markerByKey.clear();
-
-      $("pillLoaded").textContent = "0";
-
-      // 지도/줌 UI는 유지, 에러 메시지 표시
-      const msg = "데이터 로드 실패 (data_public.json)";
-      const detail = (err && err.message) ? String(err.message) : String(err || "unknown error");
-      showLoadError(msg, detail);
-
-      // 빈 렌더로 상태 반영
-      curBase = [];
-      curInView = [];
-      $("mAll").textContent = "0";
-      $("mFilter").textContent = "0";
-      $("mInView").textContent = "0";
-      $("list").innerHTML = "";
-      $("empty").style.display = "block";
-      $("moreHint").style.display = "none";
-
-      try{ markers && markers.clearLayers && markers.clearLayers(); }catch(_){}
-      updateZoomUI();
-    }
+    // 최초 렌더
+    fullRender(false);
+    openDetailByHash();
   }
 
   init();
+
+  /* ========== 변경사항 확인 요청(업무지시 #1 반영) ==========
+     아래 4가지를 확인 후 결과를 알려주세요.
+     1) 초기화 버튼 클릭 시: 지도가 새 bounds(39.955/33.455/122.8/129.8) 느낌으로 "딱" 이동하는가?
+     2) 지도에서 핀/클러스터에 마우스만 올릴 때: 리스트가 스르륵 자동 스크롤(롤링)하지 않는가?
+     3) 클릭(핀 클릭/상세 열기)에서는 리스트가 필요 시 즉시(부드럽지 않게) 이동하는가?
+     4) 드래그/줌 조작 후에도 줌이 임의로 7로 내려가지는 않는가?
+  ========================================================= */
 </script>
 </body>
 </html>
