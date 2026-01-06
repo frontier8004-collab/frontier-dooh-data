@@ -5,1790 +5,1090 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Frontier DOOH 전국 DB</title>
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <style>
+    :root{
+      --bg:#0b0d10;
+      --panel:#12161b;
+      --panel2:#0f1318;
+      --stroke:rgba(255,255,255,.08);
+      --stroke2:rgba(255,255,255,.12);
+      --text:#e7edf7;
+      --muted:rgba(231,237,247,.65);
+      --mint:#7de3c6;
+      --mint2:#a2decc;
+      --danger:#ff5c5c;
+      --radius:18px;
+      --shadow:0 20px 50px rgba(0,0,0,.45);
+    }
+
     @import url('https://webfontworld.github.io/NanumSquare/NanumSquare.css');
 
-    :root{
-      --bg:#0f1011;
-      --panel:#121416;
-      --panel2:#15181b;
-      --line:rgba(255,255,255,.10);
-      --text:#e9eef6;
-      --muted:#9aa7b5;
-      --mint:#a2decc;
-      --mint2:rgba(162,222,204,.25);
-      --shadow:0 14px 40px rgba(0,0,0,.45);
-      --r:16px;
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text);}
+    body{font-family:'NanumSquare',system-ui,-apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden;}
 
-      /* ===== v1.1.26 Building width: "40% 줄임" 반영 =====
-         기존을 420px 가정 → 252px(약 -40%).
-         필요시 여기만 조정하면 전체 UI가 함께 줄어듭니다.
-      */
-      --buildingW: 252px;
-      --buildingPad: 10px;
+    #app{position:fixed; inset:0; display:flex; align-items:stretch; justify-content:stretch;}
 
-      /* 장바구니 모달 폰트(요구사항 #7: "폰트 포인트 얼마인지") */
-      --cartTitlePx: 15px;    /* = 11.25pt */
-      --cartMetaPx: 12px;     /* = 9pt */
-      --cartPricePx: 13px;    /* = 9.75pt */
-      --cartBtnPx: 12px;      /* = 9pt */
-
-      /* 해시모달 폰트(1차 자율) */
-      --hashTitlePx: 20px;
-      --hashBodyPx: 13px;
-      --hashChipPx: 12px;
-    }
-
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family:'NanumSquare',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      overflow:hidden;
-    }
-
-    /* Layout */
-    #app{
-      position:fixed; inset:0;
-      display:flex;
-    }
+    /* Map */
     #map{
+      position:relative;
       flex:1;
       height:100%;
-      background:#0b0c0d;
+      z-index:1;
+      background: #000;
     }
 
-    /* Top search bar */
+    /* Floating search bar */
     #topbar{
-      position:fixed;
+      position:absolute;
+      left:50%;
       top:14px;
-      left:14px;
-      right:14px;
-      z-index:1200;
+      transform:translateX(-50%);
+      width:min(980px, calc(100% - 44px));
+      z-index:9999;
       display:flex;
       gap:10px;
       align-items:center;
-      pointer-events:none;
-    }
-    .searchWrap{
-      pointer-events:auto;
-      max-width:720px;
-      width:100%;
-      margin-left:calc(var(--buildingW) + 16px);
-      background:rgba(16,18,20,.82);
-      border:1px solid var(--line);
-      backdrop-filter: blur(10px);
-      border-radius:999px;
       padding:10px 12px;
-      box-shadow: var(--shadow);
-      display:flex;
-      align-items:center;
-      gap:10px;
+      border-radius:999px;
+      background:rgba(18,22,27,.80);
+      border:1px solid var(--stroke);
+      backdrop-filter: blur(10px);
+      box-shadow:0 12px 30px rgba(0,0,0,.35);
     }
-    .searchIcon{
-      width:28px;height:28px;border-radius:999px;
-      display:flex;align-items:center;justify-content:center;
-      border:1px solid var(--line);
-      background:linear-gradient(180deg,rgba(162,222,204,.12),rgba(162,222,204,.02));
-      color:var(--mint);
-      flex:0 0 auto;
-    }
-    #q{
+    #searchInput{
       flex:1;
-      background:transparent;
-      border:0;
-      outline:0;
+      height:40px;
+      padding:0 14px;
+      border-radius:999px;
+      outline:none;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.25);
       color:var(--text);
       font-size:14px;
-      letter-spacing:.2px;
     }
-    #q::placeholder{color:rgba(233,238,246,.5)}
-    .pillBtn{
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-      color:var(--text);
-      padding:8px 12px;
+    #searchInput::placeholder{color:rgba(231,237,247,.45);}
+    .btn{
+      height:40px;
+      padding:0 14px;
       border-radius:999px;
-      font-size:12px;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
       cursor:pointer;
-      transition:.15s transform, .15s background, .15s border-color;
+      font-size:13px;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
       user-select:none;
     }
-    .pillBtn:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.35)}
-    .pillBtn:active{transform:translateY(0)}
-    .pillBtn.mint{
-      background:rgba(162,222,204,.10);
-      border-color:rgba(162,222,204,.35);
-      color:var(--mint);
+    .btn:hover{border-color:var(--stroke2);}
+    .btn.mint{
+      border-color:rgba(125,227,198,.35);
+      box-shadow:0 0 0 1px rgba(125,227,198,.16) inset;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:26px;
+      padding:0 10px;
+      height:24px;
+      border-radius:999px;
+      background:rgba(125,227,198,.14);
+      border:1px solid rgba(125,227,198,.35);
+      color:var(--mint2);
+      font-weight:800;
+      font-size:12px;
     }
 
-    /* Building panel */
-    #building{
-      position:fixed;
-      top:14px;
+    /* Left “building” panel */
+    #side{
+      position:absolute;
       left:14px;
-      width:var(--buildingW);
-      height:calc(100% - 28px);
-      z-index:1300;
-      background:linear-gradient(180deg, rgba(20,22,24,.92), rgba(14,16,18,.86));
-      border:1px solid var(--line);
-      border-radius:22px;
-      box-shadow: var(--shadow);
-      padding:var(--buildingPad);
+      top:14px;
+      bottom:14px;
+      width:320px;
+      max-width:calc(100% - 28px);
+      z-index:9998;
       display:flex;
       flex-direction:column;
       gap:10px;
-      overflow:hidden;
-      backdrop-filter: blur(10px);
+      pointer-events:none;
     }
-
-    .section{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.07);
-      border-radius:16px;
-      padding:10px;
+    #side .building{
+      pointer-events:auto;
+      height:100%;
+      border-radius:22px;
+      background:rgba(18,22,27,.86);
+      border:1px solid var(--stroke);
+      box-shadow: var(--shadow);
       overflow:hidden;
-      flex:0 0 auto;
+      display:flex;
+      flex-direction:column;
     }
-    .sectionTitle{
+    #sideHeader{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:8px;
-      margin-bottom:10px;
-      color:rgba(233,238,246,.9);
+      gap:10px;
+    }
+    .hTitle{
       font-size:12px;
-      letter-spacing:.2px;
+      letter-spacing:.12em;
+      color:rgba(231,237,247,.55);
+      text-transform:uppercase;
     }
-    .sectionTitle .sub{
-      color:rgba(233,238,246,.55);
-      font-size:11px;
-    }
-    .divider{
-      height:1px;
-      background:rgba(255,255,255,.07);
-      margin:8px 0;
+    .miniRow{
+      display:flex;
+      gap:8px;
+      align-items:center;
     }
 
-    /* Zoom UI (요구사항 #4) */
-    .zoomRow{
+    /* Zoom UI (v1.1.26 style already applied) */
+    .zoomCard{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
       display:flex;
-      align-items:stretch;
       gap:10px;
+      align-items:stretch;
+      justify-content:space-between;
+    }
+    .zoomLeft{
+      flex:1;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      padding:10px 12px;
+      min-height:44px;
     }
     .zoomLabel{
-      flex:1;
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;
-      padding:10px 12px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      background:rgba(0,0,0,.18);
-      min-width:0;
-    }
-    .zoomLabel .zTxt{
-      color:rgba(233,238,246,.85);
       font-size:12px;
-      letter-spacing:.4px;
+      letter-spacing:.12em;
+      color:rgba(231,237,247,.55);
+      text-transform:uppercase;
     }
-    .zoomLabel .zNum{
-      font-weight:800;
-      color:var(--mint);
-      font-size:12px;
+    .zoomNum{
+      font-weight:900;
+      font-size:18px;
+      color:var(--text);
     }
-    .zoomBtns{
-      width:44px;
+    .zoomRight{
+      width:56px;
       display:flex;
       flex-direction:column;
       gap:8px;
     }
     .zBtn{
       flex:1;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
-      color:rgba(233,238,246,.9);
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
       cursor:pointer;
+      font-weight:900;
+      font-size:18px;
+    }
+    .zBtn:hover{border-color:rgba(255,255,255,.14);}
+
+    /* Cart + Recent sections */
+    .section{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .sectionHead{
       display:flex;
       align-items:center;
-      justify-content:center;
-      transition:.12s transform, .12s border-color, .12s background;
-      user-select:none;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:8px;
     }
-    .zBtn:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.35)}
-    .zBtn:active{transform:translateY(0)}
-    .zBtn svg{width:18px;height:18px;opacity:.95}
-
-    /* Cart row (요구사항: 장바구니 텍스트 + 숫자만) */
+    .sectionTitle{
+      font-weight:800;
+      font-size:13px;
+      color:rgba(231,237,247,.90);
+    }
     .cartRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-    }
-    .cartBtn{
-      flex:1;
-      border-radius:14px;
-      border:1px solid rgba(162,222,204,.22);
-      background:rgba(162,222,204,.09);
       padding:10px 12px;
-      cursor:pointer;
+      border-radius:14px;
+      border:1px solid rgba(125,227,198,.25);
+      background:rgba(125,227,198,.08);
+    }
+    .cartRow .label{font-weight:900;}
+    .cartRow .count{
+      min-width:34px;
+      height:24px;
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      transition:.12s transform, .12s border-color, .12s background;
-      user-select:none;
-    }
-    .cartBtn:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.42)}
-    .cartBtn:active{transform:translateY(0)}
-    .cartBtn .t{color:rgba(233,238,246,.92); font-size:13px; font-weight:700}
-    .cartBtn .n{
-      min-width:36px;
-      text-align:center;
+      justify-content:center;
       border-radius:999px;
-      padding:5px 10px;
-      font-size:12px;
-      font-weight:800;
-      color:var(--mint);
-      background:rgba(0,0,0,.22);
+      background:rgba(0,0,0,.25);
       border:1px solid rgba(255,255,255,.10);
+      font-weight:900;
     }
-    .tinyLink{
-      border:0;
-      background:transparent;
-      color:rgba(233,238,246,.55);
-      font-size:11px;
-      cursor:pointer;
-      padding:0 2px;
-    }
-    .tinyLink:hover{color:rgba(162,222,204,.85)}
 
     /* Recent list */
-    #recentSection{flex:1 1 auto; display:flex; flex-direction:column; min-height:0}
-    #recentList{
+    .recentList{
       display:flex;
       flex-direction:column;
       gap:10px;
+      max-height:calc(100vh - 360px);
       overflow:auto;
-      padding-right:4px;
-      min-height:0;
-      scrollbar-width:thin;
-      scrollbar-color: rgba(162,222,204,.28) rgba(0,0,0,.0);
+      padding-right:6px;
     }
-    #recentList::-webkit-scrollbar{width:8px}
-    #recentList::-webkit-scrollbar-thumb{
-      background:rgba(162,222,204,.22);
-      border-radius:999px;
-      border:2px solid rgba(0,0,0,.0);
-      background-clip: padding-box;
-    }
-
     .recentCard{
-      border-radius:14px;
+      border-radius:18px;
       border:1px solid rgba(255,255,255,.08);
       background:rgba(0,0,0,.18);
       overflow:hidden;
-      cursor:pointer;
-      transition:.15s transform,.15s border-color,.15s box-shadow;
-    }
-    .recentCard:hover{
-      transform:translateY(-2px);
-      border-color:rgba(162,222,204,.28);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
     }
     .recentImg{
       width:100%;
-      height:110px;
-      background:#0a0b0c;
-      display:flex;align-items:center;justify-content:center;
-      position:relative;
-    }
-    .recentImg img{
-      width:100%;height:100%;
-      object-fit:cover;
-      display:block;
-    }
-    .noImg{
-      color:rgba(233,238,246,.35);
+      aspect-ratio: 16 / 9;
+      background:rgba(255,255,255,.04);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:rgba(231,237,247,.35);
       font-size:12px;
-      letter-spacing:.4px;
     }
-    .recentBody{
-      padding:10px 10px 12px;
+    .recentBody{padding:10px 12px; display:flex; flex-direction:column; gap:6px;}
+    .recentName{
+      font-weight:900;
+      font-size:13px;
+      line-height:1.25;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .recentPrice{
+      font-weight:900;
+      font-size:14px;
+      color:var(--mint2);
+    }
+    .bottomPager{
+      margin-top:auto;
+      padding:10px 12px;
+      border-top:1px solid rgba(255,255,255,.06);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    /* Right list panel (search results) */
+    #results{
+      position:absolute;
+      right:14px;
+      top:14px;
+      bottom:14px;
+      width:520px;
+      max-width:calc(100% - 28px);
+      z-index:9998;
+      border-radius:22px;
+      background:rgba(18,22,27,.86);
+      border:1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      pointer-events:auto;
+    }
+    #resultsHeader{
+      padding:12px 14px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    #resultsHeader .title{
+      font-weight:900;
+      font-size:14px;
+    }
+    #resultsList{
+      flex:1;
+      overflow:auto;
+      padding:12px 14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .item{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(0,0,0,.18);
+      padding:12px 12px;
+      cursor:pointer;
       display:flex;
       flex-direction:column;
       gap:6px;
-      min-width:0;
-    }
-    .recentName{
-      font-size:13px;
-      font-weight:800;
-      color:rgba(233,238,246,.95);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; /* 요구사항: 1줄 … */
-    }
-    .recentPrice{
-      font-size:12px;
-      font-weight:800;
-      color:var(--mint);
-    }
-    .recentPager{
-      margin-top:10px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .pagerBtn{
-      width:44px;height:34px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
-      color:rgba(233,238,246,.9);
-      cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      user-select:none;
-      transition:.12s transform,.12s border-color;
-    }
-    .pagerBtn:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.35)}
-    .pagerBtn:active{transform:translateY(0)}
-    .pagerInfo{
-      color:rgba(233,238,246,.65);
-      font-size:12px;
-      font-weight:700;
-    }
-
-    /* Right list panel (main results) */
-    #rightPanel{
-      position:fixed;
-      top:70px;
-      right:14px;
-      width:420px;
-      max-width:calc(100vw - (var(--buildingW) + 60px));
-      height:calc(100% - 84px);
-      z-index:1100;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      pointer-events:none;
-    }
-    #rightPanel .panelBox{
-      pointer-events:auto;
-      background:rgba(16,18,20,.84);
-      border:1px solid var(--line);
-      border-radius:22px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      min-height:0;
-    }
-    .panelHead{
-      padding:12px 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      border-bottom:1px solid rgba(255,255,255,.07);
-    }
-    .panelHead .hTitle{
-      font-size:13px;
-      font-weight:900;
-      letter-spacing:.2px;
-    }
-    .panelHead .hMeta{
-      color:rgba(233,238,246,.55);
-      font-size:12px;
-      font-weight:700;
-    }
-    #resultList{
-      padding:12px 10px 12px 12px;
-      overflow:auto;
-      min-height:0;
-      scrollbar-width:thin;
-      scrollbar-color: rgba(162,222,204,.28) rgba(0,0,0,.0);
-    }
-    #resultList::-webkit-scrollbar{width:10px}
-    #resultList::-webkit-scrollbar-thumb{
-      background:rgba(162,222,204,.22);
-      border-radius:999px;
-      border:3px solid rgba(0,0,0,.0);
-      background-clip: padding-box;
-    }
-
-    .item{
-      display:flex;
-      gap:10px;
-      padding:10px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.16);
-      margin-bottom:10px;
-      cursor:pointer;
-      transition:.15s transform,.15s border-color,.15s box-shadow;
-      min-width:0;
-      position:relative;
+      transition: transform .12s ease, border-color .12s ease;
     }
     .item:hover{
-      transform:translateY(-2px);
-      border-color:rgba(162,222,204,.28);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      transform:translateY(-1px);
+      border-color:rgba(125,227,198,.22);
     }
-    .item.active{
-      border-color:rgba(162,222,204,.55);
-      box-shadow: 0 0 0 2px rgba(162,222,204,.15), 0 14px 34px rgba(0,0,0,.55);
-    }
-    .thumb{
-      width:74px; height:58px;
-      border-radius:12px;
-      background:#0b0c0d;
-      border:1px solid rgba(255,255,255,.06);
-      overflow:hidden;
-      flex:0 0 auto;
-      display:flex;align-items:center;justify-content:center;
-      position:relative;
-    }
-    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-    .itBody{min-width:0; flex:1}
-    .itName{
-      font-size:13px;
+    .item .name{
       font-weight:900;
-      color:rgba(233,238,246,.95);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      margin-bottom:6px;
+      font-size:15px;
+      line-height:1.25;
     }
-    .itAddr{
-      font-size:11px;
-      color:rgba(233,238,246,.55);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      margin-bottom:6px;
-    }
-    .itPrice{
+    .item .sub{
+      color:rgba(231,237,247,.65);
       font-size:12px;
-      font-weight:900;
-      color:var(--mint);
+      line-height:1.3;
     }
-    .itBadge{
-      position:absolute;
-      top:10px; right:10px;
-      font-size:10px;
+    .item .price{
+      margin-top:2px;
       font-weight:900;
-      color:rgba(233,238,246,.75);
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.20);
-      padding:4px 8px;
-      border-radius:999px;
+      color:var(--mint2);
     }
 
-    /* Leaflet popup (mini modal) */
-    .miniPop{
-      width:260px;
-      color:var(--text);
+    /* Mini modal (marker popup) */
+    .miniPopup{
+      width:240px;
       font-family:'NanumSquare',sans-serif;
+      color:var(--text);
     }
-    .miniHero{
-      width:100%;
-      height:120px;
-      border-radius:14px;
-      overflow:hidden;
-      background:#0b0c0d;
-      border:1px solid rgba(255,255,255,.08);
-      margin-bottom:10px;
-      display:flex;align-items:center;justify-content:center;
-    }
-    .miniHero img{width:100%;height:100%;object-fit:cover;display:block}
-    .miniTitle{
+    .miniPopup .pName{
+      font-weight:900;
+      margin:0 0 6px;
       font-size:14px;
-      font-weight:900;
-      margin-bottom:6px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      line-height:1.25;
     }
-    .miniAddr{
-      font-size:12px;
-      color:rgba(233,238,246,.6);
+    .miniPopup .pPrice{
+      font-weight:900;
+      color:var(--mint2);
       margin-bottom:10px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
     }
-    .miniRow{
+    .miniPopup .pBtns{
       display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:12px;
+      gap:8px;
     }
-    .miniPrice{
-      font-size:13px;
-      font-weight:900;
-      color:var(--mint);
-    }
-    .miniBtn{
+    .miniPopup .pBtns button{
+      flex:1;
+      height:34px;
       border-radius:12px;
-      border:1px solid rgba(162,222,204,.35);
-      background:rgba(162,222,204,.10);
-      color:var(--mint);
-      font-size:12px;
-      font-weight:900;
-      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
       cursor:pointer;
-      user-select:none;
-      transition:.12s transform,.12s border-color;
-      white-space:nowrap;
+      font-weight:800;
+      font-size:12px;
     }
-    .miniBtn:hover{transform:translateY(-1px); border-color:rgba(162,222,204,.55)}
-    .miniBtn:active{transform:translateY(0)}
+    .miniPopup .pBtns button:hover{
+      border-color:rgba(125,227,198,.22);
+    }
 
-    /* Overlay modals */
+    /* Modal overlay */
     .overlay{
       position:fixed;
       inset:0;
       background:rgba(0,0,0,.55);
-      z-index:2000;
       display:none;
       align-items:center;
       justify-content:center;
-      padding:16px;
+      z-index:10000;
+      padding:22px;
     }
-    .overlay.show{display:flex}
-
+    .overlay.show{display:flex;}
     .modal{
-      width:min(980px, 100%);
-      max-height:calc(100% - 20px);
+      width:min(1100px, 100%);
+      max-height:min(86vh, 860px);
       border-radius:24px;
+      background:rgba(18,22,27,.96);
       border:1px solid rgba(255,255,255,.10);
-      background:linear-gradient(180deg, rgba(18,20,22,.95), rgba(14,16,18,.92));
-      box-shadow: 0 26px 90px rgba(0,0,0,.65);
+      box-shadow:0 30px 90px rgba(0,0,0,.55);
       overflow:hidden;
       display:flex;
       flex-direction:column;
     }
     .modalHead{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.06);
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:10px;
-      padding:14px 16px;
-      border-bottom:1px solid rgba(255,255,255,.08);
     }
-    .modalHead .ttl{
-      font-size:14px;
+    .modalHead .mTitle{
       font-weight:900;
-      letter-spacing:.2px;
+      font-size:14px;
+      letter-spacing:.02em;
     }
-    .modalHead .x{
-      width:38px;height:38px;
+    .xBtn{
+      width:38px; height:38px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.04);
+      background:rgba(0,0,0,.22);
+      color:var(--text);
       cursor:pointer;
-      display:flex;align-items:center;justify-content:center;
-      user-select:none;
+      font-size:18px;
+      font-weight:900;
     }
-    .modalHead .x:hover{border-color:rgba(162,222,204,.35)}
-
-    /* Cart modal body */
-    #cartBody{
-      padding:14px 16px 16px;
+    .modalBody{
+      padding:14px 16px;
       overflow:auto;
-      min-height:0;
-    }
-    .cartGrid{
-      display:grid;
-      grid-template-columns: repeat(2, minmax(0,1fr));
-      gap:12px;
-    }
-    @media(max-width:860px){
-      #rightPanel{display:none}
-      .searchWrap{margin-left:0}
-      #building{height:auto; max-height:calc(100% - 28px)}
-      .cartGrid{grid-template-columns:1fr}
-    }
-
-    /* Cart item card (이미지 크기=미니모달급) */
-    .cItem{
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.16);
-      overflow:hidden;
-      cursor:pointer;
-      transition:.15s transform,.15s border-color,.15s box-shadow;
-      min-width:0;
-    }
-    .cItem:hover{
-      transform:translateY(-2px);
-      border-color:rgba(162,222,204,.28);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
-    }
-    .cHero{
-      height:140px;
-      background:#0b0c0d;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      display:flex;align-items:center;justify-content:center;
-    }
-    .cHero img{width:100%;height:100%;object-fit:cover;display:block}
-    .cBody{
-      padding:12px 12px 14px;
       display:flex;
       flex-direction:column;
-      gap:8px;
-      min-width:0;
-    }
-    .cTitle{
-      font-size:var(--cartTitlePx);
-      font-weight:900;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .cMeta{
-      font-size:var(--cartMetaPx);
-      color:rgba(233,238,246,.55);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .cPriceRow{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-    }
-    .cPrice{
-      font-size:var(--cartPricePx);
-      font-weight:900;
-      color:var(--mint);
-    }
-    .cRemove{
-      font-size:var(--cartBtnPx);
-      padding:7px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.05);
-      color:rgba(233,238,246,.85);
-      cursor:pointer;
-      user-select:none;
-    }
-    .cRemove:hover{border-color:rgba(255,120,120,.35)}
-
-    /* Hash modal (1차 자율 UI) */
-    #hashModal .modal{width:min(1120px, 100%)}
-    #hashBody{
-      padding:16px;
-      overflow:auto;
-      min-height:0;
-    }
-    .hashTop{
-      display:grid;
-      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-      gap:14px;
-      align-items:start;
-    }
-    @media(max-width:920px){
-      .hashTop{grid-template-columns:1fr}
-    }
-    .hashHero{
-      border-radius:22px;
-      border:1px solid rgba(255,255,255,.10);
-      overflow:hidden;
-      background:#0b0c0d;
-      height:320px;
-      position:relative;
-    }
-    .hashHero img{width:100%;height:100%;object-fit:cover;display:block}
-    .hashHero .zoomPic{
-      position:absolute;
-      right:12px; bottom:12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.35);
-      color:rgba(233,238,246,.9);
-      font-size:12px;
-      padding:10px 12px;
-      cursor:pointer;
-      user-select:none;
-      backdrop-filter: blur(8px);
-    }
-    .hashCard{
-      border-radius:22px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.16);
-      padding:14px 14px 16px;
-      min-width:0;
-    }
-    .hashTitle{
-      font-size:var(--hashTitlePx);
-      font-weight:900;
-      margin-bottom:8px;
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .hashDesc{
-      font-size:var(--hashBodyPx);
-      line-height:1.55;
-      color:rgba(233,238,246,.78);
-      max-height: 180px;
-      overflow:auto;
-      padding-right:6px;
-    }
-    .hashChips{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:12px;
-    }
-    .chip{
-      font-size:var(--hashChipPx);
-      font-weight:800;
-      color:rgba(233,238,246,.82);
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.04);
-      padding:8px 10px;
-      border-radius:999px;
-    }
-    .hashBottom{
-      margin-top:14px;
-      border-top:1px solid rgba(255,255,255,.08);
-      padding-top:14px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
       gap:12px;
-    }
-    @media(max-width:920px){
-      .hashBottom{grid-template-columns:1fr}
-    }
-    .specBox{
-      border-radius:20px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.03);
-      padding:12px 12px 14px;
-    }
-    .specT{
-      font-size:13px;
-      font-weight:900;
-      margin-bottom:10px;
-      color:rgba(233,238,246,.9);
-      display:flex;align-items:center;justify-content:space-between;
-    }
-    .specGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-    .kv{
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(0,0,0,.14);
-      padding:10px 10px 11px;
-      min-width:0;
-    }
-    .kv .k{
-      font-size:11px;
-      color:rgba(233,238,246,.55);
-      margin-bottom:6px;
-      font-weight:800;
-    }
-    .kv .v{
-      font-size:12px;
-      font-weight:900;
-      color:rgba(233,238,246,.90);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-
-    /* Custom marker icon */
-    .pin{
-      width:18px;height:18px;
-      border-radius:999px;
-      background:rgba(90,170,255,.95);
-      border:2px solid rgba(255,255,255,.85);
-      box-shadow: 0 10px 18px rgba(0,0,0,.35);
-      position:relative;
-      transform:translateZ(0);
-    }
-    .pin::after{
-      content:"";
-      position:absolute;
-      left:50%; top:50%;
-      width:4px; height:4px;
-      transform:translate(-50%,-50%);
-      border-radius:999px;
-      background:rgba(0,0,0,.35);
-    }
-    .pin.active{
-      background:rgba(162,222,204,.95);
-      box-shadow: 0 0 0 6px rgba(162,222,204,.18), 0 16px 30px rgba(0,0,0,.55);
-      border-color:rgba(255,255,255,.95);
-    }
-    .pin.hover{
-      box-shadow: 0 0 0 6px rgba(162,222,204,.12), 0 16px 30px rgba(0,0,0,.50);
-      border-color:rgba(162,222,204,.75);
     }
 
     /* Leaflet tweaks */
-    .leaflet-control-container{display:none} /* 기존 UI 혼선 방지: 자체 줌 UI 사용 */
+    .leaflet-control-attribution{display:none;}
+    .leaflet-container{background:#0b0d10;}
     .leaflet-popup-content-wrapper{
-      background:rgba(14,16,18,.92);
-      border:1px solid rgba(255,255,255,.12);
-      box-shadow: 0 18px 60px rgba(0,0,0,.65);
-      border-radius:18px;
-      backdrop-filter: blur(10px);
+      background:rgba(18,22,27,.95);
+      color:var(--text);
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:0 18px 50px rgba(0,0,0,.45);
     }
     .leaflet-popup-tip{
-      background:rgba(14,16,18,.92);
-      border:1px solid rgba(255,255,255,.12);
+      background:rgba(18,22,27,.95);
+      border:1px solid rgba(255,255,255,.10);
     }
-    .leaflet-popup-content{margin:12px 12px 12px}
+
+    /* Responsive */
+    @media (max-width:1100px){
+      #results{display:none;}
+      #side{width:320px;}
+      #topbar{width:calc(100% - 28px);}
+    }
+    @media (max-width:520px){
+      #side{left:10px; top:10px; bottom:10px; width:280px;}
+      #topbar{top:10px;}
+    }
   </style>
 </head>
 
 <body>
   <div id="app">
     <div id="map"></div>
-  </div>
 
-  <!-- Left building -->
-  <aside id="building">
-    <div class="section" id="zoomSection">
-      <div class="sectionTitle">
-        <span>ZOOM</span>
-        <span class="sub" id="zoomMeta">—</span>
-      </div>
-      <div class="zoomRow">
-        <div class="zoomLabel">
-          <div class="zTxt">ZOOM</div>
-          <div class="zNum" id="zoomNum">0</div>
-        </div>
-        <div class="zoomBtns">
-          <button class="zBtn" id="btnZoomIn" title="확대">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <button class="zBtn" id="btnZoomOut" title="축소">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-      </div>
+    <div id="topbar">
+      <input id="searchInput" placeholder="지역/매체명을 검색하세요 (예: 인천공항, 강남, KT SQUARE)" />
+      <button id="btnReset" class="btn">초기화</button>
+      <button id="btnToggleResults" class="btn mint">검색결과</button>
     </div>
 
-    <div class="section" id="cartSection">
-      <div class="sectionTitle">
-        <span>제안서</span>
-        <button class="tinyLink" id="btnCartReset" title="이 브라우저 장바구니 비우기">초기화</button>
-      </div>
-      <div class="cartRow">
-        <div class="cartBtn" id="btnOpenCart">
-          <div class="t">장바구니</div>
-          <div class="n" id="cartCount">0</div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div style="font-size:11px;color:rgba(233,238,246,.55);line-height:1.45;">
-        장바구니는 <b>이 브라우저(이용자)</b> 기준으로 저장됩니다.<br/>
-        (같은 PC를 여러 사람이 공유하면, 위 <b>초기화</b>를 눌러 비워주세요.)
-      </div>
-    </div>
-
-    <div class="section" id="recentSection">
-      <div class="sectionTitle">
-        <span>최근 본 매체</span>
-        <span class="sub"><span id="recentMeta">0/4</span></span>
-      </div>
-      <div id="recentList"></div>
-      <div class="recentPager">
-        <div class="pagerBtn" id="recentPrev" title="이전">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M14.5 5.5L8 12l6.5 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <div class="pagerInfo" id="recentPageInfo">1/1</div>
-        <div class="pagerBtn" id="recentNext" title="다음">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M9.5 5.5L16 12l-6.5 6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Topbar -->
-  <div id="topbar">
-    <div class="searchWrap">
-      <div class="searchIcon">⌕</div>
-      <input id="q" placeholder="지역/매체명을 검색하세요 (예: 인천공항, 강남, KT SQUARE)" autocomplete="off" />
-      <button class="pillBtn" id="btnResetView">초기화</button>
-      <button class="pillBtn mint" id="btnOnlyVisible">현재화면</button>
-    </div>
-  </div>
-
-  <!-- Right list -->
-  <div id="rightPanel">
-    <div class="panelBox">
-      <div class="panelHead">
-        <div class="hTitle">검색 결과</div>
-        <div class="hMeta"><span id="resultMeta">0</span>개</div>
-      </div>
-      <div id="resultList"></div>
-    </div>
-  </div>
-
-  <!-- Cart modal -->
-  <div class="overlay" id="cartModal">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modalHead">
-        <div class="ttl">장바구니</div>
-        <div style="display:flex;gap:10px;align-items:center;">
-          <div style="font-size:11px;color:rgba(233,238,246,.55);">
-            폰트: Title <b>15px(11.25pt)</b> / Meta <b>12px(9pt)</b> / Price <b>13px(9.75pt)</b>
+    <div id="side">
+      <div class="building">
+        <div id="sideHeader">
+          <div class="hTitle">ZOOM</div>
+          <div class="miniRow">
+            <span class="pill" id="clusterCount">0</span>
           </div>
-          <button class="x" id="btnCloseCart" aria-label="닫기">✕</button>
         </div>
-      </div>
-      <div id="cartBody">
-        <div class="cartGrid" id="cartGrid"></div>
-        <div id="cartEmpty" style="display:none;color:rgba(233,238,246,.55);padding:24px 2px;">
-          담긴 매체가 없습니다.
+
+        <div class="zoomCard">
+          <div class="zoomLeft">
+            <div class="zoomLabel">ZOOM</div>
+            <div class="zoomNum" id="zoomNum">0</div>
+          </div>
+          <div class="zoomRight">
+            <button class="zBtn" id="zoomIn">+</button>
+            <button class="zBtn" id="zoomOut">−</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sectionHead">
+            <div class="sectionTitle">제안서</div>
+            <button id="btnCartOpen" class="btn" style="height:30px;padding:0 10px;font-size:12px;">열기</button>
+          </div>
+          <div class="cartRow">
+            <div class="label">장바구니</div>
+            <div class="count" id="cartCount">0</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="sectionHead">
+            <div class="sectionTitle">최근 본 매체</div>
+            <div style="font-weight:900;color:rgba(231,237,247,.65);font-size:12px;" id="recentCount">0/4</div>
+          </div>
+          <div class="recentList" id="recentList"></div>
+        </div>
+
+        <div class="bottomPager">
+          <button class="btn" id="recentPrev" style="height:34px;">←</button>
+          <div style="font-weight:900;color:rgba(231,237,247,.65);" id="recentPage">1/1</div>
+          <button class="btn" id="recentNext" style="height:34px;">→</button>
         </div>
       </div>
     </div>
+
+    <div id="results">
+      <div id="resultsHeader">
+        <div class="title">검색 결과</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="pill" id="resultsCount">0</span>
+          <button id="btnCloseResults" class="btn" style="height:34px;">닫기</button>
+        </div>
+      </div>
+      <div id="resultsList"></div>
+    </div>
   </div>
 
-  <!-- Hash modal -->
-  <div class="overlay" id="hashModal">
-    <div class="modal" role="dialog" aria-modal="true">
+  <!-- Cart Modal -->
+  <div class="overlay" id="cartOverlay">
+    <div class="modal">
       <div class="modalHead">
-        <div class="ttl">매체 상세</div>
-        <button class="x" id="btnCloseHash" aria-label="닫기">✕</button>
+        <div class="mTitle">장바구니</div>
+        <button class="xBtn" id="cartClose">×</button>
       </div>
-      <div id="hashBody"></div>
+      <div class="modalBody" id="cartBody"></div>
+    </div>
+  </div>
+
+  <!-- Hash Modal (detail) -->
+  <div class="overlay" id="hashOverlay">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="mTitle" id="hashTitle">상세</div>
+        <button class="xBtn" id="hashClose">×</button>
+      </div>
+      <div class="modalBody" id="hashBody"></div>
     </div>
   </div>
 
   <script>
-    /****************************************************************
-     * Frontier DOOH v1.1.26
-     * - Pin click => item to position 1 (우상), glow
-     * - Search zoom logic: single => setView w/ adaptive zoom, multi => fitBounds
-     * - Dense pins: media_id strict + same-coord jitter to restore per-item hover/add
-     * - Zoom UI: right stacked, left label
-     * - Recent: ellipsis, crop fix
-     * - Mini popup has "담기"
-     * - Cart modal UI (image ~ mini modal size), font sizes declared
-     * - Cart->Hash->X close returns to Cart (modal stack)
-     * - Performance: debounce, minimal DOM updates, chunked loading
-     ****************************************************************/
+    // v1.1.26 restore build (data loader hardened)
+    (async () => {
+      const VERSION = "v1.1.26";
 
-    const VERSION = "v1.1.26";
-
-    // ===== Storage keys (A안: localStorage per browser/user) =====
-    const LS_CART = "frontier_cart_v1";
-    const LS_RECENT = "frontier_recent_v1";
-
-    // ===== Recent settings =====
-    const RECENT_MAX = 4;
-    const RECENT_PAGE_SIZE = 4;
-
-    // ===== Search & list settings =====
-    const LIST_RENDER_LIMIT = 200; // 성능: 리스트 과다 렌더 방지
-    const FIT_PADDING = [40, 40];
-    const MAX_ZOOM_FIT = 16;
-    const MIN_ZOOM_FIT = 10;
-
-    // ===== Globals =====
-    let map, cluster;
-    let allItems = [];          // normalized items
-    let markersById = new Map(); // id -> marker
-    let currentResults = [];    // list currently shown on right panel
-    let activeId = null;
-    let hoveredId = null;
-    let onlyVisible = false;
-    let modalStack = [];        // for cart -> hash -> back
-
-    // ===== Utils =====
-    const $ = (sel) => document.querySelector(sel);
-    const esc = (s) => (s==null ? "" : String(s)).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-    function fmtPrice(v){
-      if(v == null || v === "") return "문의";
-      const n = Number(String(v).replace(/[^\d.-]/g,""));
-      if(!Number.isFinite(n)) return String(v);
-      return n.toLocaleString("ko-KR") + "원";
-    }
-
-    function normalizeRow(row){
-      // tolerant mapping
-      const id = row.media_id ?? row.id ?? row.ID ?? row.uid ?? row.uuid ?? row.pk ?? null;
-      const name = row.media_name ?? row.name ?? row.title ?? row.매체명 ?? row.매체 ?? "";
-      const lat = Number(row.lat ?? row.latitude ?? row.y ?? row.Lat ?? row.LAT);
-      const lng = Number(row.lng ?? row.lon ?? row.longitude ?? row.x ?? row.Lng ?? row.LNG);
-      const address = row.address ?? row.addr ?? row.주소 ?? row.location ?? "";
-      const price = row.price ?? row.가격 ?? row.monthly_price ?? row.월가격 ?? row.fee ?? "";
-      const img = row.image_url ?? row.image ?? row.img ?? row.thumbnail ?? row.thumb ?? row.photo ?? "";
-      const group = row.media_group ?? row.group ?? row.매체그룹 ?? "";
-      const region = row.region ?? row.city ?? row.지역 ?? "";
-      const type = row.type ?? row.media_type ?? row.타입 ?? "";
-      const updated = row.updated ?? row.update ?? row.업데이트 ?? "";
-      const desc = row.description ?? row.desc ?? row.설명 ?? "";
-      const spec = row.spec ?? row.specs ?? row.스펙 ?? row.규격 ?? "";
-
-      return {
-        raw: row,
-        id: (id != null ? String(id) : null),
-        name: String(name || "").trim(),
-        lat, lng,
-        address: String(address || "").trim(),
-        price,
-        img: String(img || "").trim(),
-        group: String(group || "").trim(),
-        region: String(region || "").trim(),
-        type: String(type || "").trim(),
-        updated: String(updated || "").trim(),
-        desc: String(desc || "").trim(),
-        spec: spec
+      // Utils
+      const qs = (s, el=document) => el.querySelector(s);
+      const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
+      const fmtPrice = (v) => {
+        if(v===null || v===undefined || v==="" || isNaN(Number(v))) return "문의";
+        const n = Number(v);
+        if(!isFinite(n) || n<=0) return "문의";
+        return n.toLocaleString("ko-KR") + "원";
       };
-    }
 
-    // ===== Same-coordinate jitter (핵심: 밀집 지점 개별 인식 복구) =====
-    function applyJitter(items){
-      // group by rounded coord key
-      const m = new Map();
-      for(const it of items){
-        const key = `${it.lat.toFixed(6)},${it.lng.toFixed(6)}`;
-        if(!m.has(key)) m.set(key, []);
-        m.get(key).push(it);
-      }
-      for(const [key, list] of m.entries()){
-        if(list.length <= 1) continue;
-        // stable pseudo positions in a small circle (meters-level)
-        // 0.00002 deg ~ 2m (lat). Keep tiny but separable for hover.
-        const baseLat = list[0].lat, baseLng = list[0].lng;
-        const R = 0.00002; // radius degrees
-        const n = list.length;
-        for(let i=0;i<n;i++){
-          const angle = (Math.PI * 2 * i) / n;
-          // add small offset; keep deterministic by index order
-          list[i].lat = baseLat + Math.cos(angle) * R;
-          list[i].lng = baseLng + Math.sin(angle) * R;
-          list[i]._jittered = true;
-        }
-      }
-      return items;
-    }
+      const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-    // ===== Marker icon =====
-    function makeIcon(cls=""){
-      return L.divIcon({
-        className: "",
-        html: `<div class="pin ${cls}"></div>`,
-        iconSize: [18,18],
-        iconAnchor: [9,9]
+      // DOM
+      const elZoomNum = qs("#zoomNum");
+      const elClusterCount = qs("#clusterCount");
+      const elSearch = qs("#searchInput");
+      const elResults = qs("#results");
+      const elResultsList = qs("#resultsList");
+      const elResultsCount = qs("#resultsCount");
+      const elRecentList = qs("#recentList");
+      const elRecentCount = qs("#recentCount");
+      const elRecentPage = qs("#recentPage");
+      const elCartCount = qs("#cartCount");
+
+      // Modals
+      const cartOverlay = qs("#cartOverlay");
+      const cartBody = qs("#cartBody");
+      const hashOverlay = qs("#hashOverlay");
+      const hashTitle = qs("#hashTitle");
+      const hashBody = qs("#hashBody");
+
+      // State
+      const RECENT_MAX = 4;
+      const RECENT_PAGE_SIZE = 2;
+      let recent = [];
+      let recentPage = 1;
+
+      // Cart storage (A안: 사용자(브라우저) 단위 localStorage)
+      const CART_KEY = "frontier_dooh_cart_v1";
+      let cart = [];
+      function loadCart(){
+        try{
+          const raw = localStorage.getItem(CART_KEY);
+          cart = raw ? JSON.parse(raw) : [];
+          if(!Array.isArray(cart)) cart = [];
+        }catch(e){ cart = []; }
+        elCartCount.textContent = String(cart.length || 0);
+      }
+      function saveCart(){
+        try{ localStorage.setItem(CART_KEY, JSON.stringify(cart)); }catch(e){}
+        elCartCount.textContent = String(cart.length || 0);
+      }
+
+      function addToCart(item){
+        // IMPORTANT: "같은 위치/몰려있는 핀"이 하나로 합쳐지는 문제를 피하려면
+        // 개별 고유키가 필요합니다. data.json에 id가 없다면 아래처럼 fallback 키를 만든다.
+        const key = item.id || item.media_id || item.uid || item._uid || (item.name + "|" + item.address + "|" + item.lat + "|" + item.lng + "|" + (item.price||""));
+        if(cart.some(x => (x._key || x.id || x.media_id || x.uid) === key)) return;
+        cart.push({ ...item, _key: key });
+        saveCart();
+      }
+
+      // Recent
+      function pushRecent(item){
+        const key = item.id || item.media_id || item.uid || item._uid || (item.name + "|" + item.address + "|" + item.lat + "|" + item.lng);
+        recent = recent.filter(x => (x._key||x.id||x.media_id||x.uid) !== key);
+        recent.unshift({ ...item, _key: key });
+        if(recent.length > RECENT_MAX) recent = recent.slice(0, RECENT_MAX);
+        recentPage = 1;
+        renderRecent();
+      }
+
+      function renderRecent(){
+        const total = recent.length;
+        elRecentCount.textContent = `${total}/${RECENT_MAX}`;
+        const totalPages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+        recentPage = clamp(recentPage, 1, totalPages);
+        elRecentPage.textContent = `${recentPage}/${totalPages}`;
+
+        const start = (recentPage-1)*RECENT_PAGE_SIZE;
+        const items = recent.slice(start, start+RECENT_PAGE_SIZE);
+
+        elRecentList.innerHTML = items.map(x => {
+          const img = (x.image_url || x.img || x.image || "").trim();
+          const imgHtml = img
+            ? `<div class="recentImg" style="background-image:url('${img}');background-size:cover;background-position:center;"></div>`
+            : `<div class="recentImg">NO IMAGE</div>`;
+          return `
+            <div class="recentCard" data-key="${x._key}">
+              ${imgHtml}
+              <div class="recentBody">
+                <div class="recentName" title="${(x.name||"").replace(/"/g,'&quot;')}">${x.name || "-"}</div>
+                <div class="recentPrice">${fmtPrice(x.price)}</div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        qsa(".recentCard", elRecentList).forEach(card=>{
+          card.addEventListener("click", ()=>{
+            const key = card.getAttribute("data-key");
+            const item = recent.find(r => r._key === key);
+            if(item) openHashModal(item);
+          });
+        });
+      }
+
+      qs("#recentPrev").addEventListener("click", ()=>{ recentPage--; renderRecent(); });
+      qs("#recentNext").addEventListener("click", ()=>{ recentPage++; renderRecent(); });
+
+      // Results panel toggle
+      qs("#btnToggleResults").addEventListener("click", ()=> elResults.style.display = (elResults.style.display==="none" ? "flex" : "none"));
+      qs("#btnCloseResults").addEventListener("click", ()=> elResults.style.display="none");
+
+      // Reset
+      qs("#btnReset").addEventListener("click", ()=>{
+        elSearch.value = "";
+        renderResults([]);
+        // Default view (South Korea)
+        map.setView([36.4, 127.9], 7);
       });
-    }
 
-    function setMarkerState(id, state){
-      const mk = markersById.get(id);
-      if(!mk) return;
-      const el = mk.getElement();
-      if(!el) return;
-      const pin = el.querySelector(".pin");
-      if(!pin) return;
-      pin.classList.toggle("active", state==="active");
-      pin.classList.toggle("hover", state==="hover");
-    }
-
-    function clearAllMarkerStates(){
-      for(const [id, mk] of markersById.entries()){
-        const el = mk.getElement();
-        if(!el) continue;
-        const pin = el.querySelector(".pin");
-        if(!pin) continue;
-        pin.classList.remove("active","hover");
-      }
-    }
-
-    // ===== Recent (4개, 페이지 UI 유지 가능) =====
-    function loadRecent(){
-      try{
-        const v = JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
-        if(Array.isArray(v)) return v.map(String);
-      }catch(e){}
-      return [];
-    }
-    function saveRecent(ids){
-      localStorage.setItem(LS_RECENT, JSON.stringify(ids.slice(0, 50)));
-    }
-    function pushRecent(id){
-      if(!id) return;
-      let ids = loadRecent();
-      ids = ids.filter(x => x !== id);
-      ids.unshift(id);
-      ids = ids.slice(0, RECENT_MAX);
-      saveRecent(ids);
-      renderRecent();
-    }
-
-    // ===== Cart (A안: localStorage per browser/user) =====
-    function loadCart(){
-      try{
-        const v = JSON.parse(localStorage.getItem(LS_CART) || "[]");
-        if(Array.isArray(v)) return v.map(String);
-      }catch(e){}
-      return [];
-    }
-    function saveCart(ids){
-      localStorage.setItem(LS_CART, JSON.stringify(ids.slice(0, 500)));
-      $("#cartCount").textContent = String(ids.length);
-    }
-    function cartHas(id){
-      return loadCart().includes(String(id));
-    }
-    function cartAdd(id){
-      if(!id) return;
-      const sid = String(id);
-      let ids = loadCart();
-      if(ids.includes(sid)) return;
-      ids.push(sid);
-      saveCart(ids);
-      renderCartModal(false);
-    }
-    function cartRemove(id){
-      const sid = String(id);
-      let ids = loadCart().filter(x => x !== sid);
-      saveCart(ids);
-      renderCartModal(false);
-    }
-    function cartReset(){
-      saveCart([]);
-      renderCartModal(false);
-    }
-
-    // ===== Modal stack (요구사항 #8) =====
-    function showOverlay(el){
-      el.classList.add("show");
-      modalStack.push(el.id);
-      document.body.style.overflow = "hidden";
-    }
-    function hideOverlay(el){
-      el.classList.remove("show");
-      const idx = modalStack.lastIndexOf(el.id);
-      if(idx >= 0) modalStack.splice(idx, 1);
-      if(modalStack.length === 0){
-        document.body.style.overflow = "hidden"; // body는 원래 map 전용이라 hidden 유지
-      }
-    }
-    function openCart(){
-      showOverlay($("#cartModal"));
-      renderCartModal(false);
-    }
-    function closeCart(){
-      hideOverlay($("#cartModal"));
-    }
-    function openHash(id, from="direct"){
-      renderHashModal(id);
-      showOverlay($("#hashModal"));
-      // from cart: keep cart open underneath, but restore on close
-      // (우리는 overlay 자체는 2개 show 가능. closeHash 시 스택 보고 cart로 복귀)
-      $("#hashModal").dataset.from = from;
-    }
-    function closeHash(){
-      hideOverlay($("#hashModal"));
-      // if opened from cart and cart is still show, user sees cart automatically
-      // (요구사항: X 누르면 장바구니로 돌아가야 함)
-      const from = $("#hashModal").dataset.from || "";
-      if(from === "cart"){
-        // ensure cart remains visible
-        if(!$("#cartModal").classList.contains("show")){
-          openCart();
+      // Cart modal open/close
+      qs("#btnCartOpen").addEventListener("click", ()=>{ openCartModal(); });
+      qs("#cartClose").addEventListener("click", ()=>{ closeCartModal(); });
+      qs("#hashClose").addEventListener("click", ()=>{
+        closeHashModal();
+        // v1.1.26 요구: 해시모달 X 닫으면 장바구니로 복귀 (장바구니가 열려있던 경우)
+        if(cartOverlay.classList.contains("show")){
+          // already open
         }
+      });
+
+      cartOverlay.addEventListener("click", (e)=>{ if(e.target===cartOverlay) closeCartModal(); });
+      hashOverlay.addEventListener("click", (e)=>{ if(e.target===hashOverlay) closeHashModal(); });
+
+      function openCartModal(){
+        renderCartModal();
+        cartOverlay.classList.add("show");
       }
-    }
+      function closeCartModal(){
+        cartOverlay.classList.remove("show");
+      }
+      function openHashModal(item){
+        // UI 1차 자율 변경 영역(요청사항 9) - 현재는 임시 기본 구성
+        hashTitle.textContent = item.name || "상세";
+        const img = (item.image_url || item.img || item.image || "").trim();
+        const imgBlock = img
+          ? `<div style="border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);">
+               <img src="${img}" alt="" style="width:100%;display:block;max-height:360px;object-fit:cover;">
+             </div>`
+          : `<div style="border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);height:260px;display:flex;align-items:center;justify-content:center;color:rgba(231,237,247,.35);font-weight:900;">NO IMAGE</div>`;
 
-    // ===== Right list rendering =====
-    function renderResults(list){
-      const el = $("#resultList");
-      el.innerHTML = "";
-      $("#resultMeta").textContent = String(list.length);
-
-      const toRender = list.slice(0, LIST_RENDER_LIMIT);
-      for(const it of toRender){
-        const div = document.createElement("div");
-        div.className = "item" + (it.id === activeId ? " active" : "");
-        div.dataset.id = it.id;
-
-        const thumb = it.img ? `<img src="${esc(it.img)}" alt="">` : `<div class="noImg">NO IMAGE</div>`;
-        div.innerHTML = `
-          <div class="thumb">${thumb}</div>
-          <div class="itBody">
-            <div class="itName" title="${esc(it.name)}">${esc(it.name)}</div>
-            <div class="itAddr" title="${esc(it.address || it.region || "")}">${esc(it.address || it.region || "")}</div>
-            <div class="itPrice">${esc(fmtPrice(it.price))}</div>
+        hashBody.innerHTML = `
+          ${imgBlock}
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="pill">업데이트 ${(item.updated_at || item.update || "-")}</div>
+            <div class="pill">${(item.media_group || item.group || "미분류")}</div>
           </div>
-          <div class="itBadge">${esc(it.group || it.type || "DOOH")}</div>
-        `;
-
-        div.addEventListener("mouseenter", () => {
-          if(!it.id) return;
-          hoveredId = it.id;
-          // marker hover glow (개별 인식)
-          if(activeId && activeId !== it.id) setMarkerState(activeId, "active");
-          setMarkerState(it.id, "hover");
-        });
-        div.addEventListener("mouseleave", () => {
-          if(!it.id) return;
-          hoveredId = null;
-          // restore active marker
-          clearAllMarkerStates();
-          if(activeId) setMarkerState(activeId, "active");
-        });
-
-        div.addEventListener("click", () => {
-          focusItem(it.id, {center:true, openPopup:true});
-        });
-
-        el.appendChild(div);
-      }
-
-      // keep scroll at top if results changed (잔상 방지 흐름)
-      el.scrollTop = 0;
-    }
-
-    function refreshActiveInList(){
-      // minimal: toggle class for active
-      const el = $("#resultList");
-      const items = el.querySelectorAll(".item");
-      items.forEach(n => n.classList.toggle("active", n.dataset.id === activeId));
-    }
-
-    // ===== Focus logic (요구사항 #1: 핀 클릭 => 리스트 1번(우상) + 빛) =====
-    function focusItem(id, opts={center:false, openPopup:false}){
-      const it = allItems.find(x => x.id === String(id));
-      if(!it) return;
-
-      activeId = it.id;
-      clearAllMarkerStates();
-      setMarkerState(activeId, "active");
-
-      // move item to top (position 1)
-      const idx = currentResults.findIndex(x => x.id === activeId);
-      if(idx > 0){
-        const [sp] = currentResults.splice(idx,1);
-        currentResults.unshift(sp);
-        renderResults(currentResults);
-      }else{
-        refreshActiveInList();
-      }
-
-      // recent
-      pushRecent(activeId);
-
-      // map center/zoom (핀 클릭은 현재 줌 유지, 필요시 살짝 패닝)
-      const mk = markersById.get(activeId);
-      if(mk && opts.center){
-        map.panTo(mk.getLatLng(), {animate:true, duration:0.35});
-      }
-      if(mk && opts.openPopup){
-        mk.openPopup();
-      }
-    }
-
-    // ===== Search zoom logic (요구사항 #2: 줌12 고정 제거 → 적절 로직) =====
-    function chooseSingleZoom(query, it){
-      // adaptive baseline
-      // - 공항/역/대형시설 키워드 → 조금 더 확대
-      // - 주소가 상세(번지/도로명/숫자 포함)면 확대
-      const q = (query||"").toLowerCase();
-      const name = (it.name||"").toLowerCase();
-      const addr = (it.address||"").toLowerCase();
-
-      let z = 14; // default
-      const airportLike = /공항|airport|터미널|terminal/.test(q) || /공항|airport|터미널|terminal/.test(name);
-      if(airportLike) z = 15;
-
-      const detailAddr = /\d{1,4}(-\d{1,4})?/.test(addr) || /로|길|번길|대로/.test(addr);
-      if(detailAddr) z = Math.max(z, 15);
-
-      // clamp (Leaflet tiles default)
-      return clamp(z, 12, 16);
-    }
-
-    function applySearch(query){
-      const q = (query||"").trim();
-      const qLower = q.toLowerCase();
-
-      const base = onlyVisible ? getItemsInBounds() : allItems;
-
-      let results = base;
-      if(qLower){
-        results = base.filter(it => {
-          const hay = [
-            it.name, it.address, it.region, it.group, it.type
-          ].filter(Boolean).join(" ").toLowerCase();
-          return hay.includes(qLower);
-        });
-      }
-
-      // keep current results global
-      currentResults = results.slice();
-
-      // update map view based on search results
-      if(qLower){
-        if(results.length === 1){
-          const it = results[0];
-          const z = chooseSingleZoom(qLower, it);
-          map.setView([it.lat, it.lng], z, {animate:true, duration:0.35});
-          focusItem(it.id, {center:false, openPopup:true});
-        }else if(results.length > 1){
-          const b = L.latLngBounds(results.map(x => [x.lat, x.lng]));
-          map.fitBounds(b, {padding: FIT_PADDING, maxZoom: MAX_ZOOM_FIT, animate:true, duration:0.35});
-        }
-      }
-
-      renderResults(currentResults);
-    }
-
-    function getItemsInBounds(){
-      const b = map.getBounds();
-      return allItems.filter(it => b.contains([it.lat, it.lng]));
-    }
-
-    // ===== Recent rendering =====
-    let recentPage = 1;
-    function renderRecent(){
-      const ids = loadRecent();
-      const total = ids.length;
-      const totalPages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
-      recentPage = clamp(recentPage, 1, totalPages);
-
-      const start = (recentPage-1)*RECENT_PAGE_SIZE;
-      const pageIds = ids.slice(start, start + RECENT_PAGE_SIZE);
-
-      $("#recentMeta").textContent = `${Math.min(total, start + pageIds.length)}/${RECENT_MAX}`;
-      $("#recentPageInfo").textContent = `${recentPage}/${totalPages}`;
-
-      const wrap = $("#recentList");
-      wrap.innerHTML = "";
-
-      for(const id of pageIds){
-        const it = allItems.find(x => x.id === id);
-        if(!it) continue;
-
-        const card = document.createElement("div");
-        card.className = "recentCard";
-        card.dataset.id = it.id;
-
-        const img = it.img ? `<img src="${esc(it.img)}" alt="">` : `<div class="noImg">NO IMAGE</div>`;
-        card.innerHTML = `
-          <div class="recentImg">${img}</div>
-          <div class="recentBody">
-            <div class="recentName" title="${esc(it.name)}">${esc(it.name)}</div>
-            <div class="recentPrice">${esc(fmtPrice(it.price))}</div>
+          <div style="color:rgba(231,237,247,.75);line-height:1.6;font-size:13px;">
+            ${(item.description || item.desc || item.note || "").toString().replace(/\n/g,"<br>")}
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;">
+            <button class="btn mint" id="hashAddCart">제안서 담기</button>
           </div>
         `;
-        card.addEventListener("click", () => {
-          focusItem(it.id, {center:true, openPopup:true});
-        });
-        wrap.appendChild(card);
-      }
-    }
-
-    // ===== Cart rendering =====
-    function renderCartModal(scrollTopKeep=true){
-      const ids = loadCart();
-      $("#cartCount").textContent = String(ids.length);
-
-      const grid = $("#cartGrid");
-      const empty = $("#cartEmpty");
-
-      if(ids.length === 0){
-        grid.innerHTML = "";
-        empty.style.display = "block";
-        return;
-      }
-      empty.style.display = "none";
-
-      const prevScroll = $("#cartBody").scrollTop;
-      grid.innerHTML = "";
-
-      // stable order: by added order
-      for(const id of ids){
-        const it = allItems.find(x => x.id === id);
-        if(!it) continue;
-
-        const item = document.createElement("div");
-        item.className = "cItem";
-        item.dataset.id = it.id;
-
-        const img = it.img ? `<img src="${esc(it.img)}" alt="">` : `<div class="noImg">NO IMAGE</div>`;
-        item.innerHTML = `
-          <div class="cHero">${img}</div>
-          <div class="cBody">
-            <div class="cTitle" title="${esc(it.name)}">${esc(it.name)}</div>
-            <div class="cMeta" title="${esc(it.address || it.region || "")}">${esc(it.address || it.region || "")}</div>
-            <div class="cPriceRow">
-              <div class="cPrice">${esc(fmtPrice(it.price))}</div>
-              <button class="cRemove" data-rm="${esc(it.id)}">삭제</button>
-            </div>
-          </div>
-        `;
-
-        // click card => open hash modal (from cart)
-        item.addEventListener("click", (e) => {
-          const rm = e.target?.getAttribute?.("data-rm");
-          if(rm){
-            e.stopPropagation();
-            cartRemove(rm);
-            return;
-          }
-          openHash(it.id, "cart");
+        qs("#hashAddCart").addEventListener("click", ()=>{
+          addToCart(item);
+          // 담기 후 장바구니 모달로
+          closeHashModal();
+          openCartModal();
         });
 
-        grid.appendChild(item);
+        hashOverlay.classList.add("show");
+      }
+      function closeHashModal(){
+        hashOverlay.classList.remove("show");
       }
 
-      if(scrollTopKeep) $("#cartBody").scrollTop = prevScroll;
-    }
-
-    // ===== Hash modal rendering (1차 자율 UI) =====
-    function renderHashModal(id){
-      const it = allItems.find(x => x.id === String(id));
-      if(!it){
-        $("#hashBody").innerHTML = `<div style="color:rgba(233,238,246,.6);padding:20px;">데이터를 찾을 수 없습니다.</div>`;
-        return;
-      }
-
-      const img = it.img ? `<img src="${esc(it.img)}" alt="">` : ``;
-      const desc = it.desc || (it.raw && (it.raw.long_desc || it.raw.설명상세)) || "설명 정보가 없습니다.";
-      const chips = [];
-      if(it.group) chips.push(it.group);
-      if(it.type) chips.push(it.type);
-      if(it.region) chips.push(it.region);
-      if(it.updated) chips.push(`업데이트 ${it.updated}`);
-
-      const specPairs = [
-        ["매체명", it.name],
-        ["주소", it.address || it.region],
-        ["가격", fmtPrice(it.price)],
-        ["매체그룹", it.group || "-"],
-        ["타입", it.type || "-"],
-        ["ID", it.id]
-      ];
-
-      $("#hashBody").innerHTML = `
-        <div class="hashTop">
-          <div class="hashHero">
-            ${img || `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(233,238,246,.35);">NO IMAGE</div>`}
-            <div class="zoomPic" id="btnZoomPic">사진 크게 보기</div>
-          </div>
-
-          <div class="hashCard">
-            <div class="hashTitle" title="${esc(it.name)}">${esc(it.name)}</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
-              <div style="color:rgba(233,238,246,.55);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(it.address || it.region || "")}">
-                ${esc(it.address || it.region || "")}
-              </div>
-              <div style="color:var(--mint);font-weight:900;font-size:13px;white-space:nowrap;">
-                ${esc(fmtPrice(it.price))}
-              </div>
-            </div>
-            <div class="hashDesc">${esc(desc)}</div>
-            <div class="hashChips">
-              ${chips.map(c => `<span class="chip">${esc(c)}</span>`).join("")}
-            </div>
-            <div style="margin-top:14px;display:flex;gap:10px;">
-              <button class="miniBtn" id="hashAddCart">${cartHas(it.id) ? "담김" : "장바구니 담기"}</button>
-              <button class="miniBtn" id="hashFocusMap" style="border-color:rgba(255,255,255,.12);color:rgba(233,238,246,.9);background:rgba(255,255,255,.04);">
-                지도에서 보기
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="hashBottom">
-          <div class="specBox">
-            <div class="specT">
-              <span>매체 규격을 확인해 보세요</span>
-              <span style="color:rgba(233,238,246,.55);font-size:12px;">ⓘ</span>
-            </div>
-            <div class="specGrid">
-              ${specPairs.map(([k,v]) => `
-                <div class="kv">
-                  <div class="k">${esc(k)}</div>
-                  <div class="v" title="${esc(v || "")}">${esc(v || "-")}</div>
-                </div>
-              `).join("")}
-            </div>
-          </div>
-
-          <div class="specBox">
-            <div class="specT">
-              <span>이런 특징을 가지고 있어요</span>
-              <span style="color:rgba(233,238,246,.55);font-size:12px;">⟡</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <div class="kv">
-                <div class="k">운영/노출</div>
-                <div class="v" title="${esc(it.raw?.operating_time || it.raw?.운영시간 || "")}">
-                  ${esc(it.raw?.operating_time || it.raw?.운영시간 || "정보 없음")}
-                </div>
-              </div>
-              <div class="kv">
-                <div class="k">소재정보</div>
-                <div class="v" title="${esc(it.raw?.media_format || it.raw?.소재정보 || "")}">
-                  ${esc(it.raw?.media_format || it.raw?.소재정보 || "정보 없음")}
-                </div>
-              </div>
-              <div class="kv">
-                <div class="k">기기수량</div>
-                <div class="v" title="${esc(it.raw?.device_count || it.raw?.기기수량 || "")}">
-                  ${esc(it.raw?.device_count || it.raw?.기기수량 || "정보 없음")}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      $("#hashAddCart").onclick = () => {
-        cartAdd(it.id);
-        $("#hashAddCart").textContent = "담김";
-      };
-      $("#hashFocusMap").onclick = () => {
-        closeHash();
-        focusItem(it.id, {center:true, openPopup:true});
-      };
-      $("#btnZoomPic").onclick = () => {
-        if(it.img){
-          window.open(it.img, "_blank");
+      function renderCartModal(){
+        if(!cart.length){
+          cartBody.innerHTML = `<div style="color:rgba(231,237,247,.55);padding:14px 2px;">장바구니가 비어 있습니다.</div>`;
+          return;
         }
-      };
-    }
 
-    // ===== Mini popup HTML (요구사항 #6: 담기 버튼) =====
-    function miniPopupHtml(it){
-      const img = it.img ? `<img src="${esc(it.img)}" alt="">` : `<div class="noImg">NO IMAGE</div>`;
-      const inCart = cartHas(it.id);
-      return `
-        <div class="miniPop">
-          <div class="miniHero">${img}</div>
-          <div class="miniTitle" title="${esc(it.name)}">${esc(it.name)}</div>
-          <div class="miniAddr" title="${esc(it.address || it.region || "")}">${esc(it.address || it.region || "")}</div>
-          <div class="miniRow">
-            <div class="miniPrice">${esc(fmtPrice(it.price))}</div>
-            <button class="miniBtn" data-add="${esc(it.id)}">${inCart ? "담김" : "담기"}</button>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <button class="miniBtn" data-hash="${esc(it.id)}" style="flex:1;border-color:rgba(255,255,255,.12);color:rgba(233,238,246,.9);background:rgba(255,255,255,.04);">
-              상세 보기
-            </button>
-          </div>
-        </div>
-      `;
-    }
+        // v1.1.26 요구: 이미지 크기를 미니모달(팝업) 수준으로, 폰트 크기 조절
+        // 적용 폰트 포인트(대략):
+        // - 제목: 13px, 부제: 12px, 가격: 13px
+        cartBody.innerHTML = cart.map((x, idx)=>{
+          const img = (x.image_url || x.img || x.image || "").trim();
+          const imgHtml = img
+            ? `<img src="${img}" style="width:240px;height:135px;object-fit:cover;border-radius:14px;border:1px solid rgba(255,255,255,.10);">`
+            : `<div style="width:240px;height:135px;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:rgba(231,237,247,.35);font-weight:900;">NO IMAGE</div>`;
 
-    function bindPopupButtons(popupEl){
-      // add cart
-      const addBtn = popupEl.querySelector("[data-add]");
-      if(addBtn){
-        addBtn.addEventListener("click", (e) => {
-          e.preventDefault(); e.stopPropagation();
-          const id = addBtn.getAttribute("data-add");
-          cartAdd(id);
-          addBtn.textContent = "담김";
+          return `
+            <div class="item" data-idx="${idx}" style="cursor:default;">
+              <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+                ${imgHtml}
+                <div style="flex:1;min-width:240px;">
+                  <div style="font-weight:900;font-size:13px;line-height:1.25;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${(x.name||"").replace(/"/g,'&quot;')}">${x.name || "-"}</div>
+                  <div style="color:rgba(231,237,247,.65);font-size:12px;line-height:1.4;margin-bottom:8px;">${x.address || x.addr || "-"}</div>
+                  <div style="font-weight:900;color:var(--mint2);font-size:13px;margin-bottom:12px;">${fmtPrice(x.price)}</div>
+
+                  <div style="display:flex;gap:10px;justify-content:flex-end;">
+                    <button class="btn" data-act="open">상세</button>
+                    <button class="btn" data-act="remove">삭제</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        qsa(".item", cartBody).forEach(row=>{
+          const idx = Number(row.getAttribute("data-idx"));
+          qsa("button", row).forEach(btn=>{
+            btn.addEventListener("click", ()=>{
+              const act = btn.getAttribute("data-act");
+              if(act==="open"){
+                // 장바구니 → 상세(해시모달)로 이동, 그리고 X 닫으면 다시 장바구니로 돌아오는 동작은:
+                // 해시모달을 닫을 때 cartOverlay가 show 상태라면 그대로 유지되므로 자연스럽게 복귀됨.
+                openHashModal(cart[idx]);
+              }else if(act==="remove"){
+                cart.splice(idx,1);
+                saveCart();
+                renderCartModal();
+              }
+            });
+          });
         });
       }
-      const hashBtn = popupEl.querySelector("[data-hash]");
-      if(hashBtn){
-        hashBtn.addEventListener("click", (e) => {
-          e.preventDefault(); e.stopPropagation();
-          const id = hashBtn.getAttribute("data-hash");
-          openHash(id, "direct");
-        });
-      }
-    }
 
-    // ===== Performance helpers =====
-    function debounce(fn, ms=200){
-      let t = null;
-      return (...args) => {
-        clearTimeout(t);
-        t = setTimeout(() => fn(...args), ms);
-      };
-    }
-
-    // ===== Init =====
-    async function init(){
-      // Map
-      map = L.map("map", {
+      // Map init
+      const map = L.map('map', {
         zoomControl:false,
-        attributionControl:false,
-        preferCanvas:true,
-        fadeAnimation:true,
-        zoomAnimation:true
+        preferCanvas:true
       });
 
-      // Default Korea view
-      map.setView([36.5, 127.9], 7);
-
-      // Tile
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19
-      }).addTo(map);
+      });
+      tiles.addTo(map);
 
-      // Cluster options:
-      // - removeOutsideVisibleBounds:false => 이동/줌 중 마커 제거로 인한 "사라짐" 리스크 완화
-      // - spiderfyOnMaxZoom:true 유지 가능하나, fly-out처럼 보일 수 있어 animate:false로 안정화
-      // - chunkedLoading:true => 렌더 부하 완화
-      cluster = L.markerClusterGroup({
-        chunkedLoading: true,
-        removeOutsideVisibleBounds: false,
-        animate: false,                // "드래곤볼" 체감(날아감) 방지에 매우 효과적
+      map.setView([36.4, 127.9], 7);
+
+      // Zoom controls
+      qs("#zoomIn").addEventListener("click", ()=> map.zoomIn());
+      qs("#zoomOut").addEventListener("click", ()=> map.zoomOut());
+
+      map.on("zoomend", ()=>{
+        elZoomNum.textContent = String(map.getZoom());
+      });
+      elZoomNum.textContent = String(map.getZoom());
+
+      // Cluster
+      const cluster = L.markerClusterGroup({
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false,
-        maxClusterRadius: 60
+        zoomToBoundsOnClick: true,
+        // "드래곤볼" 방지 성격: 애니메이션을 줄이면 순간 퍼짐/사라짐 현상이 감소
+        animate: false,
+        animateAddingMarkers: false,
+        spiderfyDistanceMultiplier: 1.0,
+        disableClusteringAtZoom: 18
       });
 
-      cluster.addTo(map);
+      map.addLayer(cluster);
 
+      // --- DATA LOADING (RESTORE CORE FIX) ---
       // Load data
       let data = [];
-      try{
-        const res = await fetch("data.json", {cache:"no-store"});
-        data = await res.json();
-      }catch(e){
-        alert("data.json 로드 실패: 같은 폴더에 data.json이 있는지 확인하세요.");
-        return;
-      }
-      if(!Array.isArray(data)){
-        alert("data.json 형식 오류: 배열(Array)이어야 합니다.");
-        return;
-      }
+      const __FETCH_TIMEOUT_MS = 20000;
 
-      // Normalize & validate
-      allItems = data.map(normalizeRow).filter(it =>
-        it.id && Number.isFinite(it.lat) && Number.isFinite(it.lng)
-      );
-
-      // Apply jitter for same coordinates (핵심)
-      allItems = applyJitter(allItems);
-
-      // Create markers
-      for(const it of allItems){
-        const mk = L.marker([it.lat, it.lng], {icon: makeIcon()});
-
-        mk.on("click", () => {
-          // 핀 클릭 => 1번으로 올리고 빛나기 + 팝업
-          focusItem(it.id, {center:false, openPopup:true});
-        });
-
-        mk.on("mouseover", () => {
-          hoveredId = it.id;
-          if(activeId && activeId !== it.id) setMarkerState(activeId, "active");
-          setMarkerState(it.id, "hover");
-          // hover 시 리스트도 해당 항목 활성처럼 보이게(이전 1.1.17 감각)
-          // 다만 과도한 렌더를 피하려고, 리스트 상단 이동은 "click"에만 적용
-          const card = $("#resultList").querySelector(`.item[data-id="${CSS.escape(it.id)}"]`);
-          if(card) card.classList.add("active");
-        });
-
-        mk.on("mouseout", () => {
-          hoveredId = null;
-          clearAllMarkerStates();
-          if(activeId) setMarkerState(activeId, "active");
-          refreshActiveInList();
-        });
-
-        mk.bindPopup(miniPopupHtml(it), {closeButton:true, autoPan:true, maxWidth:300});
-
-        mk.on("popupopen", (e) => {
-          // bind popup buttons after open
-          const popupEl = e.popup.getElement()?.querySelector(".miniPop");
-          if(popupEl) bindPopupButtons(popupEl);
-        });
-
-        markersById.set(it.id, mk);
-        cluster.addLayer(mk);
-      }
-
-      // initial list
-      currentResults = allItems.slice();
-      renderResults(currentResults);
-
-      // initial recent & cart
-      saveCart(loadCart()); // refresh count
-      renderRecent();
-
-      // Map events:
-      map.on("zoomend", () => {
-        $("#zoomNum").textContent = String(map.getZoom());
-        $("#zoomMeta").textContent = VERSION;
-      });
-      map.fire("zoomend");
-
-      // (v1.1.24 버그 개선) 지도 드래그 이동 시 리스트 스크롤 상단 고정 (잔상 방지)
-      map.on("dragstart", () => {
-        $("#resultList").scrollTop = 0;
-      });
-
-      // ===== UI handlers =====
-      $("#btnZoomIn").onclick = () => map.zoomIn();
-      $("#btnZoomOut").onclick = () => map.zoomOut();
-
-      $("#btnResetView").onclick = () => {
-        $("#q").value = "";
-        onlyVisible = false;
-        $("#btnOnlyVisible").classList.add("mint");
-        map.setView([36.5, 127.9], 7, {animate:true, duration:0.35});
-        currentResults = allItems.slice();
-        renderResults(currentResults);
-      };
-
-      $("#btnOnlyVisible").onclick = () => {
-        onlyVisible = !onlyVisible;
-        $("#btnOnlyVisible").classList.toggle("mint", onlyVisible);
-        applySearch($("#q").value);
-      };
-
-      const onSearch = debounce(() => {
-        applySearch($("#q").value);
-      }, 220);
-
-      $("#q").addEventListener("input", () => {
-        onSearch();
-      });
-
-      // recent pager
-      $("#recentPrev").onclick = () => { recentPage--; renderRecent(); };
-      $("#recentNext").onclick = () => { recentPage++; renderRecent(); };
-
-      // cart modal
-      $("#btnOpenCart").onclick = () => openCart();
-      $("#btnCloseCart").onclick = () => closeCart();
-      $("#btnCartReset").onclick = () => {
-        if(confirm("이 브라우저의 장바구니를 비울까요?")){
-          cartReset();
+      async function fetchJsonWithTimeout(url, ms){
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), ms);
+        try{
+          const res = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+          if(!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          const text = await res.text();
+          try{
+            return JSON.parse(text);
+          }catch(parseErr){
+            throw new Error(`JSON parse error: ${parseErr.message}`);
+          }
+        }finally{
+          clearTimeout(t);
         }
-      };
+      }
 
-      // overlay close on background click
-      $("#cartModal").addEventListener("click", (e) => {
-        if(e.target === $("#cartModal")) closeCart();
+      async function loadDataJson(){
+        // Candidate URLs (try in order)
+        const baseDir = location.href.replace(/[?#].*$/, "").replace(/\/[^\/]*$/, "/");
+        const candidates = [
+          { label: "relative", url: "data.json" },
+          { label: "dot-relative", url: "./data.json" },
+          { label: "baseDir", url: baseDir + "data.json" },
+          // Fallbacks (in case GitHub Pages path or cache gets weird)
+          { label: "raw-github", url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data.json" },
+          { label: "jsdelivr", url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data.json" },
+        ];
+
+        let lastErr = null;
+        for(const c of candidates){
+          try{
+            const loaded = await fetchJsonWithTimeout(c.url, __FETCH_TIMEOUT_MS);
+            console.log("[DATA] loaded via", c.label, c.url, "(items:", Array.isArray(loaded) ? loaded.length : "n/a", ")");
+            return loaded;
+          }catch(err){
+            lastErr = err;
+            console.warn("[DATA] load failed:", c.label, c.url, String(err && err.message ? err.message : err));
+          }
+        }
+
+        const msg =
+          "data.json 로드 실패.\n" +
+          "1) index.html과 같은 폴더에 data.json이 있는지 확인\n" +
+          "2) GitHub Pages 캐시/배포 상태 확인\n\n" +
+          "마지막 에러: " + (lastErr ? (lastErr.message || String(lastErr)) : "unknown");
+        alert(msg);
+        return [];
+      }
+
+      data = await loadDataJson();
+
+      if(!Array.isArray(data)){
+        alert("data.json 형식이 올바르지 않습니다. 배열(Array) 형태여야 합니다.");
+        data = [];
+      }
+
+      // Build markers
+      const markers = [];
+      function glowMarker(marker){
+        // "빛나라" 효과: 간단한 CSS pulse를 marker element에 적용
+        const el = marker.getElement && marker.getElement();
+        if(!el) return;
+        el.style.filter = "drop-shadow(0 0 10px rgba(125,227,198,.95)) drop-shadow(0 0 18px rgba(125,227,198,.55))";
+        el.style.transform = "translate3d(0,0,0) scale(1.12)";
+        setTimeout(()=>{
+          el.style.filter = "";
+          el.style.transform = "";
+        }, 900);
+      }
+
+      function toLatLng(item){
+        const lat = Number(item.lat ?? item.latitude);
+        const lng = Number(item.lng ?? item.lon ?? item.longitude);
+        if(!isFinite(lat) || !isFinite(lng)) return null;
+        return [lat,lng];
+      }
+
+      function makePopup(item, marker){
+        const div = document.createElement("div");
+        div.className = "miniPopup";
+        div.innerHTML = `
+          <div class="pName">${item.name || "-"}</div>
+          <div class="pPrice">${fmtPrice(item.price)}</div>
+          <div class="pBtns">
+            <button data-act="open">상세</button>
+            <button data-act="cart">담기</button>
+          </div>
+        `;
+        div.querySelectorAll("button").forEach(btn=>{
+          btn.addEventListener("click", ()=>{
+            const act = btn.getAttribute("data-act");
+            if(act==="open"){
+              openHashModal(item);
+            }else if(act==="cart"){
+              addToCart(item);
+            }
+          });
+        });
+        return div;
+      }
+
+      // Create markers and attach events
+      data.forEach(item=>{
+        const ll = toLatLng(item);
+        if(!ll) return;
+
+        const m = L.marker(ll);
+        m.on("click", ()=>{
+          // 요구: 핀 클릭시 해당 매체가 1번 위치(우상)으로 이동 + 빛나라
+          // 여기서는 "검색결과 패널 상단(첫번째)"로 올리는 동작을 수행
+          pushRecent(item);
+          glowMarker(m);
+
+          // 우측 리스트를 현재 클릭한 항목 단일로 보여주며 1번에 고정
+          renderResults([item], {pinFocus:true});
+        });
+
+        m.on("mouseover", ()=>{
+          // 몰려있는 핀 개별 발광은 markercluster 내부 상태/아이콘 관리에 따라 제한이 있으나
+          // 개별 마커 엘리먼트가 있는 경우 glow를 적용
+          glowMarker(m);
+        });
+
+        m.bindPopup(makePopup(item, m));
+        cluster.addLayer(m);
+        markers.push({ item, marker:m });
       });
-      $("#hashModal").addEventListener("click", (e) => {
-        if(e.target === $("#hashModal")) closeHash();
+
+      // Cluster count update
+      function updateClusterCount(){
+        const cnt = cluster.getVisibleParent ? cluster.getVisibleParent({}).length : cluster.getLayers().length;
+        elClusterCount.textContent = String(cluster.getLayers().length || 0);
+      }
+      updateClusterCount();
+
+      // Render results
+      function renderResults(items, opts={}){
+        const arr = Array.isArray(items) ? items : [];
+        elResultsCount.textContent = String(arr.length);
+
+        elResultsList.innerHTML = arr.map((x, idx)=>{
+          return `
+            <div class="item" data-idx="${idx}">
+              <div class="name">${x.name || "-"}</div>
+              <div class="sub">${x.address || x.addr || "-"}</div>
+              <div class="price">${fmtPrice(x.price)}</div>
+            </div>
+          `;
+        }).join("");
+
+        qsa(".item", elResultsList).forEach(row=>{
+          row.addEventListener("click", ()=>{
+            const idx = Number(row.getAttribute("data-idx"));
+            const item = arr[idx];
+            if(!item) return;
+
+            // 지도 이동 + 확대(기본 로직)
+            const ll = toLatLng(item);
+            if(ll){
+              map.setView(ll, Math.max(map.getZoom(), 12), { animate:true });
+            }
+            pushRecent(item);
+            openHashModal(item);
+          });
+        });
+
+        // 1번 위치(우상)에 “고정”: 패널 자체는 항상 우상단이므로 별도 이동 불필요
+        // 단, 스크롤 잔상 방지 위해 리스트 스크롤을 항상 최상단으로 리셋 (요청사항)
+        elResultsList.scrollTop = 0;
+      }
+
+      // Search
+      function normalize(s){ return (s||"").toString().trim().toLowerCase(); }
+
+      function searchData(q){
+        const nq = normalize(q);
+        if(!nq) return [];
+        return data.filter(x=>{
+          const name = normalize(x.name);
+          const addr = normalize(x.address || x.addr);
+          const group = normalize(x.media_group || x.group);
+          return name.includes(nq) || addr.includes(nq) || group.includes(nq);
+        }).slice(0, 200);
+      }
+
+      function computeZoomForResults(items){
+        // v1.1.26 개선요구: 검색 시 무조건 12 고정이 아니라,
+        // 결과들의 분포를 보고 "적절한 줌"을 준다.
+        const llList = items.map(toLatLng).filter(Boolean);
+        if(llList.length===0) return {center:null, zoom:12};
+        if(llList.length===1) return {center:llList[0], zoom:14};
+
+        const lats = llList.map(v=>v[0]);
+        const lngs = llList.map(v=>v[1]);
+        const minLat=Math.min(...lats), maxLat=Math.max(...lats);
+        const minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
+        const center=[(minLat+maxLat)/2, (minLng+maxLng)/2];
+
+        // spread 기반 줌 추정(대략)
+        const dLat = Math.abs(maxLat-minLat);
+        const dLng = Math.abs(maxLng-minLng);
+        const spread = Math.max(dLat,dLng);
+
+        let zoom = 12;
+        if(spread < 0.002) zoom = 16;
+        else if(spread < 0.01) zoom = 15;
+        else if(spread < 0.03) zoom = 14;
+        else if(spread < 0.08) zoom = 13;
+        else zoom = 12;
+
+        return {center, zoom};
+      }
+
+      elSearch.addEventListener("keydown", (e)=>{
+        if(e.key === "Enter"){
+          const q = elSearch.value;
+          const results = searchData(q);
+          renderResults(results);
+
+          // 지도 이동
+          const {center, zoom} = computeZoomForResults(results);
+          if(center){
+            map.setView(center, zoom, { animate:true });
+          }
+
+          // 우측 패널 오픈 보장
+          elResults.style.display = "flex";
+        }
       });
-      $("#btnCloseHash").onclick = () => closeHash();
 
-      // ESC close (topmost)
-      document.addEventListener("keydown", (e) => {
-        if(e.key !== "Escape") return;
-        if($("#hashModal").classList.contains("show")) closeHash();
-        else if($("#cartModal").classList.contains("show")) closeCart();
+      // Initial render
+      renderRecent();
+      loadCart();
+
+      // On drag map: (요청) 지도 드래그 시 리스트 스크롤을 최상단으로 고정해 잔상 제거
+      map.on("movestart", ()=>{
+        elResultsList.scrollTop = 0;
       });
 
-      // First paint: avoid cluster "jump" feeling
-      await sleep(50);
-    }
-
-    init();
+      console.log("Frontier DOOH", VERSION, "loaded. items:", data.length);
+    })();
   </script>
 </body>
 </html>
