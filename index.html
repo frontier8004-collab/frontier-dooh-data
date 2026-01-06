@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.23</title>
+  <title>Frontier DOOH 전국 DB v1.1.22</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,7 +30,6 @@
       --inputPh:rgba(255,255,255,.45);
 
       --topbarH:72px;
-
       --sideW: 268px;
     }
 
@@ -100,6 +99,50 @@
       flex:0 0 auto;
     }
     .pill b{color:var(--mint); font-weight:1000}
+
+    /* Load error banner */
+    .errBanner{
+      position:sticky;
+      top:calc(var(--topbarH) + 0px);
+      z-index:5600;
+      background:rgba(120, 20, 20, .22);
+      border-bottom:1px solid rgba(255,255,255,.10);
+      padding:10px 16px;
+      display:none;
+    }
+    .errBox{
+      max-width:1200px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin:0 auto;
+      color:#ffdfdf;
+      font-size:12px;
+      line-height:1.45;
+    }
+    .errBox b{ color:#ffd1d1; font-weight:1000; }
+    .errBox code{
+      color:#ffdede;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.10);
+      padding:2px 6px;
+      border-radius:8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size:11px;
+      white-space:nowrap;
+    }
+    .errClose{
+      flex:0 0 auto;
+      height:34px;
+      padding:0 10px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.20);
+      background:rgba(0,0,0,.18);
+      color:#fff;
+      cursor:pointer;
+      font-weight:900;
+    }
 
     /* ===== FILTER BAR ===== */
     .filtersRow{
@@ -234,6 +277,7 @@
       html, body{overflow:auto;}
       body{overflow:auto;}
       .app{grid-template-columns: 1fr; grid-template-rows: 520px 1fr;}
+      .errBanner{ position:relative; top:auto; }
     }
 
     .panel{
@@ -242,6 +286,7 @@
       overflow:auto;
       padding:0;
       min-height:0;
+      scroll-behavior:auto !important; /* v1.1.22: “롤링/부드러운 이동” 방지 강제 */
     }
     @media (max-width: 980px){
       .panel{border-right:none; border-bottom:1px solid var(--line);}
@@ -290,30 +335,6 @@
       white-space:nowrap;
     }
     .sPill b{color:var(--mint); font-weight:1000}
-
-    /* ===== ERROR BANNER ===== */
-    .errBanner{
-      display:none;
-      margin:10px 12px 0;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,120,120,.35);
-      background:rgba(120,20,20,.22);
-      color:rgba(255,255,255,.90);
-      box-shadow:0 12px 30px rgba(0,0,0,.35);
-      font-size:12px;
-      line-height:1.35;
-    }
-    .errBanner b{ color:#ffd2d2; }
-    .errBanner code{
-      background:rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.12);
-      padding:2px 6px;
-      border-radius:10px;
-      color:#fff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size:11px;
-    }
 
     /* ===== LIST ===== */
     .listWrap{padding:12px;}
@@ -391,35 +412,6 @@
 
     .leaflet-tile-pane{
       filter: brightness(1.06) contrast(1.06) saturate(0.92);
-    }
-
-    /* ===== MAP ERROR OVERLAY ===== */
-    .mapErr{
-      position:absolute;
-      left:14px;
-      bottom:14px;
-      z-index:8000;
-      max-width:min(520px, calc(100% - 28px));
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,120,120,.35);
-      background:rgba(120,20,20,.22);
-      color:rgba(255,255,255,.92);
-      font-size:12px;
-      line-height:1.35;
-      box-shadow:0 18px 44px rgba(0,0,0,.55);
-      display:none;
-      pointer-events:none;
-    }
-    .mapErr b{ color:#ffd2d2; }
-    .mapErr code{
-      background:rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.12);
-      padding:2px 6px;
-      border-radius:10px;
-      color:#fff;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-      font-size:11px;
     }
 
     /* ===== PIN ICONS ===== */
@@ -547,7 +539,7 @@
       overflow:hidden;
     }
 
-    /* v1.1.23: 줌 UI (← ZOOM 8 →) */
+    /* 줌 UI (← ZOOM 8 →) */
     .zoomCard{ padding:10px; }
     .zoomBar{
       display:flex;
@@ -638,13 +630,9 @@
     }
     .cartBtn .meta b{ color:var(--mint); font-weight:1000; }
 
-    /* 최근 본 매체 (세로 4줄 + 페이지네이션) */
+    /* 최근 본 매체 */
     .recentBody{ padding:10px; display:flex; flex-direction:column; gap:10px; }
-    .recentList{
-      display:flex;
-      flex-direction:column;
-      gap:8px;
-    }
+    .recentList{ display:flex; flex-direction:column; gap:8px; }
     .rRow{
       position:relative;
       display:flex;
@@ -731,10 +719,7 @@
       justify-content:center;
       user-select:none;
     }
-    .pBtn:disabled{
-      opacity:.35;
-      cursor:not-allowed;
-    }
+    .pBtn:disabled{ opacity:.35; cursor:not-allowed; }
     .pMeta{
       font-size:12px;
       color:rgba(255,255,255,.72);
@@ -796,13 +781,10 @@
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:#0d0f10;
-      aspect-ratio:auto;
       height:min(52vh, 520px);
       position:relative;
     }
-    @media (max-width: 920px){
-      .dimg{ height:min(46vh, 460px); }
-    }
+    @media (max-width: 920px){ .dimg{ height:min(46vh, 460px); } }
     .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
     .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
     .info{
@@ -826,12 +808,7 @@
       font-size:12px;
     }
 
-    .dActions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
+    .dActions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
     .dAddCart{
       height:44px;
       border-radius:14px;
@@ -921,8 +898,21 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.23</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.22</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
+  </div>
+
+  <div class="errBanner" id="errBanner">
+    <div class="errBox">
+      <div style="min-width:0;">
+        <b>데이터 로드 실패</b>
+        <div style="margin-top:4px; color:rgba(255,255,255,.88);">
+          <span id="errMsg">-</span>
+          <span style="margin-left:8px;">(경로: <code id="errUrl">-</code>)</span>
+        </div>
+      </div>
+      <button class="errClose" id="errClose">닫기</button>
+    </div>
   </div>
 
   <div class="filtersRow" id="filtersRow">
@@ -946,9 +936,6 @@
         <div class="sPill">현재범위 <b id="mInView">0</b></div>
       </div>
 
-      <!-- v1.1.23: 데이터 로드 실패 등 오류 배너 -->
-      <div class="errBanner" id="errBanner"></div>
-
       <div class="card listWrap">
         <div class="grid" id="list"></div>
 
@@ -966,13 +953,8 @@
       <div class="mapInner">
         <div id="map"></div>
 
-        <!-- cluster hover hint -->
         <div class="clusterHint" id="clusterHint">클릭해서 확대</div>
 
-        <!-- v1.1.23: 지도 유지 + 오류 메시지 -->
-        <div class="mapErr" id="mapErr"></div>
-
-        <!-- right side panel -->
         <div class="mapSide" id="mapSide">
           <div class="sideCard zoomCard">
             <div class="zoomBar">
@@ -1065,12 +1047,14 @@
   </div>
 
 <script>
-  /* ===========================
-     Frontier DOOH 전국 DB v1.1.23
-     - 리스트 롤링(슬롯머신 느낌) 제거: hover/지도조작에서 스크롤 유발 요소 제거
-     - 핀 클릭 시 해당 카드가 리스트 "정중앙(3x3의 5번)"에 오도록 즉시 정렬
-     - 데이터 로드 실패 시 지도/줌 UI 유지 + 오류 메시지 노출
-     =========================== */
+  /* =========================================================
+     v1.1.22 변경점
+     1) 줌 표시/스냅: 7.99999999 방지 (정수 스냅/표시 정수화)
+     2) 지도 조작(moveend) 시 리스트 “롤링” 방지:
+        - moveend 렌더 시 패널 scrollTop 보존
+        - 핀 hover에서 자동 scrollIntoView 제거 (클릭에만 이동)
+     3) 초기화 홈센터 보정 방향 반대로 (사용자 체감 반대였음)
+     ========================================================= */
 
   const DATA_URL = "./data_public.json";
 
@@ -1082,24 +1066,33 @@
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
 
-  /* v1.1.23: 줌은 8을 기준으로 표시/운영 (표기는 정수 고정) */
   const HOME_ZOOM = 8;
 
-  /* v1.1.23: 초기화 홈 영역(요구 반영) */
   const HOME_BOUNDS_FIXED = {
     north: 39.5,
     south: 33.0,
-    west:  123.5,
-    east:  130.5
+    west: 123.5,
+    east: 130.5
   };
-  const HOME_BOUNDS = L.latLngBounds(
-    [HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west],
-    [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]
-  );
-  const HOME_CENTER = [
-    (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2,
-    (HOME_BOUNDS_FIXED.west  + HOME_BOUNDS_FIXED.east)  / 2
-  ];
+
+  /* v1.1.22: 방향 반대로 (사용자 체감 반대) */
+  const HOME_CENTER_SHIFT = {
+    upPct: -0.07,     // (기존 +0.07) -> 반대로
+    leftPct: -0.10    // (기존 +0.10) -> 반대로
+  };
+
+  function computeHomeCenter(){
+    const midLat = (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2;
+    const midLng = (HOME_BOUNDS_FIXED.west + HOME_BOUNDS_FIXED.east) / 2;
+    const latSpan = (HOME_BOUNDS_FIXED.north - HOME_BOUNDS_FIXED.south);
+    const lngSpan = (HOME_BOUNDS_FIXED.east - HOME_BOUNDS_FIXED.west);
+
+    const latShift = latSpan * HOME_CENTER_SHIFT.upPct;
+    const lngShift = lngSpan * HOME_CENTER_SHIFT.leftPct;
+
+    return [ midLat + latShift, midLng - lngShift ];
+  }
+  const HOME_CENTER = computeHomeCenter();
 
   let ALL = [];
   let map = null;
@@ -1119,10 +1112,10 @@
   let suppressHashHandler = false;
 
   let highlightedClusterEl = null;
-
   let isMapInteracting = false;
 
-  /* 검색(렉 제거): 입력은 미리보기만, 적용은 Enter/돋보기 클릭 */
+  let suspendViewportOnce = false;
+
   let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
@@ -1130,14 +1123,11 @@
   let SUG_META = new Map();
   let sugIndex = -1;
 
-  /* 마커 상태 */
   let hoverKey = null;
   let activeMiniKey = null;
 
-  /* 랜덤 리스트: (초기 접속/초기화/F5마다) seed 새로 생성, 그 seed로 안정적 섞기 */
   let shuffleSeed = Math.random();
 
-  /* 최근 본 / 장바구니 (개별 방문자 localStorage) */
   const LS_RECENT = "frontier_recent_viewed_v1";
   const LS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
@@ -1145,35 +1135,17 @@
   let recentKeys = [];
   let cartKeys = [];
 
-  /* 최근 본 페이지네이션 */
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
   const $ = (id) => document.getElementById(id);
 
-  /* v1.1.23: "핀 클릭 포커스"를 moveend 후(리스트가 갱신된 후)에 중앙 정렬로 실행 */
-  let pendingFocusKey = null;
-  function requestCenterFocus(key){
-    if (!key) return;
-    pendingFocusKey = key;
+  function showErrorBanner(msg){
+    $("errMsg").textContent = msg || "알 수 없는 오류";
+    $("errUrl").textContent = DATA_URL;
+    $("errBanner").style.display = "block";
   }
-
-  /* v1.1.23: 줌 표기/정수 고정(표기만이라도 7.99999999 제거) */
-  let zoomFixing = false;
-  function getIntZoom(){
-    if (!map) return HOME_ZOOM;
-    return Math.round(map.getZoom());
-  }
-  function enforceIntegerZoomIfNear(){
-    if (!map || zoomFixing) return;
-    const z = map.getZoom();
-    const zi = Math.round(z);
-    if (Math.abs(z - zi) > 1e-9 && Math.abs(z - zi) < 0.05){
-      zoomFixing = true;
-      try{ map.setZoom(zi, { animate:false }); }catch(_){}
-      setTimeout(()=>{ zoomFixing = false; }, 0);
-    }
-  }
+  function hideErrorBanner(){ $("errBanner").style.display = "none"; }
 
   function addOption(sel, value, label){
     const o = document.createElement("option");
@@ -1546,57 +1518,6 @@
     return arr;
   }
 
-  function boundsAll(items){
-    const pts = items.slice(0, 2500);
-    if (!pts.length) return null;
-    const b = L.latLngBounds([]);
-    for (const it of pts){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-      b.extend([la, ln]);
-    }
-    return b.isValid() ? b : null;
-  }
-
-  function getHomePadding(){
-    const sideW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sideW")) || 268;
-    return {
-      paddingTopLeft: L.point(58, 54),
-      paddingBottomRight: L.point(sideW + 88, 86)
-    };
-  }
-
-  /* v1.1.23: 홈뷰는 "초기화"에서만 적용. (지도 조작 후 자동으로 홈뷰 재호출 금지) */
-  let homeApplyToken = 0;
-  function applyHomeView(animate){
-    if (!map) return;
-    const myToken = ++homeApplyToken;
-
-    try{
-      if (animate){
-        map.flyTo(HOME_CENTER, HOME_ZOOM, { duration:0.65 });
-      }else{
-        map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
-      }
-    }catch(_){}
-
-    map.once("moveend", () => {
-      if (myToken !== homeApplyToken) return;
-
-      // HOME_ZOOM에서 HOME_BOUNDS가 안 들어오면 fitBounds로 보정(필요한 경우만)
-      try{
-        if (HOME_BOUNDS && !map.getBounds().contains(HOME_BOUNDS)){
-          const pad = getHomePadding();
-          map.fitBounds(HOME_BOUNDS, { ...pad, maxZoom: HOME_ZOOM });
-        }
-      }catch(_){}
-
-      enforceIntegerZoomIfNear();
-      updateZoomUI();
-      viewportUpdate();
-    });
-  }
-
   /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
@@ -1654,10 +1575,13 @@
     highlightedClusterEl = el;
   }
 
-  function highlightCard(key){
+  function highlightCard(key, doScroll){
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.add("isActive");
+    if (doScroll){
+      el.scrollIntoView({ block:"start", behavior:"auto" });
+    }
   }
   function unhighlightCard(key){
     const el = cardByKey.get(key);
@@ -1696,43 +1620,17 @@
     if (next) updateMarkerVisual(next);
   }
 
-  /* v1.1.23: 리스트 "정중앙(3x3의 5번)" 정렬 — click 트리거에서만 사용 */
-  function centerCardInPanel(key){
-    const panel = $("panel");
-    const card = cardByKey.get(key);
-    if (!panel || !card) return;
-
-    const stats = panel.querySelector(".statsSticky");
-    const statsH = stats ? stats.getBoundingClientRect().height : 0;
-
-    const panelRect = panel.getBoundingClientRect();
-    const cardRect  = card.getBoundingClientRect();
-
-    const targetCenterY = panelRect.top + statsH + (panelRect.height - statsH) / 2;
-    const cardCenterY   = cardRect.top + cardRect.height / 2;
-
-    const delta = cardCenterY - targetCenterY;
-    const nextTop = panel.scrollTop + delta;
-
-    try{
-      panel.scrollTo({ top: nextTop, behavior:"auto" }); // v1.1.23: smooth 금지(딱딱)
-    }catch(_){
-      panel.scrollTop = nextTop;
-    }
-  }
-
   function ensureCardVisible(key){
     if (cardByKey.has(key)) return;
 
     const idx = curInView.findIndex(x => x._key === key);
     if (idx < 0) return;
-
     if (idx < renderLimit) return;
 
     let next = renderLimit;
     while (next <= idx) next += STEP;
     renderLimit = Math.min(curInView.length, next);
-    appendList(curInView, { preserveScroll:true });
+    appendList(curInView);
   }
 
   function highlightClusterOnlyByKey(key){
@@ -1805,10 +1703,9 @@
     }
     setActiveMiniKey(it._key);
 
-    // v1.1.23: hover/미니팝업에서는 스크롤 이동 금지(롤링 체감 방지)
     clearAllCardHighlights();
     ensureCardVisible(it._key);
-    highlightCard(it._key);
+    highlightCard(it._key, true);
 
     try{
       marker.setPopupContent(miniPopupHtml(it));
@@ -1841,15 +1738,15 @@
         offset: L.point(0, -86)
       });
 
+      // v1.1.22: hover로 리스트를 “자동 스크롤 이동”하지 않는다 (어지럽다고 함)
       m.on("mouseover", () => {
         if (isMapInteracting) return;
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
 
-        // v1.1.23: hover에서 스크롤 유발 금지(중앙 정렬은 click에서만)
         clearAllCardHighlights();
         ensureCardVisible(it._key);
-        highlightCard(it._key);
+        highlightCard(it._key, false);   // <<< doScroll=false (중요)
       });
 
       m.on("mouseout", () => {
@@ -1857,7 +1754,7 @@
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
         clearAllCardHighlights();
-        if (activeMiniKey) highlightCard(activeMiniKey);
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
 
       // 클릭: 1회=미니팝업, 동일 핀 재클릭=상세
@@ -1869,10 +1766,12 @@
           }
         }catch(_){}
 
-        // v1.1.23: 클릭 시 해당 카드가 중앙(5번)에 오도록 예약
-        requestCenterFocus(it._key);
+        suspendViewportOnce = true;
+        map.once("moveend", () => {
+          suspendViewportOnce = false;
+          updateZoomUI();
+        });
 
-        // 지도 이동(시각적 맥락): 부드러운 panTo는 유지하되, 리스트 스크롤은 "딱" 처리
         try{
           map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
         }catch(_){}
@@ -1950,9 +1849,15 @@
 
     $("dOverlay").style.display = "block";
 
+    suspendViewportOnce = true;
+    map.once("moveend", () => {
+      suspendViewportOnce = false;
+      updateZoomUI();
+    });
+
     const la = (it._latDisp ?? it.lat);
     const ln = (it._lngDisp ?? it.lng);
-    map.setView([la, ln], Math.max(getIntZoom(), 15));
+    map.setView([la, ln], Math.max(map.getZoom(), 15), { animate:false });
 
     saveRecentKey(it._key);
 
@@ -1989,11 +1894,7 @@
     return (!activeQuery || !activeQuery.trim()) && (!$("catHigh").value);
   }
 
-  function renderList(items, opt){
-    const preserveScroll = opt?.preserveScroll ?? true;
-    const panel = $("panel");
-    const prevTop = preserveScroll ? panel.scrollTop : 0;
-
+  function renderList(items){
     const list = $("list");
     list.innerHTML = "";
     cardByKey.clear();
@@ -2002,22 +1903,10 @@
     $("empty").style.display = items.length ? "none" : "block";
     $("moreHint").style.display = "none";
 
-    appendList(items, { preserveScroll: preserveScroll });
-
-    if (preserveScroll){
-      // DOM 교체로 스크롤이 튀는 경우를 방지(롤링 체감 방지)
-      try{
-        const maxTop = Math.max(0, panel.scrollHeight - panel.clientHeight);
-        panel.scrollTop = Math.min(prevTop, maxTop);
-      }catch(_){}
-    }
+    appendList(items);
   }
 
-  function appendList(items, opt){
-    const preserveScroll = opt?.preserveScroll ?? true;
-    const panel = $("panel");
-    const prevTop = preserveScroll ? panel.scrollTop : 0;
-
+  function appendList(items){
     const list = $("list");
     let arr = items.slice();
 
@@ -2056,7 +1945,7 @@
 
       el.addEventListener("mouseenter", () => {
         clearAllCardHighlights();
-        highlightCard(it._key);
+        highlightCard(it._key, false);
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
       });
@@ -2064,26 +1953,14 @@
         unhighlightCard(it._key);
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
-        if (activeMiniKey) highlightCard(activeMiniKey);
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
-
-      // 리스트 카드 클릭: 상세 열기 + 중앙 정렬(클릭 트리거)
-      el.addEventListener("click", () => {
-        requestCenterFocus(it._key);
-        openDetail(it, true);
-      });
+      el.addEventListener("click", () => openDetail(it, true));
 
       list.appendChild(el);
     }
 
     $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
-
-    if (preserveScroll){
-      try{
-        const maxTop = Math.max(0, panel.scrollHeight - panel.clientHeight);
-        panel.scrollTop = Math.min(prevTop, maxTop);
-      }catch(_){}
-    }
   }
 
   function setupInfiniteScroll(){
@@ -2094,7 +1971,7 @@
       if (renderLimit >= curInView.length) return;
 
       renderLimit = Math.min(curInView.length, renderLimit + STEP);
-      appendList(curInView, { preserveScroll:true });
+      appendList(curInView);
     }, { passive:true });
   }
 
@@ -2284,9 +2161,7 @@
     return true;
   }
 
-  /* v1.1.23: 지도 위치/줌 유지가 원칙이므로 "fitBounds로 재설정"은 하지 않는다 */
-  function fullRender(){
-    const base = getFilteredBase();
+  function renderMarkersAndListFromBase(base){
     curBase = base;
 
     if (currentOpenKey){
@@ -2301,7 +2176,7 @@
     viewportUpdate();
   }
 
-  /* v1.1.23: moveend로 리스트가 갱신된 뒤에만 "클릭 포커스 중앙정렬" 실행 */
+  // v1.1.22: 리스트 “롤링” 방지 핵심 -> scrollTop 보존/복구
   function viewportUpdate(){
     if (!map) return;
     const b = map.getBounds();
@@ -2314,33 +2189,22 @@
     curInView = inView;
     $("mInView").textContent = inView.length;
 
-    // v1.1.23: 지도 조작/줌에서 롤링 체감을 줄이기 위해 스크롤은 보존(절대 자동 스크롤 금지)
-    renderList(inView, { preserveScroll:true });
+    const panel = $("panel");
+    const st = panel ? panel.scrollTop : 0;
 
-    // active mini highlight 유지
+    renderList(inView);
+
+    if (panel){
+      // 즉시 복구 (애니메이션 없음)
+      panel.scrollTop = st;
+    }
+
     if (activeMiniKey){
       ensureCardVisible(activeMiniKey);
       clearAllCardHighlights();
-      highlightCard(activeMiniKey);
+      highlightCard(activeMiniKey, false);
       highlightClusterOnlyByKey(activeMiniKey);
       updateMarkerVisual(activeMiniKey);
-    }
-
-    // v1.1.23: 클릭으로 예약된 카드 중앙 정렬(딱! 딱!)
-    if (pendingFocusKey){
-      const key = pendingFocusKey;
-      pendingFocusKey = null;
-
-      // 카드가 아직 렌더되지 않았다면 확장
-      ensureCardVisible(key);
-
-      clearAllCardHighlights();
-      highlightCard(key);
-      highlightClusterOnlyByKey(key);
-      updateMarkerVisual(key);
-
-      // 중앙 정렬(3x3의 5번 느낌)
-      centerCardInPanel(key);
     }
   }
 
@@ -2350,9 +2214,22 @@
     document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
   }
 
+  // v1.1.22: 줌 UI는 “정수”로만 표기
   function updateZoomUI(){
     if (!map) return;
-    $("zVal").textContent = String(getIntZoom());
+    const zi = Math.round(map.getZoom());
+    $("zVal").textContent = zi;
+  }
+
+  // v1.1.22: zoomend에서 정수 스냅 강제 (7.999999 방지)
+  function forceIntegerZoom(){
+    if (!map) return;
+    const z = map.getZoom();
+    const zi = Math.round(z);
+    if (Math.abs(z - zi) > 1e-6){
+      try{ map.setZoom(zi, { animate:false }); }catch(_){}
+    }
+    updateZoomUI();
   }
 
   function showClusterHint(latlng){
@@ -2369,33 +2246,13 @@
     hint.style.display = "none";
   }
 
-  function showErrorBanner(msg, detail){
-    const b = $("errBanner");
-    const m = $("mapErr");
-    const text = `<b>데이터 로드 실패</b><br>${escapeHtml(msg || "알 수 없는 오류")}<br><span style="opacity:.85;">DATA_URL: <code>${escapeHtml(DATA_URL)}</code></span>${detail ? `<br><span style="opacity:.85;">${escapeHtml(detail)}</span>` : ""}`;
-    if (b){
-      b.innerHTML = text;
-      b.style.display = "block";
-    }
-    if (m){
-      m.innerHTML = text;
-      m.style.display = "block";
-    }
-    // Loaded pill 표시도 즉시 바꿈
-    $("pillLoaded").textContent = "ERR";
-  }
-  function clearErrorBanner(){
-    const b = $("errBanner");
-    const m = $("mapErr");
-    if (b){ b.style.display = "none"; b.innerHTML = ""; }
-    if (m){ m.style.display = "none"; m.innerHTML = ""; }
-  }
-
   function buildMap(){
+    // v1.1.22: zoomSnap/zoomDelta로 fractional zoom 억제
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
-      zoomDelta: 1
+      zoomDelta: 1,
+      wheelPxPerZoomLevel: 80
     }).setView(HOME_CENTER, HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
@@ -2425,7 +2282,6 @@
       hideClusterHint();
     });
 
-    // 클러스터 클릭: 자연스럽게 확대/중앙 이동
     markers.on("clusterclick", (e) => {
       try{
         if (e && e.originalEvent){
@@ -2440,13 +2296,19 @@
       clearAllCardHighlights();
       clearClusterHighlight();
 
+      suspendViewportOnce = true;
+      map.once("moveend", () => {
+        suspendViewportOnce = false;
+        forceIntegerZoom();
+      });
+
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
       if (bb && bb.isValid && bb.isValid()){
         map.fitBounds(bb, { padding:[90,90], maxZoom: 18 });
       }else if (e.layer && e.layer.getLatLng){
         const ll = e.layer.getLatLng();
-        map.setView(ll, Math.min(getIntZoom() + 2, 18));
+        map.setView(ll, Math.min(map.getZoom() + 2, 18), { animate:false });
       }
     });
 
@@ -2458,7 +2320,7 @@
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; enforceIntegerZoomIfNear(); updateZoomUI(); });
+    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
 
@@ -2472,8 +2334,10 @@
     }, { passive:true });
 
     map.on("moveend", () => {
-      enforceIntegerZoomIfNear();
+      if (suspendViewportOnce) return;
       viewportUpdate();
+      // moveend 뒤에도 혹시 떠있는 소수줌 제거
+      forceIntegerZoom();
     });
   }
 
@@ -2532,7 +2396,7 @@
         <div class="rX" title="제거">✕</div>
       `;
 
-      el.addEventListener("click", () => { requestCenterFocus(it._key); openDetail(it, true); });
+      el.addEventListener("click", () => openDetail(it, true));
       el.querySelector(".rX").addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
         recentKeys = recentKeys.filter(x => x !== key);
@@ -2620,7 +2484,7 @@
           </div>
         `;
 
-        row.addEventListener("click", ()=>{ closeCartModal(); requestCenterFocus(it._key); openDetail(it, true); });
+        row.addEventListener("click", ()=>{ closeCartModal(); openDetail(it, true); });
         row.querySelector(".mX").addEventListener("click", (e)=>{
           e.preventDefault(); e.stopPropagation();
           removeFromCart(key);
@@ -2645,8 +2509,28 @@
     const qVal = $("q").value.trim();
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
-    // v1.1.23: 검색/필터 변경 시 지도 위치/줌 유지 (fit 금지)
-    fullRender();
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
+  }
+
+  function applyHomeView(animate){
+    if (!map) return;
+
+    suspendViewportOnce = true;
+
+    try{
+      if (animate){
+        map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
+      }else{
+        map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
+      }
+    }catch(_){}
+
+    map.once("moveend", () => {
+      suspendViewportOnce = false;
+      forceIntegerZoom();
+      viewportUpdate();
+    });
   }
 
   function resetAll(){
@@ -2660,16 +2544,33 @@
     shuffleSeed = Math.random();
 
     applyHomeView(true);
-    fullRender();
+
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
+  }
+
+  async function fetchJsonRobust(url){
+    const res = await fetch(url, { cache:"no-store" });
+
+    if (!res.ok){
+      const text = await res.text().catch(()=> "");
+      throw new Error(`HTTP ${res.status} ${res.statusText} (응답 일부: ${text.slice(0, 80)})`);
+    }
+
+    const raw = await res.text();
+    try{
+      return JSON.parse(raw);
+    }catch(e){
+      const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
+      throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
+    }
   }
 
   async function init(){
     updateStickyHeights();
-    window.addEventListener("resize", () => {
-      updateStickyHeights();
-      // v1.1.23: 리사이즈 시에도 지도 위치 강제 초기화는 금지(단, "중립 상태"에서만 아주 약하게 유지)
-      // 여기서는 스크롤/리스트 롤링 문제를 피하기 위해 홈뷰 재적용을 하지 않음.
-    });
+    window.addEventListener("resize", () => { updateStickyHeights(); });
+
+    $("errClose").addEventListener("click", hideErrorBanner);
 
     buildMap();
     setupInfiniteScroll();
@@ -2685,30 +2586,17 @@
 
       e.preventDefault();
       e.stopPropagation();
-      requestCenterFocus(it._key);
       openDetail(it, true);
     }, true);
 
-    // 데이터 로드(실패해도 지도/줌 UI 유지)
-    clearErrorBanner();
     let items = [];
     try{
-      const res = await fetch(DATA_URL, { cache:"no-store" });
-      if (!res.ok){
-        const ct = (res.headers.get("content-type") || "").toLowerCase();
-        throw new Error(`HTTP ${res.status} (${res.statusText || "fetch failed"}), content-type=${ct || "-"}`);
-      }
-      const ct = (res.headers.get("content-type") || "").toLowerCase();
-      // JSON이 아닌 HTML이 오는 경우를 조기에 감지
-      if (ct && !ct.includes("application/json") && !ct.includes("text/json") && !ct.includes("+json")){
-        // 그래도 json()을 시도해보고 실패 메시지를 더 구체화
-      }
-      const json = await res.json();
+      const json = await fetchJsonRobust(DATA_URL);
       items = Array.isArray(json) ? json : (json.items || []);
-      if (!Array.isArray(items)) items = [];
+      hideErrorBanner();
     }catch(err){
-      const msg = (err && err.message) ? err.message : String(err || "unknown error");
-      showErrorBanner("data_public.json을 불러오지 못했습니다.", msg);
+      console.error("[DATA LOAD FAIL]", err);
+      showErrorBanner(err?.message || "data 로드 실패");
       items = [];
     }
 
@@ -2739,7 +2627,7 @@
     itemByKey.clear();
     ALL.forEach(it => itemByKey.set(it._key, it));
 
-    $("pillLoaded").textContent = String(ALL.length);
+    $("pillLoaded").textContent = ALL.length;
 
     setCatHighOptions();
     buildSuggestPool();
@@ -2748,12 +2636,11 @@
     renderRecentPanel();
     renderCartSummary();
 
-    // 홈뷰(초기 1회)
     applyHomeView(false);
+    forceIntegerZoom();
 
-    updateZoomUI();
-    $("zIn").addEventListener("click", ()=> { map.zoomIn(); updateZoomUI(); });
-    $("zOut").addEventListener("click", ()=> { map.zoomOut(); updateZoomUI(); });
+    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
+    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
 
     $("recentPrev").addEventListener("click", ()=>{
       recentPage = Math.max(0, recentPage - 1);
@@ -2775,19 +2662,16 @@
       renderCartSummary();
     });
 
-    // filters
     $("catHigh").addEventListener("change", () => {
-      // v1.1.23: 카테고리 변경 시 지도 위치/줌 유지
-      fullRender();
+      const base = getFilteredBase();
+      renderMarkersAndListFromBase(base);
     });
 
     const q = $("q");
     const qBox = $("qSuggest");
 
     q.addEventListener("focus", ()=>{ updateSuggest(); });
-    q.addEventListener("blur", ()=>{
-      setTimeout(()=>{ qBox.style.display = "none"; }, 140);
-    });
+    q.addEventListener("blur", ()=>{ setTimeout(()=>{ qBox.style.display = "none"; }, 140); });
 
     document.addEventListener("click", (e)=>{
       const wrap = q.parentElement;
@@ -2823,7 +2707,6 @@
     });
 
     $("qGo").addEventListener("click", ()=> applySearchFromUI());
-
     $("reset").addEventListener("click", resetAll);
     $("titleReset").addEventListener("click", resetAll);
 
@@ -2849,8 +2732,8 @@
       }
     });
 
-    // 최초 렌더
-    fullRender();
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
     openDetailByHash();
   }
 
