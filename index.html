@@ -1,613 +1,1210 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Frontier DOOH 전국 DB (v1.1.26)</title>
 
+  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <style>
     :root{
-      --bg:#0b0e10;
-      --panel:#0f1417cc;
-      --panel2:#0f1417;
-      --stroke:#1e2a30;
-      --text:#d7e2e8;
-      --muted:#95a6b3;
+      --bg:#0b0c0e;
+      --panel:#0f1115;
+      --panel2:#0c0e12;
+      --line:rgba(255,255,255,.08);
+      --text:#e8eef6;
+      --muted:rgba(232,238,246,.65);
       --mint:#a2decc;
-      --shadow:0 14px 40px rgba(0,0,0,.55);
-      --r:18px;
+      --mint2:rgba(162,222,204,.22);
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+      --radius:18px;
+      --radius2:14px;
+      --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
     }
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,NanumGothic,Arial}
-    #app{position:fixed;inset:0;display:flex;overflow:hidden}
-    #map{flex:1;background:#000}
 
-    .panel{
-      position:absolute;left:12px;top:12px;bottom:12px;width:310px;
-      background:linear-gradient(180deg,var(--panel),rgba(15,20,23,.55));
-      border:1px solid rgba(162,222,204,.10);
-      border-radius:24px;box-shadow:var(--shadow);
-      overflow:hidden;backdrop-filter: blur(10px);
-      display:flex;flex-direction:column;
-    }
-    .panel .section{padding:12px 12px 0 12px}
-    .panel .section:last-child{padding-bottom:12px}
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--text); font-family:var(--font);}
+    *{box-sizing:border-box;}
 
-    .box{
-      background:rgba(0,0,0,.22);
-      border:1px solid rgba(162,222,204,.12);
-      border-radius:16px;
-      padding:10px;
-      margin-bottom:10px;
+    /* Layout */
+    #app{
+      position:fixed; inset:0;
+      display:grid;
+      grid-template-columns: 320px 1fr 380px;
+      gap:14px;
+      padding:14px;
+      background: radial-gradient(1200px 800px at 20% 0%, rgba(162,222,204,.08), transparent 60%),
+                  radial-gradient(900px 700px at 80% 10%, rgba(162,222,204,.06), transparent 55%),
+                  var(--bg);
     }
-    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .pill{
-      display:inline-flex;align-items:center;justify-content:center;
-      padding:6px 10px;border-radius:999px;
-      border:1px solid rgba(162,222,204,.18);
-      background:rgba(162,222,204,.08);
-      color:var(--text);
-      font-weight:700;
-      min-width:44px;
+    @media (max-width:1200px){
+      #app{grid-template-columns: 300px 1fr 340px;}
     }
-    .muted{color:var(--muted);font-size:12px;line-height:1.4}
+    @media (max-width:980px){
+      #app{grid-template-columns: 1fr; grid-template-rows: auto 1fr auto;}
+      #leftPanel,#rightPanel{height:auto;}
+      #mapWrap{min-height:52vh;}
+    }
 
-    .zoomWrap{display:flex;align-items:center;gap:10px}
-    .zoomLabel{font-weight:800;letter-spacing:.02em}
-    .zoomBtns{
-      margin-left:auto;
-      width:42px;
-      display:flex;flex-direction:column;
-      border:1px solid rgba(162,222,204,.18);
-      border-radius:14px;overflow:hidden;
+    #leftPanel, #rightPanel{
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    #mapWrap{
+      border-radius: var(--radius);
+      overflow:hidden;
+      border:1px solid var(--line);
+      box-shadow: var(--shadow);
+      position:relative;
+      background:#0b0c0e;
+    }
+    #map{height:100%; width:100%; background:#0b0c0e;}
+    .panelHeader{
+      padding:12px 14px;
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between;
+      background: linear-gradient(180deg, rgba(162,222,204,.08), rgba(255,255,255,0));
+    }
+    .panelHeader .title{
+      font-weight:800; letter-spacing:.2px;
+      display:flex; align-items:center; gap:8px;
+    }
+    .badge{
+      font-size:12px; color:var(--muted);
+      padding:4px 10px;
+      border:1px solid var(--line);
+      border-radius:999px;
       background:rgba(0,0,0,.25);
     }
-    .zbtn{
-      height:34px;border:0;background:transparent;color:var(--text);
-      cursor:pointer;font-size:16px;font-weight:900;
-    }
-    .zbtn + .zbtn{border-top:1px solid rgba(162,222,204,.12)}
-    .zbtn:hover{background:rgba(162,222,204,.10)}
 
+    /* Left “빌딩” */
+    .building{
+      padding:12px 12px 14px;
+      display:grid;
+      gap:10px;
+    }
+
+    .block{
+      background:rgba(0,0,0,.25);
+      border:1px solid var(--line);
+      border-radius: var(--radius2);
+      overflow:hidden;
+    }
+    .blockHead{
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    /* Zoom UI (요청: 우측 상하 버튼 + 왼쪽 zoom/숫자) */
+    .zoomRow{
+      display:grid;
+      grid-template-columns: 1fr 66px;
+      align-items:stretch;
+      gap:10px;
+      padding:12px;
+    }
+    .zoomLabel{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.28);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      font-weight:800;
+      color:var(--text);
+      min-height:50px;
+    }
+    .zoomLabel small{color:var(--muted); font-weight:700;}
+    .zoomBtns{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      overflow:hidden;
+      background: rgba(0,0,0,.28);
+      display:grid;
+      grid-template-rows: 1fr 1fr;
+      min-height:50px;
+    }
+    .btn{
+      appearance:none;
+      border:0;
+      background:transparent;
+      color:var(--text);
+      cursor:pointer;
+      font-weight:900;
+      font-size:18px;
+      display:flex; align-items:center; justify-content:center;
+      transition: background .15s ease, transform .08s ease;
+    }
+    .btn:hover{background:rgba(162,222,204,.12);}
+    .btn:active{transform:translateY(1px);}
+
+    /* Cart (요청: '장바구니' + 숫자만) */
     .cartRow{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:12px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .cartBtn{
+      width:100%;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.28);
+      color:var(--text);
+      cursor:pointer;
       font-weight:800;
     }
+    .cartCount{
+      min-width:36px;
+      height:26px;
+      border-radius:999px;
+      display:flex; align-items:center; justify-content:center;
+      background: rgba(162,222,204,.18);
+      border:1px solid rgba(162,222,204,.32);
+      color:var(--text);
+      font-weight:900;
+      font-size:12px;
+    }
 
-    .recentHead{display:flex;align-items:center;justify-content:space-between}
-    .recentGrid{
-      display:flex;flex-direction:column;gap:10px;
-      max-height:460px;overflow:auto;padding-right:4px;
+    /* Recent */
+    .recentList{
+      padding:12px;
+      display:grid;
+      gap:10px;
     }
     .recentItem{
-      display:grid;grid-template-columns:70px 1fr;gap:10px;
-      padding:10px;border-radius:16px;
-      border:1px solid rgba(162,222,204,.10);
-      background:rgba(0,0,0,.20);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.24);
+      border-radius: 14px;
+      overflow:hidden;
+      cursor:pointer;
+      transition: transform .08s ease, border-color .15s ease;
+    }
+    .recentItem:hover{border-color: rgba(162,222,204,.35);}
+    .recentThumb{
+      height:110px;
+      background:#090a0c;
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,.28);
+      font-weight:900;
+      letter-spacing:.6px;
+      position:relative;
+    }
+    .recentThumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .recentBody{padding:10px 12px;}
+    .ellipsis{
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
+    .recentTitle{
+      font-weight:900;
+      font-size:13px;
+      margin-bottom:6px;
+    }
+    .recentPrice{
+      color:rgba(162,222,204,.92);
+      font-weight:900;
+      font-size:12px;
+    }
+
+    /* Right panel (검색 결과 리스트) */
+    #rightPanel .body{
+      height:calc(100% - 49px);
+      overflow:auto;
+    }
+    .searchTop{
+      position:absolute;
+      left:14px; right:14px; top:14px;
+      z-index: 500; /* above map */
+      display:flex;
+      gap:10px;
+      align-items:center;
+      pointer-events:none;
+    }
+    .searchBar{
+      pointer-events:auto;
+      flex:1;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background: rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 999px;
+      padding:10px 12px;
+      backdrop-filter: blur(8px);
+    }
+    .searchBar input{
+      flex:1;
+      border:0;
+      outline:0;
+      background:transparent;
+      color:var(--text);
+      font-weight:800;
+      font-size:13px;
+    }
+    .searchBar input::placeholder{color:rgba(232,238,246,.45); font-weight:700;}
+    .pill{
+      pointer-events:auto;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.55);
+      color:var(--text);
+      border-radius: 999px;
+      padding:10px 12px;
+      font-weight:900;
+      font-size:12px;
+      cursor:pointer;
+      backdrop-filter: blur(8px);
+      transition: background .15s ease;
+    }
+    .pill:hover{background: rgba(162,222,204,.10);}
+    .resultItem{
+      padding:12px 12px;
+      border-bottom:1px solid var(--line);
+      display:grid;
+      grid-template-columns: 92px 1fr;
+      gap:10px;
       cursor:pointer;
     }
-    .recentItem:hover{background:rgba(162,222,204,.06);border-color:rgba(162,222,204,.22)}
+    .resultItem:hover{background: rgba(162,222,204,.06);}
+    .resultItem.active{outline:2px solid rgba(162,222,204,.25); outline-offset:-2px; background: rgba(162,222,204,.08);}
     .thumb{
-      width:70px;height:54px;border-radius:12px;
-      background:rgba(0,0,0,.35);
-      border:1px solid rgba(162,222,204,.10);
-      overflow:hidden;display:flex;align-items:center;justify-content:center;
-      color:rgba(215,226,232,.45);font-size:11px;font-weight:800;
-    }
-    .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-    .title{
-      font-weight:900;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-      max-width:100%;
-    }
-    .price{color:var(--mint);font-weight:900;margin-top:4px}
-
-    .pager{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
-    .pbtn{
-      width:42px;height:34px;border-radius:12px;border:1px solid rgba(162,222,204,.18);
-      background:rgba(0,0,0,.25);color:var(--text);cursor:pointer;font-weight:900;
-    }
-    .pbtn:hover{background:rgba(162,222,204,.10)}
-
-    .searchbar{
-      position:absolute;left:340px;top:14px;right:340px;height:44px;
-      background:rgba(0,0,0,.32);
-      border:1px solid rgba(162,222,204,.14);
-      border-radius:999px;
-      display:flex;align-items:center;gap:10px;
-      padding:0 14px;
-      backdrop-filter:blur(10px);
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-    }
-    .searchbar input{
-      flex:1;border:0;outline:0;background:transparent;color:var(--text);
-      font-size:14px;font-weight:700;
-    }
-    .searchbar .sbtn{
-      height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(162,222,204,.18);
-      background:rgba(162,222,204,.10);
-      color:var(--text);font-weight:900;cursor:pointer;
-    }
-    .searchbar .sbtn:hover{background:rgba(162,222,204,.18)}
-
-    .results{
-      position:absolute;right:12px;top:12px;bottom:12px;width:360px;
-      background:linear-gradient(180deg,var(--panel),rgba(15,20,23,.55));
-      border:1px solid rgba(162,222,204,.10);
-      border-radius:24px;box-shadow:var(--shadow);
-      overflow:hidden;backdrop-filter: blur(10px);
-      display:flex;flex-direction:column;
-    }
-    .results .head{padding:12px 14px;font-weight:900;display:flex;align-items:center;justify-content:space-between}
-    .results .list{flex:1;overflow:auto;padding:0 10px 12px 10px}
-    .card{
-      padding:12px;margin:10px 0;border-radius:18px;
-      border:1px solid rgba(162,222,204,.10);
-      background:rgba(0,0,0,.20);
-      cursor:pointer;
-    }
-    .card:hover{background:rgba(162,222,204,.06);border-color:rgba(162,222,204,.22)}
-    .card .cTitle{font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .card .cAddr{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.4}
-    .card .cPrice{color:var(--mint);font-weight:950;margin-top:8px}
-
-    .glow{
-      filter: drop-shadow(0 0 10px rgba(162,222,204,.8)) drop-shadow(0 0 18px rgba(162,222,204,.55));
-    }
-
-    /* Leaflet tweaks */
-    .leaflet-control-zoom{display:none !important;}
-    .leaflet-popup-content{margin:10px 12px}
-    .leaflet-popup-content-wrapper{
-      background:#0e1417;
-      color:var(--text);
-      border:1px solid rgba(162,222,204,.18);
-      border-radius:16px;
-      box-shadow:0 14px 40px rgba(0,0,0,.6);
-    }
-    .leaflet-popup-tip{background:#0e1417;border:1px solid rgba(162,222,204,.18)}
-    .miniBtn{
-      margin-top:10px;
-      width:100%;
-      height:34px;
+      width:92px; height:72px;
       border-radius:12px;
-      border:1px solid rgba(162,222,204,.22);
-      background:rgba(162,222,204,.10);
-      color:var(--text);
+      overflow:hidden;
+      background:#0a0b0d;
+      border:1px solid var(--line);
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,.25);
       font-weight:900;
-      cursor:pointer;
+      font-size:11px;
+      letter-spacing:.3px;
     }
-    .miniBtn:hover{background:rgba(162,222,204,.18)}
+    .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .riTitle{
+      font-weight:900;
+      font-size:13px;
+      margin:0 0 6px;
+    }
+    .riMeta{color:var(--muted); font-size:12px; line-height:1.35;}
+    .riPrice{margin-top:6px; color:rgba(162,222,204,.95); font-weight:900; font-size:12px;}
+
+    /* Leaflet markers */
+    .pin{
+      width:16px; height:16px;
+      border-radius:999px;
+      background: #2b87ff;
+      border:2px solid rgba(255,255,255,.85);
+      box-shadow: 0 0 0 6px rgba(43,135,255,.18), 0 0 24px rgba(43,135,255,.35);
+      transform: translate(-8px,-8px);
+    }
+    .pin.glow{
+      background: var(--mint);
+      box-shadow: 0 0 0 7px rgba(162,222,204,.20), 0 0 30px rgba(162,222,204,.55);
+      border-color: rgba(255,255,255,.92);
+    }
+    .pin.active{
+      background: var(--mint);
+      box-shadow: 0 0 0 9px rgba(162,222,204,.25), 0 0 38px rgba(162,222,204,.75);
+      border-color:#fff;
+    }
+
+    /* Modals */
+    .overlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.62);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:18px;
+      z-index: 2000;
+    }
+    .overlay.show{display:flex;}
+    .modal{
+      width:min(980px, 100%);
+      max-height: 86vh;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 22px;
+      box-shadow: 0 25px 70px rgba(0,0,0,.55);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .modalHead{
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.35);
+    }
+    .modalHead .mhTitle{font-weight:1000; letter-spacing:.2px;}
+    .iconBtn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.35);
+      color:var(--text);
+      width:38px; height:38px;
+      border-radius: 12px;
+      cursor:pointer;
+      font-weight:900;
+    }
+    .modalBody{
+      overflow:auto;
+      padding:14px;
+      display:grid;
+      gap:12px;
+    }
+
+    /* Cart modal UI (요청: 이미지 크기를 미니모달 수준으로 크게, 폰트 조절) */
+    /* 폰트 포인트(대략): 타이틀 14px, 메타 12px, 가격 13px */
+    .cartCard{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.28);
+      border-radius: 16px;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 220px 1fr;
+      gap:0;
+      min-height: 150px;
+    }
+    @media(max-width:820px){
+      .cartCard{grid-template-columns: 1fr; }
+    }
+    .cartImg{
+      background:#090a0c;
+      position:relative;
+      min-height:150px;
+    }
+    .cartImg img{width:100%; height:100%; object-fit:cover; display:block;}
+    .cartInfo{padding:12px 14px; display:flex; flex-direction:column; gap:8px;}
+    .cartInfo .t{font-weight:1000; font-size:14px;}
+    .cartInfo .m{color:var(--muted); font-size:12px; line-height:1.35;}
+    .cartInfo .p{color:rgba(162,222,204,.95); font-weight:1000; font-size:13px;}
+    .cartActions{margin-top:auto; display:flex; gap:10px; flex-wrap:wrap;}
+    .act{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.30);
+      color:var(--text);
+      border-radius: 12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:900;
+      font-size:12px;
+    }
+    .act.primary{border-color: rgba(162,222,204,.30); background: rgba(162,222,204,.10);}
+
+    /* Mini popup (Leaflet popup) */
+    .leaflet-popup-content-wrapper{
+      background: rgba(0,0,0,.78);
+      color: var(--text);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,.55);
+    }
+    .leaflet-popup-tip{background: rgba(0,0,0,.78);}
+    .miniCard{min-width: 240px; max-width: 280px;}
+    .miniThumb{
+      height:110px;
+      border-radius: 12px;
+      overflow:hidden;
+      background:#090a0c;
+      border:1px solid rgba(255,255,255,.10);
+      display:flex; align-items:center; justify-content:center;
+      color:rgba(255,255,255,.25);
+      font-weight:900;
+      margin-bottom:10px;
+    }
+    .miniThumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .miniTitle{font-weight:1000; font-size:13px; margin:0 0 6px;}
+    .miniPrice{color:rgba(162,222,204,.95); font-weight:1000; font-size:12px; margin:0 0 10px;}
+    .miniBtn{
+      width:100%;
+      border:1px solid rgba(162,222,204,.35);
+      background: rgba(162,222,204,.10);
+      color:var(--text);
+      border-radius: 12px;
+      padding:10px 12px;
+      cursor:pointer;
+      font-weight:1000;
+      font-size:12px;
+    }
   </style>
 </head>
 
 <body>
-<div id="app">
-  <div id="map"></div>
+  <div id="app">
+    <!-- Left -->
+    <section id="leftPanel">
+      <div class="panelHeader">
+        <div class="title">빌딩 <span class="badge" id="verBadge">v1.1.26</span></div>
+        <div class="badge" id="statusBadge">READY</div>
+      </div>
 
-  <div class="panel" id="leftPanel">
-    <div class="section">
-      <div class="box">
-        <div class="row">
-          <div class="zoomWrap">
-            <div class="zoomLabel">ZOOM</div>
-            <div class="pill" id="zoomNum">0</div>
+      <div class="building">
+        <div class="block">
+          <div class="blockHead">
+            <span>ZOOM</span>
+            <span class="badge" id="zoomBadge">-</span>
           </div>
-
-          <div class="zoomBtns">
-            <button class="zbtn" id="zoomIn">▲</button>
-            <button class="zbtn" id="zoomOut">▼</button>
+          <div class="zoomRow">
+            <div class="zoomLabel"><small>Zoom</small> <span id="zoomText">0</span></div>
+            <div class="zoomBtns">
+              <button class="btn" id="zoomInBtn" title="확대">˄</button>
+              <button class="btn" id="zoomOutBtn" title="축소">˅</button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="box">
-        <div class="cartRow">
-          <div>장바구니</div>
-          <div class="pill" id="cartCount">0</div>
+        <div class="block">
+          <div class="blockHead">
+            <span>제안서</span>
+            <span class="badge">A안 (로컬 저장)</span>
+          </div>
+          <div class="cartRow">
+            <button class="cartBtn" id="cartOpenBtn">
+              <span>장바구니</span>
+              <span class="cartCount" id="cartCount">0</span>
+            </button>
+          </div>
         </div>
-        <div class="muted" style="margin-top:8px">
-          장바구니는 이 브라우저(이용자) 기준으로 저장됩니다.<br/>
-          (같은 PC의 다른 사람이 접속해도 그대로 보일 수 있습니다.)
-        </div>
-      </div>
 
-      <div class="box">
-        <div class="recentHead">
-          <div style="font-weight:900">최근 본 매체</div>
-          <div class="muted"><span id="recentNow">0</span>/<span id="recentMax">4</span></div>
+        <div class="block">
+          <div class="blockHead">
+            <span>최근 본 매체</span>
+            <span class="badge"><span id="recentCount">0</span>/4</span>
+          </div>
+          <div class="recentList" id="recentList"></div>
         </div>
       </div>
+    </section>
 
-      <div class="box" style="padding-top:0">
-        <div class="recentGrid" id="recentGrid"></div>
-        <div class="pager">
-          <button class="pbtn" id="recentPrev">←</button>
-          <div class="muted"><span id="recentPage">1</span>/<span id="recentPageMax">1</span></div>
-          <button class="pbtn" id="recentNext">→</button>
+    <!-- Map -->
+    <section id="mapWrap">
+      <div class="searchTop">
+        <div class="searchBar">
+          <input id="searchInput" placeholder="지역/매체명을 검색하세요 (예: 인천공항, 강남, KT SQUARE)" />
         </div>
+        <button class="pill" id="resetBtn">초기화</button>
+        <button class="pill" id="openResultsBtn">검색결과</button>
       </div>
+      <div id="map"></div>
+    </section>
+
+    <!-- Right -->
+    <section id="rightPanel">
+      <div class="panelHeader">
+        <div class="title">검색 결과</div>
+        <div class="badge" id="resultBadge">0개</div>
+      </div>
+      <div class="body" id="resultBody"></div>
+    </section>
+  </div>
+
+  <!-- Cart Modal -->
+  <div class="overlay" id="cartOverlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="mhTitle">장바구니</div>
+        <button class="iconBtn" id="cartCloseBtn" title="닫기">X</button>
+      </div>
+      <div class="modalBody" id="cartBody"></div>
     </div>
   </div>
 
-  <div class="searchbar">
-    <input id="q" placeholder="지역/매체명/키워드 검색 (예: 인천공항, 강남, KT SQUARE)" />
-    <button class="sbtn" id="btnSearch">검색</button>
-    <button class="sbtn" id="btnReset" style="opacity:.85">초기화</button>
-  </div>
-
-  <div class="results">
-    <div class="head">
-      <div>검색 결과</div>
-      <div class="muted" id="resultCount">0개</div>
+  <!-- Detail Modal (hash modal 대체) -->
+  <div class="overlay" id="detailOverlay" aria-hidden="true">
+    <div class="modal">
+      <div class="modalHead">
+        <div class="mhTitle" id="detailTitle">상세</div>
+        <button class="iconBtn" id="detailCloseBtn" title="닫기">X</button>
+      </div>
+      <div class="modalBody" id="detailBody"></div>
     </div>
-    <div class="list" id="resultList"></div>
   </div>
-</div>
 
-<script>
-(() => {
-  const VERSION = "v1.1.26";
+  <script>
+    /* =========================
+       v1.1.26 복구 포인트 요약
+       - index.html 정상 HTML 복구
+       - DATA: data_public.json 로드 + (배열/객체.items) 모두 지원
+       - 핀 클릭: 결과 1번(맨 위)로 이동 + 핀/리스트 glow
+       - 최근본: 이미지(상단)/매체명(중단 1줄 ...)/가격(하단)
+       - 장바구니: '장바구니' + 숫자만, 로컬(브라우저) 단위 저장 (A안)
+       - 미니팝업에 '담기' 버튼
+       - 클러스터 드래곤볼(Spiderfy) 방지: spiderfyOnMaxZoom=false
+       - 지도 드래그 시 결과 스크롤 상단 고정(잔상 방지)
+       - 검색 줌: 단일/다중 결과에 따라 자동 줌/fitBounds
+    ========================= */
 
-  const __FETCH_TIMEOUT_MS = 20000;
-  async function fetchJsonWithTimeout(url, timeoutMs){
-    const ctrl = new AbortController();
-    const t = setTimeout(()=>ctrl.abort("timeout"), timeoutMs);
-    try{
-      const res = await fetch(url, { signal: ctrl.signal, cache: "no-store" });
-      if(!res.ok) throw new Error("HTTP "+res.status+" "+res.statusText);
-      const txt = await res.text();
-      const cleaned = txt.replace(/^\uFEFF/, "");
-      return JSON.parse(cleaned);
-    } finally {
-      clearTimeout(t);
-    }
-  }
+    const VERSION = "v1.1.26";
+    document.getElementById("verBadge").textContent = VERSION;
 
-  async function loadDataJson(){
-    try{
-      const baseDir = location.pathname.replace(/[^\/]+$/, "");
-      const candidates = [
-        { label: "rel:data_public.json", url: "data_public.json" },
-        { label: "rel:data.json",        url: "data.json" },
-        { label: "./data_public.json",   url: "./data_public.json" },
-        { label: "./data.json",          url: "./data.json" },
-        { label: "base:data_public",     url: baseDir + "data_public.json" },
-        { label: "base:data",            url: baseDir + "data.json" },
-        { label: "ghraw:data_public",    url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data_public.json" },
-        { label: "ghraw:data",           url: "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data.json" },
-        { label: "jsdelivr:data_public", url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data_public.json" },
-        { label: "jsdelivr:data",        url: "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data.json" },
-      ];
+    // 데이터 파일: 레포에 실제 존재하는 파일 사용
+    const DATA_URL = "./data_public.json"; // 중요: data.json 404 회피
+    const RECENT_MAX = 4;
 
-      const normalizeData = (j) => {
-        if (Array.isArray(j)) return j;
-        if (j && Array.isArray(j.items)) return j.items;
-        if (j && Array.isArray(j.data)) return j.data;
-        if (j && Array.isArray(j.points)) return j.points;
-        return null;
-      };
+    // Cart storage (A안): 로컬(브라우저/기기) 단위. 다른 사람/다른 PC에는 공유되지 않음.
+    const CART_KEY = "frontier_cart_v1";
+    const RECENT_KEY = "frontier_recent_v1";
 
-      let lastErr = null;
-      for(const c of candidates){
-        try {
-          const loaded = await fetchJsonWithTimeout(c.url, __FETCH_TIMEOUT_MS);
-          const norm = normalizeData(loaded);
-          if (!norm) throw new Error("data json root must be Array OR an object with items[]/data[]/points[]");
-          window.__DATA_SOURCE = c.label;
-          console.log("[DATA] loaded via", c.label, c.url, "(items:", norm.length, ")");
-          return norm;
-        } catch (err) {
-          lastErr = err;
-          console.warn("[DATA] failed", c.label, c.url, err);
-        }
+    const fmtPrice = (v) => {
+      if (v === undefined || v === null || v === "") return "문의";
+      const n = Number(String(v).replace(/[^0-9.]/g, ""));
+      if (!isFinite(n) || n <= 0) return String(v);
+      return n.toLocaleString("ko-KR") + "원";
+    };
+
+    const safeText = (v) => (v ?? "").toString();
+    const safeId = (item) => safeText(item.id || item.media_id || item.uid || item.title || (item.lat + "_" + item.lng));
+    const getLatLng = (item) => {
+      const lat = Number(item.lat ?? item.latitude);
+      const lng = Number(item.lng ?? item.lon ?? item.longitude);
+      if (!isFinite(lat) || !isFinite(lng)) return null;
+      return [lat, lng];
+    };
+
+    const state = {
+      items: [],
+      filtered: [],
+      markersById: new Map(),
+      listElById: new Map(),
+      activeId: null,
+      lastOpenedWasCart: false,
+    };
+
+    // Map init
+    const map = L.map("map", {
+      zoomControl: false,
+      preferCanvas: true,
+      worldCopyJump: true
+    }).setView([36.5, 127.9], 7);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    const cluster = L.markerClusterGroup({
+      chunkedLoading: true,
+      spiderfyOnMaxZoom: false,          // 드래곤볼(핀 퍼짐) 방지 핵심
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      removeOutsideVisibleBounds: true,
+      animate: true
+    });
+    map.addLayer(cluster);
+
+    // UI refs
+    const zoomText = document.getElementById("zoomText");
+    const zoomBadge = document.getElementById("zoomBadge");
+    const zoomInBtn = document.getElementById("zoomInBtn");
+    const zoomOutBtn = document.getElementById("zoomOutBtn");
+
+    const searchInput = document.getElementById("searchInput");
+    const resetBtn = document.getElementById("resetBtn");
+    const resultBody = document.getElementById("resultBody");
+    const resultBadge = document.getElementById("resultBadge");
+
+    const cartOpenBtn = document.getElementById("cartOpenBtn");
+    const cartCount = document.getElementById("cartCount");
+    const cartOverlay = document.getElementById("cartOverlay");
+    const cartCloseBtn = document.getElementById("cartCloseBtn");
+    const cartBody = document.getElementById("cartBody");
+
+    const detailOverlay = document.getElementById("detailOverlay");
+    const detailCloseBtn = document.getElementById("detailCloseBtn");
+    const detailTitle = document.getElementById("detailTitle");
+    const detailBody = document.getElementById("detailBody");
+
+    const recentList = document.getElementById("recentList");
+    const recentCount = document.getElementById("recentCount");
+
+    const statusBadge = document.getElementById("statusBadge");
+
+    const updateZoomUI = () => {
+      const z = map.getZoom();
+      zoomText.textContent = z;
+      zoomBadge.textContent = z;
+    };
+    map.on("zoomend", updateZoomUI);
+    updateZoomUI();
+
+    zoomInBtn.onclick = () => map.zoomIn();
+    zoomOutBtn.onclick = () => map.zoomOut();
+
+    // “잔상 방지”: 지도 드래그 이동 시작/끝에 결과 스크롤을 상단 고정
+    map.on("movestart", () => { resultBody.scrollTop = 0; });
+    map.on("moveend", () => { resultBody.scrollTop = 0; });
+
+    // Storage helpers
+    const loadJSON = (k, fallback) => {
+      try{
+        const v = localStorage.getItem(k);
+        if(!v) return fallback;
+        return JSON.parse(v);
+      }catch(e){ return fallback; }
+    };
+    const saveJSON = (k, v) => {
+      try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){}
+    };
+
+    const getCart = () => loadJSON(CART_KEY, []);
+    const setCart = (arr) => saveJSON(CART_KEY, arr);
+
+    const getRecent = () => loadJSON(RECENT_KEY, []);
+    const setRecent = (arr) => saveJSON(RECENT_KEY, arr);
+
+    const syncCartCount = () => {
+      cartCount.textContent = String(getCart().length);
+    };
+
+    const addRecent = (item) => {
+      const id = safeId(item);
+      let rec = getRecent().filter(x => x.id !== id);
+      rec.unshift({
+        id,
+        title: safeText(item.title),
+        price: item.price,
+        address: safeText(item.address),
+        thumb: safeText(item.thumb || item.image || item.img || ""),
+      });
+      rec = rec.slice(0, RECENT_MAX);
+      setRecent(rec);
+      renderRecent();
+    };
+
+    const renderRecent = () => {
+      const rec = getRecent();
+      recentCount.textContent = rec.length;
+      recentList.innerHTML = "";
+      if(rec.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "badge";
+        empty.style.margin = "12px";
+        empty.textContent = "최근 본 매체가 없습니다.";
+        recentList.appendChild(empty);
+        return;
+      }
+      for(const r of rec){
+        const el = document.createElement("div");
+        el.className = "recentItem";
+        el.innerHTML = `
+          <div class="recentThumb">${r.thumb ? `<img src="${r.thumb}" alt="">` : "NO IMAGE"}</div>
+          <div class="recentBody">
+            <div class="recentTitle ellipsis" title="${safeText(r.title)}">${safeText(r.title) || "제목 없음"}</div>
+            <div class="recentPrice">${fmtPrice(r.price)}</div>
+          </div>
+        `;
+        el.onclick = () => {
+          const item = state.items.find(x => safeId(x) === r.id);
+          if(item){
+            focusItem(item, {openPopup:true, promote:true});
+          }
+        };
+        recentList.appendChild(el);
+      }
+    };
+
+    // Marker factory
+    const makeDivIcon = (clazz="") => {
+      return L.divIcon({
+        className: "",
+        html: `<div class="pin ${clazz}"></div>`,
+        iconSize: [16,16],
+        iconAnchor: [8,8]
+      });
+    };
+
+    const setMarkerState = (id, mode) => {
+      const m = state.markersById.get(id);
+      if(!m) return;
+      const el = m.getElement && m.getElement();
+      if(!el) return;
+      const pin = el.querySelector(".pin");
+      if(!pin) return;
+      pin.classList.remove("glow","active");
+      if(mode === "glow") pin.classList.add("glow");
+      if(mode === "active") pin.classList.add("active");
+    };
+
+    const setListActive = (id, on) => {
+      const el = state.listElById.get(id);
+      if(!el) return;
+      el.classList.toggle("active", !!on);
+    };
+
+    const clearActive = () => {
+      if(state.activeId){
+        setMarkerState(state.activeId, "");
+        setListActive(state.activeId, false);
+      }
+      state.activeId = null;
+    };
+
+    const openCart = () => {
+      state.lastOpenedWasCart = true;
+      renderCart();
+      cartOverlay.classList.add("show");
+      cartOverlay.setAttribute("aria-hidden","false");
+    };
+    const closeCart = () => {
+      cartOverlay.classList.remove("show");
+      cartOverlay.setAttribute("aria-hidden","true");
+    };
+
+    const openDetail = (item) => {
+      state.lastOpenedWasCart = false;
+      detailTitle.textContent = safeText(item.title) || "상세";
+      detailBody.innerHTML = renderDetailHTML(item);
+      detailOverlay.classList.add("show");
+      detailOverlay.setAttribute("aria-hidden","false");
+      // 해시모달 느낌으로 URL 해시도 동기화(원하면 유지)
+      const id = safeId(item);
+      history.replaceState(null, "", "#m=" + encodeURIComponent(id));
+    };
+    const closeDetail = () => {
+      detailOverlay.classList.remove("show");
+      detailOverlay.setAttribute("aria-hidden","true");
+      // 닫으면 해시 제거
+      if(location.hash.startsWith("#m=")) history.replaceState(null, "", location.pathname + location.search);
+      // 요구사항 8) 상세 X 닫으면 장바구니로 복귀
+      if(state.lastOpenedWasCart){
+        openCart();
+      }
+    };
+
+    cartOpenBtn.onclick = openCart;
+    cartCloseBtn.onclick = closeCart;
+    detailCloseBtn.onclick = closeDetail;
+
+    cartOverlay.addEventListener("click", (e) => { if(e.target === cartOverlay) closeCart(); });
+    detailOverlay.addEventListener("click", (e) => { if(e.target === detailOverlay) closeDetail(); });
+
+    const addToCart = (item) => {
+      const id = safeId(item);
+      const cart = getCart();
+      if(cart.some(x => x.id === id)){
+        syncCartCount();
+        return;
+      }
+      cart.push({
+        id,
+        title: safeText(item.title),
+        price: item.price,
+        address: safeText(item.address),
+        thumb: safeText(item.thumb || item.image || item.img || ""),
+        media_group: safeText(item.media_group || ""),
+        category: safeText(item.category_low || item.category || ""),
+      });
+      setCart(cart);
+      syncCartCount();
+    };
+
+    const removeFromCart = (id) => {
+      const cart = getCart().filter(x => x.id !== id);
+      setCart(cart);
+      syncCartCount();
+      renderCart();
+    };
+
+    const renderCart = () => {
+      const cart = getCart();
+      cartBody.innerHTML = "";
+      if(cart.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "badge";
+        empty.textContent = "장바구니가 비어있습니다.";
+        cartBody.appendChild(empty);
+        return;
+      }
+      for(const c of cart){
+        const card = document.createElement("div");
+        card.className = "cartCard";
+        card.innerHTML = `
+          <div class="cartImg">${c.thumb ? `<img src="${c.thumb}" alt="">` : ""}</div>
+          <div class="cartInfo">
+            <div class="t">${safeText(c.title) || "제목 없음"}</div>
+            <div class="m">${safeText(c.address)}</div>
+            <div class="p">${fmtPrice(c.price)}</div>
+            <div class="cartActions">
+              <button class="act primary" data-act="view">상세 보기</button>
+              <button class="act" data-act="focus">지도에서 보기</button>
+              <button class="act" data-act="remove">삭제</button>
+            </div>
+          </div>
+        `;
+        card.querySelector('[data-act="remove"]').onclick = () => removeFromCart(c.id);
+        card.querySelector('[data-act="view"]').onclick = () => {
+          closeCart();
+          const item = state.items.find(x => safeId(x) === c.id);
+          if(item){
+            state.lastOpenedWasCart = true; // 상세 닫으면 장바구니로 복귀
+            openDetail(item);
+          }
+        };
+        card.querySelector('[data-act="focus"]').onclick = () => {
+          const item = state.items.find(x => safeId(x) === c.id);
+          if(item){
+            closeCart();
+            focusItem(item, {openPopup:true, promote:true});
+          }
+        };
+        cartBody.appendChild(card);
+      }
+    };
+
+    const renderDetailHTML = (item) => {
+      const thumb = safeText(item.thumb || item.image || item.img || "");
+      const addr = safeText(item.address || "");
+      const group = safeText(item.media_group || "");
+      const cat = safeText(item.category_low || item.category || "");
+      const op = safeText(item.operator || "");
+      const price = fmtPrice(item.price);
+
+      return `
+        <div style="display:grid;gap:12px;">
+          <div style="border:1px solid rgba(255,255,255,.10);border-radius:16px;overflow:hidden;background:rgba(0,0,0,.28);">
+            <div style="height:260px;background:#090a0c;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.22);font-weight:900;">
+              ${thumb ? `<img src="${thumb}" style="width:100%;height:100%;object-fit:cover;display:block;" alt="">` : "NO IMAGE"}
+            </div>
+            <div style="padding:12px 14px;display:grid;gap:8px;">
+              <div style="font-weight:1000;font-size:16px;">${safeText(item.title) || "제목 없음"}</div>
+              <div style="color:rgba(232,238,246,.65);font-size:13px;line-height:1.5;">
+                <div><b>주소</b> : ${addr || "-"}</div>
+                <div><b>분류</b> : ${cat || "-"} ${group ? ` / ${group}` : ""}</div>
+                <div><b>운영사</b> : ${op || "-"}</div>
+              </div>
+              <div style="color:rgba(162,222,204,.95);font-weight:1000;font-size:14px;">${price}</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;">
+                <button class="act primary" id="detailAddCart">담기</button>
+                <button class="act" id="detailFocus">지도에서 보기</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    };
+
+    const attachDetailActions = (item) => {
+      const addBtn = document.getElementById("detailAddCart");
+      const focusBtn = document.getElementById("detailFocus");
+      if(addBtn) addBtn.onclick = () => { addToCart(item); };
+      if(focusBtn) focusBtn.onclick = () => { closeDetail(); focusItem(item, {openPopup:true, promote:true}); };
+    };
+
+    // Focus behavior: pin click => results 1번 위치 + glow
+    const focusItem = (item, opts={openPopup:false, promote:false}) => {
+      const id = safeId(item);
+      const ll = getLatLng(item);
+      if(!ll) return;
+
+      clearActive();
+      state.activeId = id;
+      setMarkerState(id, "active");
+      setListActive(id, true);
+
+      // 지도 이동: 핀 클릭은 무조건 적절 줌으로(너무 과하면 안됨)
+      map.setView(ll, Math.max(map.getZoom(), 15), {animate:true});
+
+      // 결과 1번으로 올리기
+      if(opts.promote){
+        state.filtered = [item, ...state.filtered.filter(x => safeId(x) !== id)];
+        renderResults();
+        // 결과 스크롤 최상단으로 (잔상 방지 + 1번 고정)
+        resultBody.scrollTop = 0;
       }
 
-      const msg =
-        "데이터(JSON) 로드 실패.\n" +
-        "1) index.html과 같은 폴더에 data_public.json 또는 data.json 이 있는지 확인\n" +
-        "2) GitHub Pages 배포가 최신 커밋을 반영했는지 확인(몇 분 지연 가능)\n" +
-        "3) 파일명이 대소문자까지 정확한지 확인\n\n" +
-        "마지막 에러: " + (lastErr ? (lastErr.message || String(lastErr)) : "unknown");
-      alert(msg);
-      return [];
-    } catch(e){
-      alert("데이터 로드 중 예외: " + (e.message || String(e)));
-      return [];
-    }
-  }
+      addRecent(item);
 
-  const map = L.map("map", {
-    zoomControl:false,
-    preferCanvas:true
-  }).setView([36.5, 127.8], 7);
-
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap"
-  }).addTo(map);
-
-  const cluster = L.markerClusterGroup({
-    chunkedLoading: true,
-    spiderfyOnMaxZoom: true,
-    showCoverageOnHover: false,
-    removeOutsideVisibleBounds: true,
-  });
-  map.addLayer(cluster);
-
-  const zoomNum = document.getElementById("zoomNum");
-  function updateZoomUI(){ zoomNum.textContent = String(map.getZoom()); }
-  map.on("zoomend", updateZoomUI);
-  updateZoomUI();
-
-  document.getElementById("zoomIn").onclick = () => map.zoomIn();
-  document.getElementById("zoomOut").onclick = () => map.zoomOut();
-
-  const q = document.getElementById("q");
-  const btnSearch = document.getElementById("btnSearch");
-  const btnReset = document.getElementById("btnReset");
-
-  const resultList = document.getElementById("resultList");
-  const resultCount = document.getElementById("resultCount");
-
-  const recentGrid = document.getElementById("recentGrid");
-  const recentNow = document.getElementById("recentNow");
-  const recentMax = document.getElementById("recentMax");
-  const recentPrev = document.getElementById("recentPrev");
-  const recentNext = document.getElementById("recentNext");
-  const recentPage = document.getElementById("recentPage");
-  const recentPageMax = document.getElementById("recentPageMax");
-
-  const cartCount = document.getElementById("cartCount");
-
-  const RECENT_LIMIT = 4;
-  recentMax.textContent = String(RECENT_LIMIT);
-
-  const LS_RECENT = "frontier_recent_v1";
-  const LS_CART = "frontier_cart_v1";
-
-  function safeParse(json, fallback){
-    try{ return JSON.parse(json); }catch{ return fallback; }
-  }
-
-  function loadRecent(){
-    return safeParse(localStorage.getItem(LS_RECENT) || "[]", []);
-  }
-  function saveRecent(arr){
-    localStorage.setItem(LS_RECENT, JSON.stringify(arr.slice(0, RECENT_LIMIT)));
-  }
-
-  function loadCart(){
-    return safeParse(localStorage.getItem(LS_CART) || "[]", []);
-  }
-  function saveCart(arr){
-    localStorage.setItem(LS_CART, JSON.stringify(arr));
-  }
-  function updateCartUI(){
-    cartCount.textContent = String(loadCart().length);
-  }
-
-  let __recentPage = 1;
-  const RECENT_PAGE_SIZE = 4;
-
-  function renderRecent(){
-    const arr = loadRecent();
-    recentNow.textContent = String(arr.length);
-
-    const pageMax = Math.max(1, Math.ceil(arr.length / RECENT_PAGE_SIZE));
-    __recentPage = Math.min(__recentPage, pageMax);
-    recentPage.textContent = String(__recentPage);
-    recentPageMax.textContent = String(pageMax);
-
-    const start = (__recentPage - 1) * RECENT_PAGE_SIZE;
-    const pageItems = arr.slice(start, start + RECENT_PAGE_SIZE);
-
-    recentGrid.innerHTML = "";
-    pageItems.forEach(item => {
-      const el = document.createElement("div");
-      el.className = "recentItem";
-      el.innerHTML = `
-        <div class="thumb">${item.thumb ? `<img src="${item.thumb}" alt="">` : "NO IMAGE"}</div>
-        <div>
-          <div class="title" title="${escapeHtml(item.title||"")}">${escapeHtml(item.title||"")}</div>
-          <div class="price">${formatPrice(item.price)}</div>
-        </div>
-      `;
-      el.onclick = () => focusItem(item, { zoom: 14, glow: true, pin: true });
-      recentGrid.appendChild(el);
-    });
-  }
-
-  recentPrev.onclick = () => { __recentPage = Math.max(1, __recentPage - 1); renderRecent(); };
-  recentNext.onclick = () => { __recentPage = Math.min(Number(recentPageMax.textContent), __recentPage + 1); renderRecent(); };
-
-  function formatPrice(p){
-    if(p === null || p === undefined || p === "") return "문의";
-    const n = Number(p);
-    if(Number.isFinite(n)){
-      return n.toLocaleString("ko-KR") + "원";
-    }
-    return String(p);
-  }
-
-  function escapeHtml(s){
-    return String(s)
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  function addRecent(item){
-    const arr = loadRecent().filter(x => x && x.id !== item.id);
-    arr.unshift(pickRecent(item));
-    saveRecent(arr);
-    __recentPage = 1;
-    renderRecent();
-  }
-
-  function pickRecent(item){
-    return {
-      id: item.id,
-      title: item.title,
-      price: item.price,
-      lat: item.lat,
-      lng: item.lng,
-      thumb: item.thumb || null,
-      address: item.address || ""
+      if(opts.openPopup){
+        const pop = makeMiniPopup(item);
+        state.markersById.get(id)?.bindPopup(pop, {closeButton:false, autoPan:true}).openPopup();
+      }
     };
-  }
 
-  function addToCart(item){
-    const cart = loadCart();
-    if(!cart.find(x => x && x.id === item.id)){
-      cart.unshift({ id:item.id, title:item.title, price:item.price, thumb:item.thumb||null });
-      saveCart(cart);
-      updateCartUI();
-    }
-  }
+    const makeMiniPopup = (item) => {
+      const thumb = safeText(item.thumb || item.image || item.img || "");
+      const title = safeText(item.title) || "제목 없음";
+      const price = fmtPrice(item.price);
+      const id = safeId(item);
 
-  function focusItem(item, opt={}){
-    const zoom = opt.zoom ?? Math.min(16, Math.max(10, map.getZoom()));
-    if(Number.isFinite(item.lat) && Number.isFinite(item.lng)){
-      map.setView([item.lat, item.lng], zoom, { animate:true });
-    }
-    if(opt.glow && item.__marker){
-      item.__marker._icon && item.__marker._icon.classList.add("glow");
-      setTimeout(() => {
-        item.__marker._icon && item.__marker._icon.classList.remove("glow");
-      }, 900);
-    }
-    if(opt.pin && item.__marker){
-      item.__marker.openPopup();
-    }
-  }
-
-  function makePopupHtml(item){
-    const title = escapeHtml(item.title||"");
-    const addr = escapeHtml(item.address||"");
-    const price = formatPrice(item.price);
-
-    return `
-      <div style="min-width:220px">
-        <div style="font-weight:950;font-size:14px">${title}</div>
-        <div style="color:var(--muted);font-size:12px;margin-top:6px;line-height:1.35">${addr}</div>
-        <div style="color:var(--mint);font-weight:950;margin-top:8px">${price}</div>
-        <button class="miniBtn" data-addcart="1">담기</button>
-      </div>
-    `;
-  }
-
-  function renderResults(items){
-    resultCount.textContent = `${items.length}개`;
-    resultList.innerHTML = "";
-    items.forEach(item => {
-      const el = document.createElement("div");
-      el.className = "card";
-      el.innerHTML = `
-        <div class="cTitle" title="${escapeHtml(item.title||"")}">${escapeHtml(item.title||"")}</div>
-        <div class="cAddr">${escapeHtml(item.address||"")}</div>
-        <div class="cPrice">${formatPrice(item.price)}</div>
+      const wrap = document.createElement("div");
+      wrap.className = "miniCard";
+      wrap.innerHTML = `
+        <div class="miniThumb">${thumb ? `<img src="${thumb}" alt="">` : "NO IMAGE"}</div>
+        <div class="miniTitle ellipsis" title="${title}">${title}</div>
+        <div class="miniPrice">${price}</div>
+        <button class="miniBtn" id="miniAdd_${id.replace(/[^a-zA-Z0-9_-]/g,'')}">담기</button>
       `;
-      el.onclick = () => focusItem(item, { zoom: 14, glow: true, pin: true });
-      resultList.appendChild(el);
-    });
-  }
-
-  function normalizeItem(raw){
-    const lat = Number(raw.lat ?? raw.latitude);
-    const lng = Number(raw.lng ?? raw.longitude ?? raw.lon);
-    return {
-      id: raw.id ?? raw.media_id ?? raw.uid ?? (raw.title + "_" + lat + "_" + lng),
-      title: raw.title ?? raw.name ?? raw.media_name ?? "",
-      address: raw.address ?? raw.addr ?? "",
-      lat: Number.isFinite(lat) ? lat : null,
-      lng: Number.isFinite(lng) ? lng : null,
-      price: raw.price ?? raw.price_krw ?? raw.cost ?? "",
-      thumb: raw.thumb ?? raw.thumbnail ?? raw.image_url ?? raw.img ?? null,
-      raw
+      // 버튼 핸들러는 popupopen 이벤트에서 부착(Leaflet DOM 생성 타이밍)
+      return wrap;
     };
-  }
 
-  function doSearch(all, keyword){
-    const kw = (keyword||"").trim().toLowerCase();
-    if(!kw) return [];
-
-    const hits = all.filter(item => {
-      const t = (item.title||"").toLowerCase();
-      const a = (item.address||"").toLowerCase();
-      return t.includes(kw) || a.includes(kw);
+    map.on("popupopen", (e) => {
+      const node = e.popup.getContent();
+      if(!(node instanceof HTMLElement)) return;
+      const btn = node.querySelector("button.miniBtn");
+      if(!btn) return;
+      // 현재 activeId 기준으로 아이템 찾기
+      const item = state.items.find(x => safeId(x) === state.activeId);
+      if(!item) return;
+      btn.onclick = () => { addToCart(item); };
     });
 
-    renderResults(hits);
+    // Results rendering
+    const renderResults = () => {
+      resultBody.innerHTML = "";
+      state.listElById.clear();
 
-    if(hits.length){
-      const first = hits[0];
-      focusItem(first, { zoom: 12, glow: true, pin: false });
-    }
-    return hits;
-  }
+      const list = state.filtered;
+      resultBadge.textContent = list.length + "개";
+      if(list.length === 0){
+        const empty = document.createElement("div");
+        empty.className = "badge";
+        empty.style.margin = "12px";
+        empty.textContent = "검색 결과가 없습니다.";
+        resultBody.appendChild(empty);
+        return;
+      }
 
-  btnSearch.onclick = () => doSearch(window.__ALL_ITEMS || [], q.value);
-  q.addEventListener("keydown", (e)=>{ if(e.key==="Enter") btnSearch.click(); });
+      for(const item of list){
+        const id = safeId(item);
+        const thumb = safeText(item.thumb || item.image || item.img || "");
+        const title = safeText(item.title) || "제목 없음";
+        const addr = safeText(item.address) || "";
+        const price = fmtPrice(item.price);
 
-  btnReset.onclick = () => {
-    q.value = "";
-    renderResults([]);
-    map.setView([36.5, 127.8], 7);
-  };
+        const row = document.createElement("div");
+        row.className = "resultItem" + (state.activeId === id ? " active" : "");
+        row.innerHTML = `
+          <div class="thumb">${thumb ? `<img src="${thumb}" alt="">` : "NO IMAGE"}</div>
+          <div>
+            <div class="riTitle ellipsis" title="${title}">${title}</div>
+            <div class="riMeta ellipsis" title="${addr}">${addr}</div>
+            <div class="riPrice">${price}</div>
+          </div>
+        `;
 
-  (async function init(){
-    console.log("Frontier DOOH", VERSION);
-    updateCartUI();
-    renderRecent();
+        // Hover: 해당 핀만 glow (요구: 몰려있는 핀도 개별 glow/인식)
+        row.onmouseenter = () => { if(state.activeId !== id) setMarkerState(id, "glow"); };
+        row.onmouseleave = () => { if(state.activeId !== id) setMarkerState(id, ""); };
 
-    let data = await loadDataJson();
-    if (!Array.isArray(data) || data.length === 0) {
-      alert("데이터를 불러오지 못했습니다. data_public.json 또는 data.json 이 정상인지 확인하세요.");
-      data = [];
-    }
+        row.onclick = () => {
+          // 리스트 클릭 => 핀 active + 1번으로 올리기
+          focusItem(item, {openPopup:true, promote:true});
+        };
 
-    const items = data.map(normalizeItem).filter(x => Number.isFinite(x.lat) && Number.isFinite(x.lng));
-    window.__ALL_ITEMS = items;
+        state.listElById.set(id, row);
+        resultBody.appendChild(row);
+      }
+    };
 
-    items.forEach(item => {
-      const m = L.marker([item.lat, item.lng], { title: item.title });
-      m.bindPopup(makePopupHtml(item), { closeButton:true });
-      m.on("click", () => {
-        addRecent(item);
-        // 클릭한 매체를 우상(1번 위치)에 띄우고 빛나게
-        focusItem(item, { zoom: map.getZoom(), glow: true, pin: true });
+    // Search logic (요청 2: 줌12 고정 X, 적절 로직)
+    const applySearch = () => {
+      const q = safeText(searchInput.value).trim().toLowerCase();
+      if(!q){
+        state.filtered = state.items.slice();
+        renderResults();
+        // 전체 보기 기본 시야
+        map.setView([36.5,127.9], 7, {animate:true});
+        return;
+      }
+
+      const hits = state.items.filter(item => {
+        const t = safeText(item.title).toLowerCase();
+        const a = safeText(item.address).toLowerCase();
+        const s = safeText(item.sido).toLowerCase();
+        const g = safeText(item.sigungu).toLowerCase();
+        const mg = safeText(item.media_group).toLowerCase();
+        return t.includes(q) || a.includes(q) || s.includes(q) || g.includes(q) || mg.includes(q);
       });
-      m.on("popupopen", (e) => {
-        const root = e.popup.getElement();
-        const btn = root && root.querySelector('[data-addcart="1"]');
-        if(btn){
-          btn.onclick = () => {
-            addToCart(item);
-            updateCartUI();
-            btn.textContent = "담김";
-            setTimeout(()=>btn.textContent="담기", 800);
+
+      state.filtered = hits;
+      renderResults();
+
+      // 지도 이동/줌
+      const latlngs = hits.map(getLatLng).filter(Boolean);
+      if(latlngs.length === 0) return;
+
+      if(latlngs.length === 1){
+        map.setView(latlngs[0], 16, {animate:true});
+        return;
+      }
+
+      const bounds = L.latLngBounds(latlngs);
+      const targetZoom = map.getBoundsZoom(bounds, false, [40,40]);
+      const z = Math.max(10, Math.min(16, targetZoom));
+      map.fitBounds(bounds, {padding:[40,40], animate:true});
+      // fitBounds 결과 줌이 너무 낮으면 보정
+      setTimeout(() => {
+        if(map.getZoom() < z) map.setZoom(z, {animate:true});
+      }, 0);
+    };
+
+    let searchT = null;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchT);
+      searchT = setTimeout(applySearch, 120);
+    });
+
+    resetBtn.onclick = () => {
+      searchInput.value = "";
+      clearActive();
+      applySearch();
+    };
+
+    // Data load
+    const setStatus = (t) => statusBadge.textContent = t;
+
+    const normalizeData = (raw) => {
+      // 허용:
+      // 1) Array
+      // 2) {items:[...]}
+      if(Array.isArray(raw)) return raw;
+      if(raw && Array.isArray(raw.items)) return raw.items;
+      return null;
+    };
+
+    const buildMarkers = (items) => {
+      cluster.clearLayers();
+      state.markersById.clear();
+
+      for(const item of items){
+        const ll = getLatLng(item);
+        if(!ll) continue;
+
+        const id = safeId(item);
+
+        const m = L.marker(ll, {icon: makeDivIcon("")});
+
+        // 마커 hover => 해당 row highlight
+        m.on("mouseover", () => {
+          if(state.activeId !== id) setMarkerState(id, "glow");
+        });
+        m.on("mouseout", () => {
+          if(state.activeId !== id) setMarkerState(id, "");
+        });
+
+        // 클릭: 1번 위치로 + glow + popup + recent
+        m.on("click", () => {
+          focusItem(item, {openPopup:true, promote:true});
+        });
+
+        // (중요) 각 마커를 ID로 분리 저장 => “몰려있는 핀을 하나로 인식” 문제 방지
+        state.markersById.set(id, m);
+        cluster.addLayer(m);
+      }
+    };
+
+    const boot = async () => {
+      setStatus("LOADING");
+      syncCartCount();
+      renderRecent();
+
+      try{
+        const res = await fetch(DATA_URL, {cache:"no-store"});
+        if(!res.ok) throw new Error("DATA fetch failed: " + res.status);
+        const raw = await res.json();
+        const arr = normalizeData(raw);
+        if(!arr) throw new Error("data 형식 오류: 배열(Array) 또는 {items:[...]} 여야 합니다.");
+
+        state.items = arr;
+        state.filtered = arr.slice();
+
+        buildMarkers(arr);
+        renderResults();
+        setStatus("OK");
+
+        // 해시로 상세 열기(있으면)
+        if(location.hash.startsWith("#m=")){
+          const id = decodeURIComponent(location.hash.slice(3));
+          const item = state.items.find(x => safeId(x) === id);
+          if(item){
+            openDetail(item);
+            attachDetailActions(item);
+          }
+        }
+
+      }catch(e){
+        console.error(e);
+        setStatus("ERROR");
+        alert(String(e.message || e));
+      }
+    };
+
+    // right panel open button (모바일 대비)
+    document.getElementById("openResultsBtn").onclick = () => {
+      const rp = document.getElementById("rightPanel");
+      rp.scrollIntoView({behavior:"smooth"});
+    };
+
+    // detail overlay content actions binding (DOM updated after openDetail)
+    const obs = new MutationObserver(() => {
+      if(detailOverlay.classList.contains("show")){
+        const item = state.items.find(x => safeId(x) === state.activeId) ||
+                     (location.hash.startsWith("#m=") ? state.items.find(x => safeId(x) === decodeURIComponent(location.hash.slice(3))) : null);
+        if(item) attachDetailActions(item);
+      }
+    });
+    obs.observe(detailBody, {childList:true, subtree:true});
+
+    // Open detail from list double click (optional)
+    resultBody.addEventListener("dblclick", (e) => {
+      const el = e.target.closest(".resultItem");
+      if(!el) return;
+      // find by title match is unstable, so use activeId
+      const item = state.items.find(x => safeId(x) === state.activeId);
+      if(item){
+        openDetail(item);
+      }
+    });
+
+    // When clicking a list item, allow "상세"
+    resultBody.addEventListener("contextmenu", (e) => {
+      // disable context menu inside
+      e.preventDefault();
+    });
+
+    // Also allow click on marker popup to open detail by clicking title (simple: click on popup body)
+    map.on("popupopen", () => {
+      const item = state.items.find(x => safeId(x) === state.activeId);
+      if(!item) return;
+      // clicking popup area opens detail
+      setTimeout(() => {
+        const pop = document.querySelector(".leaflet-popup-content");
+        if(pop){
+          pop.style.cursor = "pointer";
+          pop.onclick = (ev) => {
+            // avoid when clicking '담기' button
+            if(ev.target && ev.target.closest("button")) return;
+            openDetail(item);
+            attachDetailActions(item);
           };
         }
-      });
-      item.__marker = m;
-      cluster.addLayer(m);
+      }, 0);
     });
 
-    renderResults([]);
-
-  })();
-
-})();
-</script>
+    boot();
+  </script>
 </body>
 </html>
