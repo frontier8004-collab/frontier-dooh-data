@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.26</title>
+  <title>Frontier DOOH 전국 DB v1.1.27</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -362,16 +362,14 @@
       box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow);
     }
 
-    /* v1.1.26: 핀 클릭시 “빛나라” 플래시 */
+    /* 핀 클릭 플래시 (v1.1.27: 기본 OFF / 옵션) */
     @keyframes pinFlash {
       0%   { box-shadow:0 0 0 0 rgba(162,222,204,.00), var(--shadow); }
       15%  { box-shadow:0 0 0 2px rgba(162,222,204,.25), 0 0 24px rgba(162,222,204,.22), var(--shadow); }
       45%  { box-shadow:0 0 0 2px rgba(162,222,204,.20), 0 0 34px rgba(162,222,204,.30), var(--shadow); }
       100% { box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow); }
     }
-    .item.isPinFlash{
-      animation: pinFlash 0.85s ease-out 1;
-    }
+    .item.isPinFlash{ animation: pinFlash 0.85s ease-out 1; }
 
     .thumb{width:100%; aspect-ratio: 16/9; background:#0d0f10; position:relative;}
     .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -566,18 +564,11 @@
     }
 
     /* v1.1.25: 빌딩 카드 */
-    .buildingCard{
-      display:flex;
-      flex-direction:column;
-      gap:0;
-    }
-    .buildingSec{
-      padding:10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-    }
+    .buildingCard{ display:flex; flex-direction:column; gap:0; }
+    .buildingSec{ padding:10px; border-bottom:1px solid rgba(255,255,255,.08); }
     .buildingSec:last-child{ border-bottom:none; }
 
-    /* v1.1.26: 줌 UI 변경(요청안) - 오른쪽 상하 버튼, 왼쪽에 ZOOM/숫자 */
+    /* 줌 UI (유지) */
     .zoomBar{
       display:flex;
       align-items:stretch;
@@ -689,11 +680,7 @@
 
     /* 최근 본 매체 */
     .recentBody{ padding:0; display:flex; flex-direction:column; gap:10px; }
-    .recentList{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:10px;
-    }
+    .recentList{ display:grid; grid-template-columns: 1fr; gap:10px; }
 
     .rRow{
       position:relative;
@@ -707,7 +694,7 @@
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
       min-width:0;
-      overflow:hidden; /* v1.1.26: 우측 잘림 방지(안에 가두기) */
+      overflow:hidden; /* 우측 잘림 방지 */
     }
     .rRow:hover{ transform:translateY(-1px); border-color:rgba(162,222,204,.30); }
 
@@ -802,7 +789,7 @@
       text-align:center;
     }
 
-    /* ===== DETAIL OVERLAY ===== */
+    /* ===== DETAIL OVERLAY (v1.1.27 리디자인 1차) ===== */
     .detailOverlay{
       position:fixed; inset:0;
       background:rgba(0,0,0,.60);
@@ -812,8 +799,8 @@
     }
     .detail{
       width:min(1600px, 96vw);
-      height:min(92vh, 920px);
-      max-height:min(92vh, 920px);
+      height:min(92vh, 960px);
+      max-height:min(92vh, 960px);
       overflow:auto;
       margin:0 auto;
       border-radius:18px;
@@ -830,8 +817,11 @@
       gap:12px;
       z-index:2;
     }
-    .detailHead .t{font-weight:1000;color:#e9eef7;font-size:22px;margin:0;}
-    .detailHead .s{color:var(--muted);font-size:12px;line-height:1.4;margin-top:4px;}
+    .detailHead .t{
+      font-weight:1000;color:#e9eef7;font-size:20px;margin:0;
+      line-height:1.15;
+    }
+    .detailHead .s{color:var(--muted);font-size:12px;line-height:1.4;margin-top:6px;}
     .x{
       width:44px; height:44px;
       border-radius:12px;
@@ -840,25 +830,71 @@
       color:#fff;
       cursor:pointer;
       font-weight:1000;
+      flex:0 0 auto;
     }
+
     .detailBody{
       padding:16px 16px 18px;
       display:grid;
       grid-template-columns: 1.35fr 1fr;
       gap:14px;
+      align-items:start;
     }
     @media (max-width: 920px){ .detailBody{grid-template-columns:1fr;} }
+
+    .dLeftStack{ display:flex; flex-direction:column; gap:12px; min-width:0; }
+
     .dimg{
       border-radius:16px;
       overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:#0d0f10;
-      height:min(52vh, 520px);
+      height:min(48vh, 520px);
       position:relative;
     }
-    @media (max-width: 920px){ .dimg{ height:min(46vh, 460px); } }
+    @media (max-width: 920px){ .dimg{ height:min(42vh, 460px); } }
     .dimg img{width:100%;height:100%;object-fit:cover;display:block;}
-    .dimg .fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;}
+    .dimg .fallback{
+      width:100%;height:100%;
+      display:flex;align-items:center;justify-content:center;
+      color:rgba(255,255,255,.35);font-weight:1000;font-size:12px;
+    }
+
+    .dMapCard{
+      border-radius:16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.22);
+      box-shadow:0 12px 30px rgba(0,0,0,.35);
+    }
+    .dMapHead{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(255,255,255,.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .dMapHead .h{
+      font-weight:1000;
+      color:#e9eef7;
+      font-size:13px;
+    }
+    .dMapHead .addr{
+      color:rgba(255,255,255,.60);
+      font-size:11px;
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:58%;
+    }
+    #dmap{
+      height:260px;
+      width:100%;
+      background:#0b0c0d;
+    }
+
     .info{
       border:1px solid rgba(255,255,255,.08);
       border-radius:14px;
@@ -868,6 +904,7 @@
     }
     .info .k{font-size:12px;color:var(--muted);margin-bottom:6px;}
     .info .v{font-size:14px;color:#e9eef7;font-weight:900;line-height:1.35;word-break:keep-all;}
+
     .links{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
     .links a{
       text-decoration:none;
@@ -890,6 +927,11 @@
       font-weight:1000;
       cursor:pointer;
       padding:0 14px;
+    }
+    .dAddCart.secondary{
+      border-color:rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:#e9eef7;
     }
 
     /* ===== MODAL (CART) ===== */
@@ -933,7 +975,6 @@
     .mRow:last-child{ border-bottom:none; }
 
     .mLeft{ display:flex; align-items:center; gap:12px; min-width:0; }
-    /* v1.1.26: 이미지 크게(미니모달 체감) */
     .mThumb{
       width:150px;
       height:100px;
@@ -945,7 +986,6 @@
     }
     .mThumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 
-    /* v1.1.26: 폰트 조정 (13px -> 14px) */
     .mTitle{
       font-weight:1000;
       color:#e9eef7;
@@ -989,7 +1029,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.26</span></div>
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.27</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -1100,7 +1140,17 @@
       </div>
 
       <div class="detailBody">
-        <div class="dimg" id="dimg"></div>
+        <div class="dLeftStack">
+          <div class="dimg" id="dimg"></div>
+
+          <div class="dMapCard">
+            <div class="dMapHead">
+              <div class="h">매체 위치</div>
+              <div class="addr" id="daddrMini">-</div>
+            </div>
+            <div id="dmap"></div>
+          </div>
+        </div>
 
         <div>
           <div class="info">
@@ -1121,10 +1171,13 @@
           <div class="info">
             <div class="k">운영사/담당</div>
             <div class="v" id="dop">-</div>
-            <div class="links" id="dlinks"></div>
+
             <div class="dActions">
               <button class="dAddCart" id="dAddCart">장바구니 담기</button>
+              <button class="dAddCart secondary" id="dFocusMap">지도 중심</button>
             </div>
+
+            <div class="links" id="dlinks"></div>
           </div>
         </div>
       </div>
@@ -1144,22 +1197,18 @@
 
 <script>
   /* =========================================================
-     v1.1.26 (v1.1.25 UI 틀 유지 + 기능 업데이트)
-     1) 핀 클릭 시: 해당 매체를 “리스트 1번(최상단)”으로 올리고, 카드가 빛나게(플래시)
-     2) 검색 줌 로직: 줌12 고정 제거 -> 결과 분포에 따라 fitBounds/단일 setView(적절 줌)
-     3) 고유키/중복 인식 해결: id 중복/재사용 시에도 무조건 유니크 키 생성
-        -> 밀집 핀 hover 개별 반응/장바구니 개별 담기 정상화
-     4) 줌 버튼 UI 변경: 오른쪽 상하(+/-), 왼쪽 ZOOM/숫자
-     5) 최근본 우측 잘림 방지: 컨테이너 내부에 가두고 … 처리 유지
-     6) 미니모달에 “담기” 버튼 추가
-     7) 장바구니 모달 UI: 썸네일 확대(150x100) + 폰트 14px로 조정
-     8) 장바구니에서 상세(해시모달) 열고 X로 닫으면 장바구니로 복귀
-     9) 최근본도 장바구니처럼 sessionStorage(세션 종료 시 리셋)
-     10) 연산부하 완화: moveend 시 “현재범위”가 동일하면 리스트 재렌더를 생략
+     v1.1.27
+     - 핀 클릭 카드 플래시: 기본 OFF (ENABLE_PIN_FLASH)
+     - 리스트 렌더링 부하 감소: 동일 리스트일 때 전체 rebuild 최소화, 추가 로딩은 append 위주
+     - 상세(해시) 1차 리디자인: 상세 내부 미니 지도(dmap) 추가
      ========================================================= */
 
-  const VERSION = "v1.1.26";
+  const VERSION = "v1.1.27";
   const DATA_URL = "./data_public.json";
+
+  /* === v1.1.27: 플래시 기본 OFF ===
+     true로 바꾸면 v1.1.26처럼 핀 클릭 시 카드가 잠깐 빛납니다. */
+  const ENABLE_PIN_FLASH = false;
 
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
@@ -1229,7 +1278,6 @@
 
   let shuffleSeed = Math.random();
 
-  /* v1.1.26: 최근본/장바구니 모두 sessionStorage(세션 종료 시 리셋) */
   const SS_RECENT = "frontier_recent_viewed_v1";
   const SS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
@@ -1240,15 +1288,20 @@
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
-  /* v1.1.26: 핀 클릭시 리스트 1번 고정 키 */
   let pinnedTopKey = null;
   let pinFlashTimer = null;
 
-  /* v1.1.26: 장바구니 -> 상세 -> 닫기 복귀 플래그 */
   let returnToCartAfterDetail = false;
 
-  /* v1.1.26: moveend 최적화 - 현재범위 해시 */
   let lastInViewHash = "";
+
+  /* v1.1.27: 리스트 렌더 최적화용 상태 */
+  let lastListSig = "";
+  let renderedCount = 0;
+
+  /* v1.1.27: 상세 모달 미니 지도 */
+  let dmap = null;
+  let dmapMarker = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -1669,7 +1722,7 @@
     iconAnchor:[18,49]
   });
 
-  /* v1.1.26: 고유키 생성(중복 id 방지) */
+  /* 고유키 생성(중복 id 방지) */
   function stableHash(seed, str){
     let h = 2166136261 ^ Math.floor(seed * 1e9);
     for (let i=0; i<str.length; i++){
@@ -1680,12 +1733,11 @@
   }
 
   function makeUniqueKeys(rawItems){
-    const seen = new Map(); // baseKey -> count
+    const seen = new Map();
     return rawItems.map((it, idx) => {
       const hasId = (it.id != null && String(it.id).trim() !== "");
       let base = hasId ? ("id:" + String(it.id).trim()) : ("k:" + idx);
 
-      // id가 중복이면 title/좌표를 섞어서 유니크화
       if (seen.has(base)){
         const c = (seen.get(base) || 1) + 1;
         seen.set(base, c);
@@ -1812,8 +1864,10 @@
   function pinToTopAndFlash(key){
     pinnedTopKey = key;
 
-    // 리스트를 다시 그려서 1번으로 올림
+    // 리스트를 다시 그려서 1번으로 올림(단, 렌더 최적화가 동작하도록 appendList 사용)
     appendList(curInView);
+
+    if (!ENABLE_PIN_FLASH) return;
 
     const el = cardByKey.get(key);
     if (el){
@@ -1859,7 +1913,7 @@
     }
     setActiveMiniKey(it._key);
 
-    /* v1.1.26: 핀 클릭 시 리스트 1번 + 플래시 */
+    // 핀 클릭 시 리스트 1번 + (옵션) 플래시
     pinToTopAndFlash(it._key);
 
     clearAllCardHighlights();
@@ -1897,6 +1951,42 @@
     renderRecentPanel();
   }
 
+  function ensureDetailMap(){
+    const el = $("dmap");
+    if (!el) return;
+
+    if (!dmap){
+      dmap = L.map(el, {
+        zoomControl:false,
+        attributionControl:false,
+        zoomSnap: 1,
+        zoomDelta: 1,
+        dragging:true,
+        scrollWheelZoom:true
+      });
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(dmap);
+
+      dmapMarker = L.marker([HOME_CENTER[0], HOME_CENTER[1]], { icon: hoverIcon }).addTo(dmap);
+    }
+
+    // 모달 표시 직후 사이즈 보정
+    setTimeout(()=>{ try{ dmap.invalidateSize(true); }catch(_){ } }, 0);
+  }
+
+  function focusDetailMap(it){
+    if (!dmap || !it) return;
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    try{
+      dmap.setView([la, ln], 15, { animate:false });
+      if (dmapMarker) dmapMarker.setLatLng([la, ln]);
+    }catch(_){}
+  }
+
   function openDetail(it, sethash){
     closeMiniPopup();
 
@@ -1908,6 +1998,7 @@
     $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
+    $("daddrMini").textContent = it.address || "-";
     $("dop").textContent = it.operator || "문의";
 
     $("dimg").innerHTML = it.thumb
@@ -1923,6 +2014,11 @@
 
     $("dOverlay").style.display = "block";
 
+    // 상세 내부 미니 지도
+    ensureDetailMap();
+    focusDetailMap(it);
+
+    // 메인맵도 해당 위치로
     suspendViewportOnce = true;
     map.once("moveend", () => {
       suspendViewportOnce = false;
@@ -1943,7 +2039,6 @@
     currentOpenKey = null;
     if (!fromHashChange) clearHash();
 
-    /* v1.1.26: 장바구니에서 들어온 상세면 닫을 때 장바구니로 복귀 */
     if (returnToCartAfterDetail){
       returnToCartAfterDetail = false;
       setTimeout(()=>{ try{ openCartModal(); }catch(_){ } }, 0);
@@ -1965,16 +2060,73 @@
     return (!activeQuery || !activeQuery.trim()) && (!$("catHigh").value);
   }
 
+  /* ===== v1.1.27: 리스트 렌더 최적화 ===== */
+  function computeListSig(items){
+    // 현재범위 해시 + pinnedTopKey + (중립상태일 때 shuffleSeed 영향)
+    const baseHash = computeInViewHash(items);
+    const pin = pinnedTopKey ? pinnedTopKey : "-";
+    const shf = isNeutralState() ? String(Math.floor(shuffleSeed * 1e9)) : "0";
+    return baseHash + "::pin=" + pin + "::shf=" + shf;
+  }
+
   function renderList(items){
     const list = $("list");
     list.innerHTML = "";
     cardByKey.clear();
+
     renderLimit = BATCH;
+    renderedCount = 0;
 
     $("empty").style.display = items.length ? "none" : "block";
     $("moreHint").style.display = "none";
 
+    lastListSig = "";
     appendList(items);
+  }
+
+  function buildCardElement(it){
+    const el = document.createElement("div");
+    el.className = "item";
+    el.dataset.key = it._key;
+
+    el.innerHTML = `
+      <div class="thumb">
+        ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
+      </div>
+      <div class="body">
+        <div class="catRow">
+          ${it._high ? `<span class="tag">${it._high}</span>` : ``}
+          ${it._low ? `<span class="tag">${it._low}</span>` : ``}
+        </div>
+        <div class="name">${escapeHtml(it.title || "-")}</div>
+        <div class="place">${escapeHtml(guessPlace(it))}</div>
+        <div class="price">
+          <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+          <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
+        </div>
+      </div>
+    `;
+
+    cardByKey.set(it._key, el);
+
+    el.addEventListener("mouseenter", () => {
+      clearAllCardHighlights();
+      highlightCard(it._key, false);
+      setHoverKey(it._key);
+      highlightClusterOnlyByKey(it._key);
+    });
+    el.addEventListener("mouseleave", () => {
+      unhighlightCard(it._key);
+      if (hoverKey === it._key) setHoverKey(null);
+      clearClusterHighlight();
+      if (activeMiniKey) highlightCard(activeMiniKey, false);
+    });
+    el.addEventListener("click", () => {
+      returnToCartAfterDetail = false;
+      openDetail(it, true);
+    });
+
+    return el;
   }
 
   function appendList(items){
@@ -1985,7 +2137,6 @@
       arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
 
-    /* v1.1.26: pinnedTopKey가 현재범위에 있으면 무조건 1번으로 */
     if (pinnedTopKey){
       const idx = arr.findIndex(x => x._key === pinnedTopKey);
       if (idx >= 0){
@@ -1994,56 +2145,32 @@
       }
     }
 
-    const slice = arr.slice(0, renderLimit);
-    list.innerHTML = "";
-    cardByKey.clear();
+    const sig = computeListSig(arr);
+    const desired = Math.min(renderLimit, arr.length);
 
-    for (const it of slice){
-      const el = document.createElement("div");
-      el.className = "item";
-      el.dataset.key = it._key;
-
-      el.innerHTML = `
-        <div class="thumb">
-          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
-        </div>
-        <div class="body">
-          <div class="catRow">
-            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
-            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
-          </div>
-          <div class="name">${escapeHtml(it.title || "-")}</div>
-          <div class="place">${escapeHtml(guessPlace(it))}</div>
-          <div class="price">
-            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
-          </div>
-        </div>
-      `;
-
-      cardByKey.set(it._key, el);
-
-      el.addEventListener("mouseenter", () => {
-        clearAllCardHighlights();
-        highlightCard(it._key, false);
-        setHoverKey(it._key);
-        highlightClusterOnlyByKey(it._key);
-      });
-      el.addEventListener("mouseleave", () => {
-        unhighlightCard(it._key);
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        if (activeMiniKey) highlightCard(activeMiniKey, false);
-      });
-      el.addEventListener("click", () => {
-        returnToCartAfterDetail = false;
-        openDetail(it, true);
-      });
-
-      list.appendChild(el);
+    // 시그니처가 바뀌면(정렬/핀/범위 변화) 전체 rebuild 1회
+    if (sig !== lastListSig){
+      list.innerHTML = "";
+      cardByKey.clear();
+      renderedCount = 0;
+      lastListSig = sig;
     }
 
-    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
+    // 이미 충분히 렌더되었으면 종료
+    if (renderedCount >= desired){
+      $("moreHint").style.display = (renderLimit < arr.length) ? "block" : "none";
+      return;
+    }
+
+    // 필요한 만큼만 추가 렌더
+    const frag = document.createDocumentFragment();
+    for (let i = renderedCount; i < desired; i++){
+      frag.appendChild(buildCardElement(arr[i]));
+    }
+    list.appendChild(frag);
+    renderedCount = desired;
+
+    $("moreHint").style.display = (renderLimit < arr.length) ? "block" : "none";
   }
 
   function setupInfiniteScroll(){
@@ -2260,7 +2387,6 @@
   }
 
   function computeInViewHash(arr){
-    // key를 정렬 후 일부만 합쳐도 충분(가벼운 해시)
     const keys = arr.map(x=>x._key).sort();
     let s = "";
     for (let i=0;i<Math.min(60, keys.length);i++){
@@ -2285,14 +2411,12 @@
     const changed = (newHash !== lastInViewHash);
     lastInViewHash = newHash;
 
-    // 리스트가 실제로 바뀔 때만 스크롤 최상단(잔상 제거 + 과도 점프 방지)
     if (changed){
       const panel = $("panel");
       if (panel) panel.scrollTop = 0;
       renderList(inView);
     }else{
       // 바뀌지 않았으면 재렌더 생략(부하 절감)
-      // 단, pinnedTopKey가 바뀌었으면 반영
       if (pinnedTopKey){
         appendList(inView);
       }
@@ -2494,7 +2618,6 @@
           map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
         }catch(_){}
 
-        // 같은 핀 재클릭: 상세
         if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
           returnToCartAfterDetail = false;
           openDetail(it, true);
@@ -2649,7 +2772,6 @@
           </div>
         `;
 
-        // v1.1.26: 장바구니에서 상세로 들어간 뒤 닫으면 장바구니로 복귀
         row.addEventListener("click", ()=>{
           returnToCartAfterDetail = true;
           closeCartModal();
@@ -2676,12 +2798,10 @@
   }
   function closeCartModal(){ $("cartModalOverlay").style.display = "none"; }
 
-  /* v1.1.26: 검색 줌 로직 - 결과 분포에 따라 fitBounds/단일 setView */
   function moveMapToSearch(base){
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
 
-    // 단일 결과: 꽤 확대해서 확인 가능
     if (base.length === 1){
       const it = base[0];
       const la = (it._latDisp ?? it.lat);
@@ -2693,7 +2813,6 @@
       return;
     }
 
-    // 다수 결과: bounds 기반 fitBounds (너무 과확대 방지 maxZoom=15)
     let bounds = null;
     for (const it of base){
       const la = (it._latDisp ?? it.lat);
@@ -2709,7 +2828,6 @@
       map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false });
     }catch(_){}
 
-    // 과줌아웃이면 최소 줌 보정(너무 멀리서 보면 확인 불가)
     try{
       const z = Math.round(map.getZoom());
       if (z < 8) map.setZoom(8, { animate:false });
@@ -2722,7 +2840,6 @@
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
 
-    // 검색 시 pinnedTopKey는 “검색 결과에서 선택된 것”이 없으니 초기화
     pinnedTopKey = null;
 
     const base = getFilteredBase();
@@ -2808,7 +2925,6 @@
     buildMap();
     setupInfiniteScroll();
 
-    // 미니모달 내부 버튼(담기/상세보기) 처리
     document.addEventListener("click", (e) => {
       const addBtn = e.target && e.target.closest ? e.target.closest(".pinPopAddCart") : null;
       if (addBtn){
@@ -2838,7 +2954,6 @@
         return;
       }
 
-      // 카드(미니모달 전체) 클릭 = 상세
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
       const key = card.getAttribute("data-key");
@@ -2871,7 +2986,6 @@
       return true;
     });
 
-    // v1.1.26: 유니크 키 생성
     const uniqueKeys = makeUniqueKeys(pts);
 
     ALL = pts.map((it, idx) => {
@@ -2927,6 +3041,13 @@
       if (!currentOpenKey) return;
       addToCart(currentOpenKey);
       renderCartSummary();
+    });
+
+    $("dFocusMap").addEventListener("click", ()=>{
+      if (!currentOpenKey) return;
+      const it = itemByKey.get(currentOpenKey);
+      if (!it) return;
+      focusDetailMap(it);
     });
 
     $("catHigh").addEventListener("change", () => {
