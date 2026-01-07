@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Frontier DOOH 전국 DB v1.1.26</title> <!-- vNEXT: 버전 동기화 -->
+  <title>Frontier DOOH 전국 DB v1.1.26</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -30,7 +30,7 @@
       --inputPh:rgba(255,255,255,.45);
 
       --topbarH:72px;
-      --sideW: 161px; /* vNEXT: 우측 빌딩 너비 40% 축소(268px -> 약 60%) */
+      --sideW: 161px; /* v1.1.25: 우측 빌딩 너비 40% 축소 유지 */
     }
 
     *{box-sizing:border-box}
@@ -287,7 +287,7 @@
       overflow:auto;
       padding:0;
       min-height:0;
-      scroll-behavior:auto !important; /* v1.1.22: “롤링/부드러운 이동” 방지 강제 */
+      scroll-behavior:auto !important;
     }
     @media (max-width: 980px){
       .panel{border-right:none; border-bottom:1px solid var(--line);}
@@ -360,6 +360,17 @@
     .item.isActive{
       border-color:rgba(162,222,204,.55);
       box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow);
+    }
+
+    /* v1.1.26: 핀 클릭시 “빛나라” 플래시 */
+    @keyframes pinFlash {
+      0%   { box-shadow:0 0 0 0 rgba(162,222,204,.00), var(--shadow); }
+      15%  { box-shadow:0 0 0 2px rgba(162,222,204,.25), 0 0 24px rgba(162,222,204,.22), var(--shadow); }
+      45%  { box-shadow:0 0 0 2px rgba(162,222,204,.20), 0 0 34px rgba(162,222,204,.30), var(--shadow); }
+      100% { box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow); }
+    }
+    .item.isPinFlash{
+      animation: pinFlash 0.85s ease-out 1;
     }
 
     .thumb{width:100%; aspect-ratio: 16/9; background:#0d0f10; position:relative;}
@@ -500,6 +511,7 @@
     .pinPopTitle{font-weight:1000; font-size:15px; line-height:1.2;}
     .pinPopSub{font-size:12px; color:var(--muted); line-height:1.2;}
     .pinPopPrice{font-size:13px; color:var(--mint); font-weight:1000;}
+
     .pinPopCtaRow{
       margin-top:6px;
       display:flex;
@@ -508,6 +520,13 @@
       gap:10px;
     }
     .pinPopHint{font-size:11px; color:rgba(255,255,255,.65);}
+
+    .pinPopBtnRow{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:flex-end;
+    }
     .pinPopBtn{
       border:1px solid rgba(162,222,204,.55);
       background:rgba(162,222,204,.12);
@@ -517,6 +536,12 @@
       padding:8px 10px;
       font-size:12px;
       white-space:nowrap;
+      cursor:pointer;
+    }
+    .pinPopBtn.ghost{
+      border-color:rgba(255,255,255,.18);
+      background:rgba(255,255,255,.06);
+      color:#e9eef7;
     }
 
     /* ===== RIGHT SIDE PANEL (MAP) ===== */
@@ -540,7 +565,7 @@
       overflow:hidden;
     }
 
-    /* vNEXT: 줌/장바구니/최근본 “빌딩” 통합 */
+    /* v1.1.25: 빌딩 카드 */
     .buildingCard{
       display:flex;
       flex-direction:column;
@@ -552,11 +577,10 @@
     }
     .buildingSec:last-child{ border-bottom:none; }
 
-    /* 줌 UI (← ZOOM 8 →) */
-    .zoomCard{ padding:0; }
+    /* v1.1.26: 줌 UI 변경(요청안) - 오른쪽 상하 버튼, 왼쪽에 ZOOM/숫자 */
     .zoomBar{
       display:flex;
-      align-items:center;
+      align-items:stretch;
       justify-content:space-between;
       gap:8px;
       padding:6px;
@@ -564,25 +588,10 @@
       background:rgba(0,0,0,.18);
       border:1px solid rgba(255,255,255,.10);
     }
-    .zNav{
-      width:38px;
-      height:40px;
-      border-radius:12px;
-      border:1px solid rgba(162,222,204,.35);
-      background:rgba(255,255,255,.06);
-      color:#e9eef7;
-      font-weight:1000;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      user-select:none;
-    }
-    .zNav:active{ transform:translateY(1px); }
     .zLabel{
       flex:1 1 auto;
-      height:40px;
-      border-radius:999px;
+      min-width:0;
+      border-radius:12px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.28);
       display:flex;
@@ -593,7 +602,8 @@
       color:#e9eef7;
       font-weight:1000;
       letter-spacing:.2px;
-      min-width:0;
+      padding:0 8px;
+      height:44px;
     }
     .zLabel span{
       font-size:10px;
@@ -602,10 +612,34 @@
       letter-spacing:.6px;
     }
     .zLabel b{
-      font-size:14px;
+      font-size:15px;
       font-weight:1000;
       color:#e9eef7;
     }
+    .zStack{
+      width:44px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      flex:0 0 auto;
+    }
+    .zBtn{
+      width:44px;
+      height:19px;
+      border-radius:10px;
+      border:1px solid rgba(162,222,204,.35);
+      background:rgba(255,255,255,.06);
+      color:#e9eef7;
+      font-weight:1000;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      user-select:none;
+      line-height:1;
+      font-size:12px;
+    }
+    .zBtn:active{ transform:translateY(1px); }
 
     .sideSectionTitle{
       padding:8px 10px;
@@ -672,6 +706,8 @@
       background:rgba(0,0,0,.22);
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
+      min-width:0;
+      overflow:hidden; /* v1.1.26: 우측 잘림 방지(안에 가두기) */
     }
     .rRow:hover{ transform:translateY(-1px); border-color:rgba(162,222,204,.30); }
 
@@ -683,6 +719,7 @@
       background:#0d0f10;
       border:1px solid rgba(255,255,255,.10);
       position:relative;
+      min-width:0;
     }
     .rThumb img{ width:100%; height:100%; object-fit:cover; display:block; }
     .rThumb .fallback{
@@ -702,6 +739,7 @@
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      min-width:0;
     }
     .rPrice{
       margin-top:2px;
@@ -711,6 +749,7 @@
       white-space:nowrap;
       overflow:hidden;
       text-overflow:ellipsis;
+      min-width:0;
     }
 
     .rX{
@@ -862,8 +901,8 @@
       padding:20px;
     }
     .modal{
-      width:min(860px, 96vw);
-      max-height:min(90vh, 860px);
+      width:min(900px, 96vw);
+      max-height:min(90vh, 900px);
       overflow:auto;
       margin:0 auto;
       border-radius:18px;
@@ -882,36 +921,55 @@
     }
     .modalHead .t{font-weight:1000;color:#e9eef7;font-size:18px;margin:0;}
     .modalBody{ padding:14px 16px 18px; }
+
     .mRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
-      padding:10px 0;
+      gap:12px;
+      padding:12px 0;
       border-bottom:1px solid rgba(255,255,255,.06);
     }
     .mRow:last-child{ border-bottom:none; }
-    .mLeft{ display:flex; align-items:center; gap:10px; min-width:0; }
-    .mThumb{ width:72px; height:48px; border-radius:10px; overflow:hidden; background:#0d0f10; border:1px solid rgba(255,255,255,.10); flex:0 0 auto; }
+
+    .mLeft{ display:flex; align-items:center; gap:12px; min-width:0; }
+    /* v1.1.26: 이미지 크게(미니모달 체감) */
+    .mThumb{
+      width:150px;
+      height:100px;
+      border-radius:12px;
+      overflow:hidden;
+      background:#0d0f10;
+      border:1px solid rgba(255,255,255,.10);
+      flex:0 0 auto;
+    }
     .mThumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    /* v1.1.26: 폰트 조정 (13px -> 14px) */
     .mTitle{
       font-weight:1000;
       color:#e9eef7;
-      font-size:13px;
-      line-height:1.2;
+      font-size:14px;
+      line-height:1.25;
       min-width:0;
       display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
       overflow:hidden;
     }
-    .mPrice{ font-weight:1000; color:var(--mint); font-size:13px; white-space:nowrap; }
+    .mPrice{
+      font-weight:1000;
+      color:var(--mint);
+      font-size:14px;
+      white-space:nowrap;
+    }
     .mX{
-      width:34px; height:34px;
+      width:36px; height:36px;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.12);
       background:rgba(255,255,255,.06);
       color:#fff;
       cursor:pointer;
       font-weight:1000;
+      flex:0 0 auto;
     }
     .mSum{
       margin-top:12px;
@@ -931,7 +989,7 @@
 
 <body>
   <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.26</span></div> <!-- vNEXT: 버전 동기화 -->
+    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.1.26</span></div>
     <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
   </div>
 
@@ -992,11 +1050,13 @@
           <div class="sideCard buildingCard" id="sideBuilding">
             <div class="buildingSec">
               <div class="zoomBar">
-                <button class="zNav" id="zOut" aria-label="줌 아웃">←</button>
                 <div class="zLabel" aria-label="현재 줌">
                   <span>ZOOM</span><b id="zVal">8</b>
                 </div>
-                <button class="zNav" id="zIn" aria-label="줌 인">→</button>
+                <div class="zStack" aria-label="줌 버튼">
+                  <button class="zBtn" id="zIn" aria-label="줌 인">＋</button>
+                  <button class="zBtn" id="zOut" aria-label="줌 아웃">－</button>
+                </div>
               </div>
             </div>
 
@@ -1084,17 +1144,22 @@
 
 <script>
   /* =========================================================
-     v1.1.26 (UI는 v1.1.25 그대로 유지)
-     - 데이터 로드 안정화: ./data_public.json 실패 시 ./data.json 자동 fallback
-     - “중립(검색/필터 없음) 셔플 정렬”과 클릭/호버 타겟 인덱스 불일치 버그 해결
-       (정렬은 viewportUpdate에서 1회 확정 -> 리스트/ensureCardVisible이 같은 배열을 봄)
+     v1.1.26 (v1.1.25 UI 틀 유지 + 기능 업데이트)
+     1) 핀 클릭 시: 해당 매체를 “리스트 1번(최상단)”으로 올리고, 카드가 빛나게(플래시)
+     2) 검색 줌 로직: 줌12 고정 제거 -> 결과 분포에 따라 fitBounds/단일 setView(적절 줌)
+     3) 고유키/중복 인식 해결: id 중복/재사용 시에도 무조건 유니크 키 생성
+        -> 밀집 핀 hover 개별 반응/장바구니 개별 담기 정상화
+     4) 줌 버튼 UI 변경: 오른쪽 상하(+/-), 왼쪽 ZOOM/숫자
+     5) 최근본 우측 잘림 방지: 컨테이너 내부에 가두고 … 처리 유지
+     6) 미니모달에 “담기” 버튼 추가
+     7) 장바구니 모달 UI: 썸네일 확대(150x100) + 폰트 14px로 조정
+     8) 장바구니에서 상세(해시모달) 열고 X로 닫으면 장바구니로 복귀
+     9) 최근본도 장바구니처럼 sessionStorage(세션 종료 시 리셋)
+     10) 연산부하 완화: moveend 시 “현재범위”가 동일하면 리스트 재렌더를 생략
      ========================================================= */
 
   const VERSION = "v1.1.26";
-
-  // v1.1.26: 데이터 파일명/경로 이슈 대응 (둘 중 존재하는 걸 자동 사용)
-  const DATA_URL_CANDIDATES = ["./data_public.json", "./data.json"];
-  let USED_DATA_URL = DATA_URL_CANDIDATES[0];
+  const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
@@ -1142,10 +1207,8 @@
   const BATCH = 36;
   const STEP  = 24;
   let renderLimit = BATCH;
-
-  // v1.1.26: “화면에 표시되는(정렬 확정된) 배열”을 단일 소스로 유지
+  let curInView = [];
   let curBase = [];
-  let curInView = []; // <- 정렬 확정된 inView (리스트/ensureCardVisible 동일하게 참조)
 
   let currentOpenKey = null;
   let suppressHashHandler = false;
@@ -1154,7 +1217,6 @@
   let isMapInteracting = false;
 
   let suspendViewportOnce = false;
-
   let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
@@ -1167,8 +1229,9 @@
 
   let shuffleSeed = Math.random();
 
-  const LS_RECENT = "frontier_recent_viewed_v1";
-  const LS_CART   = "frontier_cart_v1";
+  /* v1.1.26: 최근본/장바구니 모두 sessionStorage(세션 종료 시 리셋) */
+  const SS_RECENT = "frontier_recent_viewed_v1";
+  const SS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
 
   let recentKeys = [];
@@ -1177,11 +1240,21 @@
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
+  /* v1.1.26: 핀 클릭시 리스트 1번 고정 키 */
+  let pinnedTopKey = null;
+  let pinFlashTimer = null;
+
+  /* v1.1.26: 장바구니 -> 상세 -> 닫기 복귀 플래그 */
+  let returnToCartAfterDetail = false;
+
+  /* v1.1.26: moveend 최적화 - 현재범위 해시 */
+  let lastInViewHash = "";
+
   const $ = (id) => document.getElementById(id);
 
   function showErrorBanner(msg){
     $("errMsg").textContent = msg || "알 수 없는 오류";
-    $("errUrl").textContent = USED_DATA_URL || "-";
+    $("errUrl").textContent = DATA_URL;
     $("errBanner").style.display = "block";
   }
   function hideErrorBanner(){ $("errBanner").style.display = "none"; }
@@ -1214,6 +1287,7 @@
     return m ? m : [];
   }
 
+  // 한글 자모 분해
   const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
   const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
   const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
@@ -1595,9 +1669,34 @@
     iconAnchor:[18,49]
   });
 
-  function makeKey(it, idx){
-    if (it.id != null && String(it.id).trim() !== "") return "id:" + String(it.id);
-    return "k:" + idx + ":" + (it.title || "") + ":" + it.lat + ":" + it.lng;
+  /* v1.1.26: 고유키 생성(중복 id 방지) */
+  function stableHash(seed, str){
+    let h = 2166136261 ^ Math.floor(seed * 1e9);
+    for (let i=0; i<str.length; i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  function makeUniqueKeys(rawItems){
+    const seen = new Map(); // baseKey -> count
+    return rawItems.map((it, idx) => {
+      const hasId = (it.id != null && String(it.id).trim() !== "");
+      let base = hasId ? ("id:" + String(it.id).trim()) : ("k:" + idx);
+
+      // id가 중복이면 title/좌표를 섞어서 유니크화
+      if (seen.has(base)){
+        const c = (seen.get(base) || 1) + 1;
+        seen.set(base, c);
+        const salt = (it.title || "") + "|" + (it.lat ?? "") + "|" + (it.lng ?? "") + "|" + idx;
+        base = base + "#" + c + "-" + stableHash(0.12345, salt);
+      }else{
+        seen.set(base, 1);
+      }
+
+      return base;
+    });
   }
 
   function clearClusterHighlight(){
@@ -1625,10 +1724,12 @@
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.remove("isActive");
+    el.classList.remove("isPinFlash");
   }
   function clearAllCardHighlights(){
     for (const el of cardByKey.values()){
       el.classList.remove("isActive");
+      el.classList.remove("isPinFlash");
     }
   }
 
@@ -1708,6 +1809,20 @@
     clearClusterHighlight();
   }
 
+  function pinToTopAndFlash(key){
+    pinnedTopKey = key;
+
+    // 리스트를 다시 그려서 1번으로 올림
+    appendList(curInView);
+
+    const el = cardByKey.get(key);
+    if (el){
+      el.classList.add("isPinFlash");
+      if (pinFlashTimer) clearTimeout(pinFlashTimer);
+      pinFlashTimer = setTimeout(()=>{ try{ el.classList.remove("isPinFlash"); }catch(_){ } }, 900);
+    }
+  }
+
   function miniPopupHtml(it){
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
@@ -1726,7 +1841,10 @@
           <div class="pinPopPrice">${price}</div>
           <div class="pinPopCtaRow">
             <div class="pinPopHint">클릭하면 상세보기</div>
-            <div class="pinPopBtn">상세보기</div>
+            <div class="pinPopBtnRow">
+              <button class="pinPopBtn ghost pinPopAddCart" type="button" data-key="${escapeHtml(it._key)}">담기</button>
+              <button class="pinPopBtn pinPopGoDetail" type="button">상세보기</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1741,6 +1859,9 @@
     }
     setActiveMiniKey(it._key);
 
+    /* v1.1.26: 핀 클릭 시 리스트 1번 + 플래시 */
+    pinToTopAndFlash(it._key);
+
     clearAllCardHighlights();
     ensureCardVisible(it._key);
     highlightCard(it._key, true);
@@ -1749,89 +1870,6 @@
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
     }catch(_){}
-  }
-
-  function renderMarkers(items){
-    closeMiniPopup();
-    clearClusterHighlight();
-    setHoverKey(null);
-
-    markerByKey.clear();
-    markers.clearLayers();
-
-    const ms = [];
-    for (const it of items){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-
-      const m = L.marker([la, ln], { icon: normalIcon });
-      m.__key = it._key;
-
-      m.bindPopup(miniPopupHtml(it), {
-        closeButton:false,
-        autoClose:true,
-        closeOnClick:false,
-        autoPan:false,
-        className:"pinPopWrap",
-        offset: L.point(0, -86)
-      });
-
-      m.on("mouseover", () => {
-        if (isMapInteracting) return;
-        setHoverKey(it._key);
-        highlightClusterOnlyByKey(it._key);
-
-        clearAllCardHighlights();
-        ensureCardVisible(it._key);
-        highlightCard(it._key, false);
-      });
-
-      m.on("mouseout", () => {
-        if (isMapInteracting) return;
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        clearAllCardHighlights();
-        if (activeMiniKey) highlightCard(activeMiniKey, false);
-      });
-
-      m.on("click", (ev) => {
-        try{
-          if (ev && ev.originalEvent){
-            L.DomEvent.stopPropagation(ev.originalEvent);
-            L.DomEvent.preventDefault(ev.originalEvent);
-          }
-        }catch(_){}
-
-        suspendViewportOnce = true;
-        map.once("moveend", () => {
-          suspendViewportOnce = false;
-          updateZoomUI();
-        });
-
-        try{
-          map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
-        }catch(_){}
-
-        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
-          openDetail(it, true);
-          return;
-        }
-        openMiniPopupFor(it, m);
-      });
-
-      m.on("popupclose", () => {
-        if (activeMiniKey === it._key){
-          setActiveMiniKey(null);
-          updateMarkerVisual(it._key);
-          clearAllCardHighlights();
-        }
-      });
-
-      markerByKey.set(it._key, m);
-      ms.push(m);
-    }
-
-    markers.addLayers(ms);
   }
 
   function setHash(key){
@@ -1854,7 +1892,7 @@
     recentKeys = recentKeys.filter(k => k !== key);
     recentKeys.unshift(key);
     if (recentKeys.length > 200) recentKeys.length = 200;
-    try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
     recentPage = 0;
     renderRecentPanel();
   }
@@ -1904,6 +1942,12 @@
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
     if (!fromHashChange) clearHash();
+
+    /* v1.1.26: 장바구니에서 들어온 상세면 닫을 때 장바구니로 복귀 */
+    if (returnToCartAfterDetail){
+      returnToCartAfterDetail = false;
+      setTimeout(()=>{ try{ openCartModal(); }catch(_){ } }, 0);
+    }
   }
 
   function openDetailByHash(){
@@ -1915,15 +1959,6 @@
     if (!it) return;
 
     openDetail(it, false);
-  }
-
-  function stableHash(seed, str){
-    let h = 2166136261 ^ Math.floor(seed * 1e9);
-    for (let i=0; i<str.length; i++){
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
   }
 
   function isNeutralState(){
@@ -1944,8 +1979,22 @@
 
   function appendList(items){
     const list = $("list");
+    let arr = items.slice();
 
-    const slice = items.slice(0, renderLimit);
+    if (isNeutralState()){
+      arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
+    }
+
+    /* v1.1.26: pinnedTopKey가 현재범위에 있으면 무조건 1번으로 */
+    if (pinnedTopKey){
+      const idx = arr.findIndex(x => x._key === pinnedTopKey);
+      if (idx >= 0){
+        const [one] = arr.splice(idx, 1);
+        arr.unshift(one);
+      }
+    }
+
+    const slice = arr.slice(0, renderLimit);
     list.innerHTML = "";
     cardByKey.clear();
 
@@ -1986,7 +2035,10 @@
         clearClusterHighlight();
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
-      el.addEventListener("click", () => openDetail(it, true));
+      el.addEventListener("click", () => {
+        returnToCartAfterDetail = false;
+        openDetail(it, true);
+      });
 
       list.appendChild(el);
     }
@@ -2207,31 +2259,44 @@
     viewportUpdate();
   }
 
+  function computeInViewHash(arr){
+    // key를 정렬 후 일부만 합쳐도 충분(가벼운 해시)
+    const keys = arr.map(x=>x._key).sort();
+    let s = "";
+    for (let i=0;i<Math.min(60, keys.length);i++){
+      s += keys[i] + "|";
+    }
+    return String(keys.length) + "::" + stableHash(0.777, s);
+  }
+
   function viewportUpdate(){
     if (!map) return;
     const b = map.getBounds();
-    const inViewRaw = (curBase || []).filter(x => {
+    const inView = (curBase || []).filter(x => {
       const la = (x._latDisp ?? x.lat);
       const ln = (x._lngDisp ?? x.lng);
       return b.contains([la, ln]);
     });
 
-    // v1.1.26: 정렬은 여기서 1회 확정 (리스트/ensureCardVisible 동일 참조)
-    let display = inViewRaw.slice();
-    if (isNeutralState()){
-      display.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
+    curInView = inView;
+    $("mInView").textContent = inView.length;
+
+    const newHash = computeInViewHash(inView);
+    const changed = (newHash !== lastInViewHash);
+    lastInViewHash = newHash;
+
+    // 리스트가 실제로 바뀔 때만 스크롤 최상단(잔상 제거 + 과도 점프 방지)
+    if (changed){
+      const panel = $("panel");
+      if (panel) panel.scrollTop = 0;
+      renderList(inView);
+    }else{
+      // 바뀌지 않았으면 재렌더 생략(부하 절감)
+      // 단, pinnedTopKey가 바뀌었으면 반영
+      if (pinnedTopKey){
+        appendList(inView);
+      }
     }
-
-    curInView = display;
-
-    $("mInView").textContent = curInView.length;
-
-    const panel = $("panel");
-    if (panel){
-      panel.scrollTop = 0;
-    }
-
-    renderList(curInView);
 
     if (activeMiniKey){
       ensureCardVisible(activeMiniKey);
@@ -2368,16 +2433,89 @@
     });
   }
 
-  function loadRecentAndCart(){
-    try{
-      const r = JSON.parse(localStorage.getItem(LS_RECENT) || "[]");
-      if (Array.isArray(r)) recentKeys = r.filter(x => typeof x === "string");
-    }catch(_){ recentKeys = []; }
+  function renderMarkers(items){
+    closeMiniPopup();
+    clearClusterHighlight();
+    setHoverKey(null);
 
-    try{
-      const c = JSON.parse(sessionStorage.getItem(LS_CART) || "[]");
-      if (Array.isArray(c)) cartKeys = c.filter(x => typeof x === "string");
-    }catch(_){ cartKeys = []; }
+    markerByKey.clear();
+    markers.clearLayers();
+
+    const ms = [];
+    for (const it of items){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+
+      const m = L.marker([la, ln], { icon: normalIcon });
+      m.__key = it._key;
+
+      m.bindPopup(miniPopupHtml(it), {
+        closeButton:false,
+        autoClose:true,
+        closeOnClick:false,
+        autoPan:false,
+        className:"pinPopWrap",
+        offset: L.point(0, -86)
+      });
+
+      m.on("mouseover", () => {
+        if (isMapInteracting) return;
+        setHoverKey(it._key);
+        highlightClusterOnlyByKey(it._key);
+
+        clearAllCardHighlights();
+        ensureCardVisible(it._key);
+        highlightCard(it._key, false);
+      });
+
+      m.on("mouseout", () => {
+        if (isMapInteracting) return;
+        if (hoverKey === it._key) setHoverKey(null);
+        clearClusterHighlight();
+        clearAllCardHighlights();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
+      });
+
+      m.on("click", (ev) => {
+        try{
+          if (ev && ev.originalEvent){
+            L.DomEvent.stopPropagation(ev.originalEvent);
+            L.DomEvent.preventDefault(ev.originalEvent);
+          }
+        }catch(_){}
+
+        suspendViewportOnce = true;
+        map.once("moveend", () => {
+          suspendViewportOnce = false;
+          updateZoomUI();
+        });
+
+        try{
+          map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
+        }catch(_){}
+
+        // 같은 핀 재클릭: 상세
+        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
+          returnToCartAfterDetail = false;
+          openDetail(it, true);
+          return;
+        }
+        openMiniPopupFor(it, m);
+      });
+
+      m.on("popupclose", () => {
+        if (activeMiniKey === it._key){
+          setActiveMiniKey(null);
+          updateMarkerVisual(it._key);
+          clearAllCardHighlights();
+        }
+      });
+
+      markerByKey.set(it._key, m);
+      ms.push(m);
+    }
+
+    markers.addLayers(ms);
   }
 
   function clampRecentPage(total){
@@ -2396,7 +2534,7 @@
 
     const valid = recentKeys.filter(k => itemByKey.has(k));
     recentKeys = valid;
-    try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
 
     const pages = clampRecentPage(valid.length);
 
@@ -2421,11 +2559,15 @@
         <div class="rX" title="제거">✕</div>
       `;
 
-      el.addEventListener("click", () => openDetail(it, true));
+      el.addEventListener("click", () => {
+        returnToCartAfterDetail = false;
+        openDetail(it, true);
+      });
+
       el.querySelector(".rX").addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
         recentKeys = recentKeys.filter(x => x !== key);
-        try{ localStorage.setItem(LS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+        try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
         renderRecentPanel();
       });
 
@@ -2444,7 +2586,7 @@
   }
 
   function saveCart(){
-    try{ sessionStorage.setItem(LS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
     renderCartSummary();
   }
 
@@ -2478,7 +2620,7 @@
   function renderCartSummary(){
     const valid = cartKeys.filter(k => itemByKey.has(k));
     cartKeys = valid;
-    try{ sessionStorage.setItem(LS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
     $("cartCount").textContent = String(cartKeys.length);
   }
 
@@ -2501,13 +2643,19 @@
             <div class="mThumb">${it.thumb ? `<img src="${it.thumb}" alt="">` : ``}</div>
             <div class="mTitle">${escapeHtml(it.title || "-")}</div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:12px;">
             <div class="mPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
             <button class="mX" title="삭제">✕</button>
           </div>
         `;
 
-        row.addEventListener("click", ()=>{ closeCartModal(); openDetail(it, true); });
+        // v1.1.26: 장바구니에서 상세로 들어간 뒤 닫으면 장바구니로 복귀
+        row.addEventListener("click", ()=>{
+          returnToCartAfterDetail = true;
+          closeCartModal();
+          openDetail(it, true);
+        });
+
         row.querySelector(".mX").addEventListener("click", (e)=>{
           e.preventDefault(); e.stopPropagation();
           removeFromCart(key);
@@ -2528,23 +2676,43 @@
   }
   function closeCartModal(){ $("cartModalOverlay").style.display = "none"; }
 
+  /* v1.1.26: 검색 줌 로직 - 결과 분포에 따라 fitBounds/단일 setView */
   function moveMapToSearch(base){
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
 
-    let lat = 0, lng = 0, n = 0;
+    // 단일 결과: 꽤 확대해서 확인 가능
+    if (base.length === 1){
+      const it = base[0];
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      try{
+        map.setView([la, ln], 15, { animate:false });
+      }catch(_){}
+      forceIntegerZoom();
+      return;
+    }
 
+    // 다수 결과: bounds 기반 fitBounds (너무 과확대 방지 maxZoom=15)
+    let bounds = null;
     for (const it of base){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
       if (typeof la !== "number" || typeof ln !== "number") continue;
-      lat += la; lng += ln; n += 1;
+      const ll = L.latLng(la, ln);
+      if (!bounds) bounds = L.latLngBounds(ll, ll);
+      else bounds.extend(ll);
     }
-    if (!n) return;
+    if (!bounds || !bounds.isValid()) return;
 
-    const center = [lat / n, lng / n];
     try{
-      map.setView(center, 12, { animate:false });
+      map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false });
+    }catch(_){}
+
+    // 과줌아웃이면 최소 줌 보정(너무 멀리서 보면 확인 불가)
+    try{
+      const z = Math.round(map.getZoom());
+      if (z < 8) map.setZoom(8, { animate:false });
     }catch(_){}
     forceIntegerZoom();
   }
@@ -2553,6 +2721,10 @@
     const qVal = $("q").value.trim();
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
+
+    // 검색 시 pinnedTopKey는 “검색 결과에서 선택된 것”이 없으니 초기화
+    pinnedTopKey = null;
+
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
 
@@ -2590,6 +2762,7 @@
     closeMiniPopup();
 
     shuffleSeed = Math.random();
+    pinnedTopKey = null;
 
     applyHomeView(true);
 
@@ -2614,19 +2787,16 @@
     }
   }
 
-  // v1.1.26: 후보 URL을 순서대로 시도해서 “살아있는 파일”을 자동 선택
-  async function fetchJsonWithFallback(){
-    let lastErr = null;
-    for (const url of DATA_URL_CANDIDATES){
-      try{
-        const json = await fetchJsonRobust(url);
-        USED_DATA_URL = url;
-        return json;
-      }catch(err){
-        lastErr = err;
-      }
-    }
-    throw lastErr || new Error("데이터 로드 실패");
+  function loadRecentAndCart(){
+    try{
+      const r = JSON.parse(sessionStorage.getItem(SS_RECENT) || "[]");
+      if (Array.isArray(r)) recentKeys = r.filter(x => typeof x === "string");
+    }catch(_){ recentKeys = []; }
+
+    try{
+      const c = JSON.parse(sessionStorage.getItem(SS_CART) || "[]");
+      if (Array.isArray(c)) cartKeys = c.filter(x => typeof x === "string");
+    }catch(_){ cartKeys = []; }
   }
 
   async function init(){
@@ -2638,7 +2808,37 @@
     buildMap();
     setupInfiniteScroll();
 
+    // 미니모달 내부 버튼(담기/상세보기) 처리
     document.addEventListener("click", (e) => {
+      const addBtn = e.target && e.target.closest ? e.target.closest(".pinPopAddCart") : null;
+      if (addBtn){
+        const key = addBtn.getAttribute("data-key");
+        if (key){
+          e.preventDefault();
+          e.stopPropagation();
+          addToCart(key);
+          renderCartSummary();
+        }
+        return;
+      }
+
+      const goBtn = e.target && e.target.closest ? e.target.closest(".pinPopGoDetail") : null;
+      if (goBtn){
+        const card = e.target.closest(".pinPopCard");
+        const key = card ? card.getAttribute("data-key") : null;
+        if (key){
+          const it = itemByKey.get(key);
+          if (it){
+            e.preventDefault();
+            e.stopPropagation();
+            returnToCartAfterDetail = false;
+            openDetail(it, true);
+          }
+        }
+        return;
+      }
+
+      // 카드(미니모달 전체) 클릭 = 상세
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
       const key = card.getAttribute("data-key");
@@ -2649,12 +2849,13 @@
 
       e.preventDefault();
       e.stopPropagation();
+      returnToCartAfterDetail = false;
       openDetail(it, true);
     }, true);
 
     let items = [];
     try{
-      const json = await fetchJsonWithFallback();
+      const json = await fetchJsonRobust(DATA_URL);
       items = Array.isArray(json) ? json : (json.items || []);
       hideErrorBanner();
     }catch(err){
@@ -2670,9 +2871,12 @@
       return true;
     });
 
+    // v1.1.26: 유니크 키 생성
+    const uniqueKeys = makeUniqueKeys(pts);
+
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
-      const key = makeKey(it, idx);
+      const key = uniqueKeys[idx];
       const row = { ...it, _key: key, _high: t.high, _low: t.low };
       row._blobText = makeSearchText(row);
       row._blob = searchNorm(row._blobText);
@@ -2726,6 +2930,7 @@
     });
 
     $("catHigh").addEventListener("change", () => {
+      pinnedTopKey = null;
       const base = getFilteredBase();
       renderMarkersAndListFromBase(base);
     });
