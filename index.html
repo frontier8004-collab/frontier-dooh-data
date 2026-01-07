@@ -362,7 +362,7 @@
       box-shadow:0 0 0 2px rgba(162,222,204,.20), var(--shadow);
     }
 
-    /* v1.1.26: 플래시 CSS는 남겨두되, 동작은 코드에서 비활성화(요구사항 아님) */
+    /* v1.1.26: 핀 클릭시 “빛나라” 플래시 */
     @keyframes pinFlash {
       0%   { box-shadow:0 0 0 0 rgba(162,222,204,.00), var(--shadow); }
       15%  { box-shadow:0 0 0 2px rgba(162,222,204,.25), 0 0 24px rgba(162,222,204,.22), var(--shadow); }
@@ -641,8 +641,14 @@
     }
     .zBtn:active{ transform:translateY(1px); }
 
+    /* ===========================
+       v1.1.26 PATCH (UI ONLY)
+       1) "최근 본 매체" 제목 1줄 고정
+       2) 장바구니 버튼 높이(시안성) 강화
+       =========================== */
+
     .sideSectionTitle{
-      padding:8px 10px;
+      padding:7px 8px;                 /* 기존 8px 10px -> 폭 확보 */
       border:1px solid rgba(255,255,255,.10);
       border-radius:14px;
       background:rgba(0,0,0,.18);
@@ -651,14 +657,28 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:10px;
+      gap:8px;                         /* 기존 10px -> 폭 확보 */
       margin-bottom:10px;
+      font-size:13px;                  /* 좁은 패널에서 줄바꿈 방지 */
+      line-height:1.1;
+      white-space:nowrap;              /* 컨테이너 자체도 줄바꿈 방지 */
+      min-width:0;
+    }
+    .sideSectionTitle > span:first-child{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;          /* 혹시 더 좁아지면 ... 처리 */
+      white-space:nowrap;
+    }
+    .sideSectionTitle > span:last-child{
+      flex:0 0 auto;
+      white-space:nowrap;
     }
 
     /* 장바구니 버튼 */
     .cartBtn{
       width:100%;
-      height:44px;
+      height:56px;                     /* 기존 44px -> 시안성 강화 */
       border-radius:14px;
       border:1px solid rgba(162,222,204,.55);
       background:rgba(162,222,204,.12);
@@ -671,10 +691,12 @@
       gap:10px;
       padding:0 12px;
       user-select:none;
+      font-size:14px;
+      box-shadow:0 10px 24px rgba(0,0,0,.30);
     }
     .cartCountPill{
-      min-width:34px;
-      height:28px;
+      min-width:38px;                  /* 기존 34px */
+      height:32px;                     /* 기존 28px */
       padding:0 10px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.18);
@@ -685,6 +707,8 @@
       font-weight:1000;
       color:var(--mint);
       flex:0 0 auto;
+      font-size:13px;
+      line-height:1;
     }
 
     /* 최근 본 매체 */
@@ -1145,8 +1169,17 @@
 <script>
   /* =========================================================
      v1.1.26 (v1.1.25 UI 틀 유지 + 기능 업데이트)
-     - 이번 핫픽스(버전 유지): "핀 클릭 시 리스트 최상단 고정" 밀림/튐 제거
-     - Flash(빛나는 연출): 요구사항 아님 -> 동작 비활성화(코드에서 사용하지 않음)
+     1) 핀 클릭 시: 해당 매체를 “리스트 1번(최상단)”으로 올리고, 카드가 빛나게(플래시)
+     2) 검색 줌 로직: 줌12 고정 제거 -> 결과 분포에 따라 fitBounds/단일 setView(적절 줌)
+     3) 고유키/중복 인식 해결: id 중복/재사용 시에도 무조건 유니크 키 생성
+        -> 밀집 핀 hover 개별 반응/장바구니 개별 담기 정상화
+     4) 줌 버튼 UI 변경: 오른쪽 상하(+/-), 왼쪽 ZOOM/숫자
+     5) 최근본 우측 잘림 방지: 컨테이너 내부에 가두고 … 처리 유지
+     6) 미니모달에 “담기” 버튼 추가
+     7) 장바구니 모달 UI: 썸네일 확대(150x100) + 폰트 14px로 조정
+     8) 장바구니에서 상세(해시모달) 열고 X로 닫으면 장바구니로 복귀
+     9) 최근본도 장바구니처럼 sessionStorage(세션 종료 시 리셋)
+     10) 연산부하 완화: moveend 시 “현재범위”가 동일하면 리스트 재렌더를 생략
      ========================================================= */
 
   const VERSION = "v1.1.26";
@@ -1233,6 +1266,7 @@
 
   /* v1.1.26: 핀 클릭시 리스트 1번 고정 키 */
   let pinnedTopKey = null;
+  let pinFlashTimer = null;
 
   /* v1.1.26: 장바구니 -> 상세 -> 닫기 복귀 플래그 */
   let returnToCartAfterDetail = false;
@@ -1706,10 +1740,6 @@
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.add("isActive");
-
-    // v1.1.26 FIX: 핀 클릭 시 "최상단 고정"이 요구사항이므로,
-    // scrollIntoView로 스티키 헤더 밀림을 유발하지 않도록
-    // 핀 클릭 경로에서는 doScroll=false로만 사용한다.
     if (doScroll){
       el.scrollIntoView({ block:"start", behavior:"auto" });
     }
@@ -1803,17 +1833,18 @@
     clearClusterHighlight();
   }
 
-  /* ===== v1.1.26 FIX: 핀 클릭 시 "리스트 1번 + 패널 스크롤 최상단(0) 고정" ===== */
-  function pinToTopAndLockScroll(key){
+  function pinToTopAndFlash(key){
     pinnedTopKey = key;
 
     // 리스트를 다시 그려서 1번으로 올림
     appendList(curInView);
 
-    // 핵심: scrollIntoView 등으로 "밀림" 유발하지 말고,
-    // 패널 스크롤을 명시적으로 0에 고정
-    const panel = $("panel");
-    if (panel) panel.scrollTop = 0;
+    const el = cardByKey.get(key);
+    if (el){
+      el.classList.add("isPinFlash");
+      if (pinFlashTimer) clearTimeout(pinFlashTimer);
+      pinFlashTimer = setTimeout(()=>{ try{ el.classList.remove("isPinFlash"); }catch(_){ } }, 900);
+    }
   }
 
   function miniPopupHtml(it){
@@ -1852,17 +1883,12 @@
     }
     setActiveMiniKey(it._key);
 
-    // v1.1.26 FIX: 핀 클릭 시 리스트 1번 + 패널 스크롤 최상단 고정
-    pinToTopAndLockScroll(it._key);
+    /* v1.1.26: 핀 클릭 시 리스트 1번 + 플래시 */
+    pinToTopAndFlash(it._key);
 
     clearAllCardHighlights();
-
-    // pinnedTopKey로 1번이 됐으므로, 굳이 scrollIntoView를 호출하지 않는다(밀림 방지)
-    highlightCard(it._key, false);
-
-    // 패널 최상단을 한 번 더 확정(브라우저/DOM 타이밍 차이 방지)
-    const panel = $("panel");
-    if (panel) panel.scrollTop = 0;
+    ensureCardVisible(it._key);
+    highlightCard(it._key, true);
 
     try{
       marker.setPopupContent(miniPopupHtml(it));
@@ -2258,6 +2284,7 @@
   }
 
   function computeInViewHash(arr){
+    // key를 정렬 후 일부만 합쳐도 충분(가벼운 해시)
     const keys = arr.map(x=>x._key).sort();
     let s = "";
     for (let i=0;i<Math.min(60, keys.length);i++){
@@ -2282,11 +2309,14 @@
     const changed = (newHash !== lastInViewHash);
     lastInViewHash = newHash;
 
+    // 리스트가 실제로 바뀔 때만 스크롤 최상단(잔상 제거 + 과도 점프 방지)
     if (changed){
       const panel = $("panel");
       if (panel) panel.scrollTop = 0;
       renderList(inView);
     }else{
+      // 바뀌지 않았으면 재렌더 생략(부하 절감)
+      // 단, pinnedTopKey가 바뀌었으면 반영
       if (pinnedTopKey){
         appendList(inView);
       }
@@ -2675,6 +2705,7 @@
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
 
+    // 단일 결과: 꽤 확대해서 확인 가능
     if (base.length === 1){
       const it = base[0];
       const la = (it._latDisp ?? it.lat);
@@ -2686,6 +2717,7 @@
       return;
     }
 
+    // 다수 결과: bounds 기반 fitBounds (너무 과확대 방지 maxZoom=15)
     let bounds = null;
     for (const it of base){
       const la = (it._latDisp ?? it.lat);
@@ -2701,6 +2733,7 @@
       map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false });
     }catch(_){}
 
+    // 과줌아웃이면 최소 줌 보정(너무 멀리서 보면 확인 불가)
     try{
       const z = Math.round(map.getZoom());
       if (z < 8) map.setZoom(8, { animate:false });
@@ -2713,6 +2746,7 @@
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
 
+    // 검색 시 pinnedTopKey는 “검색 결과에서 선택된 것”이 없으니 초기화
     pinnedTopKey = null;
 
     const base = getFilteredBase();
@@ -2828,6 +2862,7 @@
         return;
       }
 
+      // 카드(미니모달 전체) 클릭 = 상세
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
       const key = card.getAttribute("data-key");
@@ -2860,6 +2895,7 @@
       return true;
     });
 
+    // v1.1.26: 유니크 키 생성
     const uniqueKeys = makeUniqueKeys(pts);
 
     ALL = pts.map((it, idx) => {
