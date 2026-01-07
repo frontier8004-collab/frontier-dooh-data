@@ -1157,6 +1157,71 @@
 
   const VERSION = "v1.1.27";
   const DATA_URL = "./data_public.json";
+// === data_public.json (object) -> points array extractor ===
+function __isArrayOfLatLng(arr){
+  if (!Array.isArray(arr) || arr.length === 0) return false;
+  const n = Math.min(arr.length, 30);
+  for (let i=0;i<n;i++){
+    const o = arr[i];
+    if (!o || typeof o !== "object") continue;
+    const lat = o.lat ?? o.latitude ?? o.y;
+    const lng = o.lng ?? o.lon ?? o.longitude ?? o.x;
+    if (typeof lat === "number" && typeof lng === "number") return true;
+    if (typeof lat === "string" && typeof lng === "string" && !isNaN(+lat) && !isNaN(+lng)) return true;
+  }
+  return false;
+}
+
+function __findFirstPointsArray(payload){
+  if (Array.isArray(payload)) return payload;
+
+  const primaryKeys = ["points", "items", "rows", "records", "data", "list", "result"];
+  for (const k of primaryKeys){
+    const v = payload?.[k];
+    if (Array.isArray(v)) return v;
+  }
+
+  for (const k of primaryKeys){
+    const v = payload?.[k];
+    if (v && typeof v === "object"){
+      for (const kk of primaryKeys){
+        const vv = v?.[kk];
+        if (Array.isArray(vv)) return vv;
+      }
+      if (Array.isArray(v.points)) return v.points;
+    }
+  }
+
+  const seen = new Set();
+  function walk(node, depth){
+    if (!node || depth > 4) return null;
+    if (typeof node !== "object") return null;
+    if (seen.has(node)) return null;
+    seen.add(node);
+
+    if (Array.isArray(node)){
+      if (__isArrayOfLatLng(node)) return node;
+      for (let i=0;i<Math.min(node.length, 8);i++){
+        const hit = walk(node[i], depth+1);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    const keys = Object.keys(node);
+    for (let i=0;i<Math.min(keys.length, 40);i++){
+      const hit = walk(node[keys[i]], depth+1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  return walk(payload, 0) || [];
+}
+
+function normalizePointsPayload(json){
+  const arr = __findFirstPointsArray(json);
+  return Array.isArray(arr) ? arr : [];
+}
 
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽" },
@@ -1181,6 +1246,83 @@
     return [ midLat + latShift, midLng - lngShift ];
   }
   const HOME_CENTER = computeHomeCenter();
+// === v1.1.27 hotfix: data_public.json (object) -> points array extractor ===
+function __isArrayOfLatLng(arr){
+  if (!Array.isArray(arr) || arr.length === 0) return false;
+  // 너무 무겁지 않게 앞쪽 일부만 검사
+  const n = Math.min(arr.length, 30);
+  for (let i=0;i<n;i++){
+    const o = arr[i];
+    if (!o || typeof o !== "object") continue;
+    const lat = o.lat ?? o.latitude ?? o.y;
+    const lng = o.lng ?? o.lon ?? o.longitude ?? o.x;
+    if (typeof lat === "number" && typeof lng === "number") return true;
+    if (typeof lat === "string" && typeof lng === "string" && !isNaN(+lat) && !isNaN(+lng)) return true;
+  }
+  return false;
+}
+
+function __findFirstPointsArray(payload){
+  // 1) payload 자체가 배열이면 그대로
+  if (Array.isArray(payload)) return payload;
+
+  // 2) 가장 흔한 키들 우선순위로 탐색
+  const primaryKeys = ["points", "items", "rows", "records", "data", "list", "result"];
+  for (const k of primaryKeys){
+    const v = payload?.[k];
+    if (Array.isArray(v)) return v;
+  }
+
+  // 3) 중첩 객체에서 한 단계 더 탐색 (meta + points 형태 대응)
+  for (const k of primaryKeys){
+    const v = payload?.[k];
+    if (v && typeof v === "object"){
+      for (const kk of primaryKeys){
+        const vv = v?.[kk];
+        if (Array.isArray(vv)) return vv;
+      }
+      // 흔한 형태: payload.data.points
+      if (Array.isArray(v.points)) return v.points;
+    }
+  }
+
+  // 4) 마지막 수단: 얕은 재귀로 "lat/lng 배열"을 찾기 (깊이 제한)
+  const seen = new Set();
+  function walk(node, depth){
+    if (!node || depth > 4) return null;
+    if (typeof node !== "object") return null;
+    if (seen.has(node)) return null;
+    seen.add(node);
+
+    if (Array.isArray(node)){
+      if (__isArrayOfLatLng(node)) return node;
+      // 배열 내부에 객체가 있으면 그 객체도 살짝 탐색
+      for (let i=0;i<Math.min(node.length, 8);i++){
+        const hit = walk(node[i], depth+1);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    // 객체의 값들을 탐색
+    const keys = Object.keys(node);
+    for (let i=0;i<Math.min(keys.length, 40);i++){
+      const hit = walk(node[keys[i]], depth+1);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  return walk(payload, 0) || [];
+}
+
+function normalizePointsPayload(json){
+  const arr = __findFirstPointsArray(json);
+  // 혹시 meta + points일 때 points 배열이 lat/lng 형태인지 확인 후 fallback
+  if (__isArrayOfLatLng(arr)) return arr;
+  // lat/lng 검사에서 걸리지 않아도, 기존 코드가 키 기반으로 쓰던 배열이면 그대로 사용하도록 허용
+  return Array.isArray(arr) ? arr : [];
+}
 
   let ALL = [];
   let map = null;
@@ -2148,9 +2290,10 @@
       const res = await fetch(DATA_URL, { cache:"no-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const json = await res.json();
-      if (!Array.isArray(json)) throw new Error("data_public.json 형식 오류(배열 아님)");
+      const rows = normalizePointsPayload(json);
 
-      ALL = json.map((it, idx)=>{
+     ALL = rows.map((it, idx)=>{
+
         const o = { ...it };
         o.key = (o.key || o.id || String(idx)).toString();
         o.lat = Number(o.lat ?? o.latitude);
