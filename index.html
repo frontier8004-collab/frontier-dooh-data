@@ -643,12 +643,10 @@
 
     /* ===========================
        v1.1.26 PATCH (UI ONLY)
-       1) "최근 본 매체" 제목 1줄 고정
-       2) 장바구니 버튼 높이(시안성) 강화
        =========================== */
 
     .sideSectionTitle{
-      padding:7px 8px;                 /* 기존 8px 10px -> 폭 확보 */
+      padding:7px 8px;
       border:1px solid rgba(255,255,255,.10);
       border-radius:14px;
       background:rgba(0,0,0,.18);
@@ -657,17 +655,17 @@
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:8px;                         /* 기존 10px -> 폭 확보 */
+      gap:8px;
       margin-bottom:10px;
-      font-size:13px;                  /* 좁은 패널에서 줄바꿈 방지 */
+      font-size:13px;
       line-height:1.1;
-      white-space:nowrap;              /* 컨테이너 자체도 줄바꿈 방지 */
+      white-space:nowrap;
       min-width:0;
     }
     .sideSectionTitle > span:first-child{
       min-width:0;
       overflow:hidden;
-      text-overflow:ellipsis;          /* 혹시 더 좁아지면 ... 처리 */
+      text-overflow:ellipsis;
       white-space:nowrap;
     }
     .sideSectionTitle > span:last-child{
@@ -678,7 +676,7 @@
     /* 장바구니 버튼 */
     .cartBtn{
       width:100%;
-      height:56px;                     /* 기존 44px -> 시안성 강화 */
+      height:56px;
       border-radius:14px;
       border:1px solid rgba(162,222,204,.55);
       background:rgba(162,222,204,.12);
@@ -695,8 +693,8 @@
       box-shadow:0 10px 24px rgba(0,0,0,.30);
     }
     .cartCountPill{
-      min-width:38px;                  /* 기존 34px */
-      height:32px;                     /* 기존 28px */
+      min-width:38px;
+      height:32px;
       padding:0 10px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.18);
@@ -731,7 +729,7 @@
       cursor:pointer;
       transition:transform .12s ease, border-color .12s ease;
       min-width:0;
-      overflow:hidden; /* v1.1.26: 우측 잘림 방지(안에 가두기) */
+      overflow:hidden;
     }
     .rRow:hover{ transform:translateY(-1px); border-color:rgba(162,222,204,.30); }
 
@@ -957,7 +955,6 @@
     .mRow:last-child{ border-bottom:none; }
 
     .mLeft{ display:flex; align-items:center; gap:12px; min-width:0; }
-    /* v1.1.26: 이미지 크게(미니모달 체감) */
     .mThumb{
       width:150px;
       height:100px;
@@ -969,7 +966,6 @@
     }
     .mThumb img{ width:100%; height:100%; object-fit:cover; display:block; }
 
-    /* v1.1.26: 폰트 조정 (13px -> 14px) */
     .mTitle{
       font-weight:1000;
       color:#e9eef7;
@@ -1168,18 +1164,7 @@
 
 <script>
   /* =========================================================
-     v1.1.26 (v1.1.25 UI 틀 유지 + 기능 업데이트)
-     1) 핀 클릭 시: 해당 매체를 “리스트 1번(최상단)”으로 올리고, 카드가 빛나게(플래시)
-     2) 검색 줌 로직: 줌12 고정 제거 -> 결과 분포에 따라 fitBounds/단일 setView(적절 줌)
-     3) 고유키/중복 인식 해결: id 중복/재사용 시에도 무조건 유니크 키 생성
-        -> 밀집 핀 hover 개별 반응/장바구니 개별 담기 정상화
-     4) 줌 버튼 UI 변경: 오른쪽 상하(+/-), 왼쪽 ZOOM/숫자
-     5) 최근본 우측 잘림 방지: 컨테이너 내부에 가두고 … 처리 유지
-     6) 미니모달에 “담기” 버튼 추가
-     7) 장바구니 모달 UI: 썸네일 확대(150x100) + 폰트 14px로 조정
-     8) 장바구니에서 상세(해시모달) 열고 X로 닫으면 장바구니로 복귀
-     9) 최근본도 장바구니처럼 sessionStorage(세션 종료 시 리셋)
-     10) 연산부하 완화: moveend 시 “현재범위”가 동일하면 리스트 재렌더를 생략
+     v1.1.26
      ========================================================= */
 
   const VERSION = "v1.1.26";
@@ -1253,7 +1238,6 @@
 
   let shuffleSeed = Math.random();
 
-  /* v1.1.26: 최근본/장바구니 모두 sessionStorage(세션 종료 시 리셋) */
   const SS_RECENT = "frontier_recent_viewed_v1";
   const SS_CART   = "frontier_cart_v1";
   const LS_QHIST  = "frontier_query_hist_v1";
@@ -1264,14 +1248,11 @@
   const RECENT_PAGE_SIZE = 4;
   let recentPage = 0;
 
-  /* v1.1.26: 핀 클릭시 리스트 1번 고정 키 */
   let pinnedTopKey = null;
   let pinFlashTimer = null;
 
-  /* v1.1.26: 장바구니 -> 상세 -> 닫기 복귀 플래그 */
   let returnToCartAfterDetail = false;
 
-  /* v1.1.26: moveend 최적화 - 현재범위 해시 */
   let lastInViewHash = "";
 
   const $ = (id) => document.getElementById(id);
@@ -1654,7 +1635,6 @@
     return arr;
   }
 
-  /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
       <div class="pinWrap">
@@ -1693,7 +1673,6 @@
     iconAnchor:[18,49]
   });
 
-  /* v1.1.26: 고유키 생성(중복 id 방지) */
   function stableHash(seed, str){
     let h = 2166136261 ^ Math.floor(seed * 1e9);
     for (let i=0; i<str.length; i++){
@@ -1704,12 +1683,11 @@
   }
 
   function makeUniqueKeys(rawItems){
-    const seen = new Map(); // baseKey -> count
+    const seen = new Map();
     return rawItems.map((it, idx) => {
       const hasId = (it.id != null && String(it.id).trim() !== "");
       let base = hasId ? ("id:" + String(it.id).trim()) : ("k:" + idx);
 
-      // id가 중복이면 title/좌표를 섞어서 유니크화
       if (seen.has(base)){
         const c = (seen.get(base) || 1) + 1;
         seen.set(base, c);
@@ -1836,7 +1814,6 @@
   function pinToTopAndFlash(key){
     pinnedTopKey = key;
 
-    // 리스트를 다시 그려서 1번으로 올림
     appendList(curInView);
 
     const el = cardByKey.get(key);
@@ -1883,7 +1860,6 @@
     }
     setActiveMiniKey(it._key);
 
-    /* v1.1.26: 핀 클릭 시 리스트 1번 + 플래시 */
     pinToTopAndFlash(it._key);
 
     clearAllCardHighlights();
@@ -1967,7 +1943,6 @@
     currentOpenKey = null;
     if (!fromHashChange) clearHash();
 
-    /* v1.1.26: 장바구니에서 들어온 상세면 닫을 때 장바구니로 복귀 */
     if (returnToCartAfterDetail){
       returnToCartAfterDetail = false;
       setTimeout(()=>{ try{ openCartModal(); }catch(_){ } }, 0);
@@ -2009,7 +1984,6 @@
       arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
 
-    /* v1.1.26: pinnedTopKey가 현재범위에 있으면 무조건 1번으로 */
     if (pinnedTopKey){
       const idx = arr.findIndex(x => x._key === pinnedTopKey);
       if (idx >= 0){
@@ -2284,7 +2258,6 @@
   }
 
   function computeInViewHash(arr){
-    // key를 정렬 후 일부만 합쳐도 충분(가벼운 해시)
     const keys = arr.map(x=>x._key).sort();
     let s = "";
     for (let i=0;i<Math.min(60, keys.length);i++){
@@ -2309,14 +2282,11 @@
     const changed = (newHash !== lastInViewHash);
     lastInViewHash = newHash;
 
-    // 리스트가 실제로 바뀔 때만 스크롤 최상단(잔상 제거 + 과도 점프 방지)
     if (changed){
       const panel = $("panel");
       if (panel) panel.scrollTop = 0;
       renderList(inView);
     }else{
-      // 바뀌지 않았으면 재렌더 생략(부하 절감)
-      // 단, pinnedTopKey가 바뀌었으면 반영
       if (pinnedTopKey){
         appendList(inView);
       }
@@ -2518,7 +2488,6 @@
           map.panTo(m.getLatLng(), { animate:true, duration:0.35 });
         }catch(_){}
 
-        // 같은 핀 재클릭: 상세
         if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
           returnToCartAfterDetail = false;
           openDetail(it, true);
@@ -2673,7 +2642,6 @@
           </div>
         `;
 
-        // v1.1.26: 장바구니에서 상세로 들어간 뒤 닫으면 장바구니로 복귀
         row.addEventListener("click", ()=>{
           returnToCartAfterDetail = true;
           closeCartModal();
@@ -2700,12 +2668,10 @@
   }
   function closeCartModal(){ $("cartModalOverlay").style.display = "none"; }
 
-  /* v1.1.26: 검색 줌 로직 - 결과 분포에 따라 fitBounds/단일 setView */
   function moveMapToSearch(base){
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
 
-    // 단일 결과: 꽤 확대해서 확인 가능
     if (base.length === 1){
       const it = base[0];
       const la = (it._latDisp ?? it.lat);
@@ -2717,7 +2683,6 @@
       return;
     }
 
-    // 다수 결과: bounds 기반 fitBounds (너무 과확대 방지 maxZoom=15)
     let bounds = null;
     for (const it of base){
       const la = (it._latDisp ?? it.lat);
@@ -2733,7 +2698,6 @@
       map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false });
     }catch(_){}
 
-    // 과줌아웃이면 최소 줌 보정(너무 멀리서 보면 확인 불가)
     try{
       const z = Math.round(map.getZoom());
       if (z < 8) map.setZoom(8, { animate:false });
@@ -2746,7 +2710,6 @@
     activeQuery = qVal;
     saveQueryHistory(activeQuery);
 
-    // 검색 시 pinnedTopKey는 “검색 결과에서 선택된 것”이 없으니 초기화
     pinnedTopKey = null;
 
     const base = getFilteredBase();
@@ -2823,6 +2786,16 @@
     }catch(_){ cartKeys = []; }
   }
 
+  function applySearchTokens(row){
+    row._blobText = makeSearchText(row);
+    row._blob = searchNorm(row._blobText);
+    row._jamo = toJamo(row._blobText);
+
+    const toks = extractTokens(row._blobText);
+    row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+    row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
+  }
+
   async function init(){
     updateStickyHeights();
     window.addEventListener("resize", () => { updateStickyHeights(); });
@@ -2862,7 +2835,6 @@
         return;
       }
 
-      // 카드(미니모달 전체) 클릭 = 상세
       const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
       if (!card) return;
       const key = card.getAttribute("data-key");
@@ -2877,23 +2849,21 @@
       openDetail(it, true);
     }, true);
 
+    // =========================
+    // DATA LOAD (단 1회) + ALL 생성 (정상화)
+    // =========================
     let items = [];
-    try{
-    // ===== DATA LOAD (single, unified) =====
     try{
       const json = await fetchJsonRobust(DATA_URL);
 
-      // 최상위가 배열이면 그대로, 객체면 내부 배열 필드 탐색
-      const rows =
-        (Array.isArray(json) ? json :
-         Array.isArray(json.items) ? json.items :
-         Array.isArray(json.data) ? json.data :
-         Array.isArray(json.rows) ? json.rows :
-         Array.isArray(json.points) ? json.points :
-         Array.isArray(json.records) ? json.records :
-         []);
+      items = Array.isArray(json) ? json
+            : (Array.isArray(json.items)    ? json.items
+            :  Array.isArray(json.data)     ? json.data
+            :  Array.isArray(json.rows)     ? json.rows
+            :  Array.isArray(json.points)   ? json.points
+            :  Array.isArray(json.records)  ? json.records
+            :  []);
 
-      items = rows || [];
       hideErrorBanner();
     }catch(err){
       console.error("[DATA LOAD FAIL]", err);
@@ -2901,31 +2871,30 @@
       items = [];
     }
 
-    // ===== pts -> ALL 생성 (필수: 카테고리/필터/마커 정상화) =====
-    const pts = items.filter(x => {
-      if (typeof x.lat !== "number" || typeof x.lng !== "number") return false;
-      if (x.lat < 32.0 || x.lat > 39.8) return false;
-      if (x.lng < 123.0 || x.lng > 132.5) return false;
-      return true;
-    });
+    // 좌표 숫자화 + 한국 영역 필터
+    const pts = (items || [])
+      .map(x => {
+        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
+        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
+        return { ...x, lat: la, lng: ln };
+      })
+      .filter(x => {
+        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
+        if (x.lat < 32.0 || x.lat > 39.8) return false;
+        if (x.lng < 123.0 || x.lng > 132.5) return false;
+        return true;
+      });
 
-    // 유니크 키 생성
+    // 유니크 키(중복 id 방지)
     const uniqueKeys = makeUniqueKeys(pts);
 
+    // ALL 생성(단 1회)
     ALL = pts.map((it, idx) => {
       const t = assignTaxonomy(it);
       const key = uniqueKeys[idx];
 
       const row = { ...it, _key: key, _high: t.high, _low: t.low };
-
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._jamo = toJamo(row._blobText);
-
-      const toks = extractTokens(row._blobText);
-      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
-      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
-
+      applySearchTokens(row);
       return row;
     });
 
@@ -2937,16 +2906,19 @@
 
     $("pillLoaded").textContent = String(ALL.length);
 
-    // 드롭다운/서제스트/최근/장바구니 준비
+    // UI 준비
     setCatHighOptions();
     buildSuggestPool();
 
     loadRecentAndCart();
     renderRecentPanel();
     renderCartSummary();
+
     applyHomeView(false);
     forceIntegerZoom();
+    updateZoomUI();
 
+    // ===== listeners =====
     $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
     $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
 
@@ -3041,6 +3013,7 @@
       }
     });
 
+    // 최초 렌더
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
     openDetailByHash();
