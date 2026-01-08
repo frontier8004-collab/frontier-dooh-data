@@ -1,6 +1,6 @@
 /* =========================================================
    Frontier DOOH 전국 DB
-   JS 분리 버전 (v1.1.26 기반 안정화)
+   JS 분리 버전 (v1.1.27 기반 안정화)
    - index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
    - index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
    ========================================================= */
@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "v1.1.26";
+  const VERSION = "v1.1.27";
   const DATA_URL = "./data_public.json";
 
   const CATEGORY_TREE = [
