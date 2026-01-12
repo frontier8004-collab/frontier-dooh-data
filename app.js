@@ -1,614 +1,423 @@
-/* =========================================================
-   Frontier DOOH 전국 DB - app.js
-   - 안정화 우선: 정적 GitHub Pages + data_public.json
-   - v1.1.26 기반 (표기 유지)
-   - 2단 카테고리(catGroup → catSub) + 해시 딥링크(#cat=...&sub=...)
-   ========================================================= */
+/* Frontier DOOH DB - app.js (v1.1.26 compatible)
+   - Category dropdown: 대분류(catGroup) + 하위(catSub)
+   - Deep-link filter: #catHigh=...&catLow=... (also supports catGroup/catSub)
+*/
+"use strict";
 
-(() => {
-  "use strict";
+const DATA_URL = "./data_public.json";
 
-  const VERSION = "v1.1.26";
-  const DATA_URL = "./data_public.json";
+// ===== Helpers =====
+const $ = (id) => document.getElementById(id);
+const fmt = new Intl.NumberFormat("ko-KR");
 
-  // ====== DOM helper ======
-  const $ = (id) => document.getElementById(id);
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
-  function esc(s){
-    return String(s ?? "").replace(/[&<>"']/g, m => ({
-      "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
-    }[m]));
+function addOption(sel, value, label) {
+  if (!sel) return;
+  const opt = document.createElement("option");
+  opt.value = value;
+  opt.textContent = label;
+  sel.appendChild(opt);
+}
+
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function loadJSON(url) {
+  return fetch(url, { cache: "no-store" }).then((r) => {
+    if (!r.ok) throw new Error(`Fetch failed ${r.status} ${r.statusText}`);
+    return r.json();
+  });
+}
+
+function parseHashParams() {
+  const h = (location.hash || "").replace(/^#/, "");
+  if (!h) return {};
+  const p = new URLSearchParams(h);
+  const obj = {};
+  for (const [k, v] of p.entries()) obj[k] = v;
+  return obj;
+}
+
+function setText(id, v) {
+  const el = $(id);
+  if (el) el.textContent = String(v);
+}
+
+// ===== Category Tree (홈페이지 구조) =====
+// key/label은 대분류, children는 하위
+const CATEGORY_TREE = [
+  {
+    key: "전광판/빌보드/외벽",
+    label: "전광판 / 빌보드 / 외벽",
+    children: [
+      { key: "전광판", label: "전광판" },
+      { key: "빌보드", label: "빌보드" },
+      { key: "외벽", label: "외벽" },
+    ],
+  },
+  {
+    key: "교통매체",
+    label: "교통매체",
+    children: [
+      { key: "버스광고", label: "버스광고" },
+      { key: "지하철 광고", label: "지하철 광고" },
+      { key: "택시 광고", label: "택시 광고" },
+      { key: "차량 광고", label: "차량 광고" },
+      { key: "주요 도로 야립 광고", label: "주요 도로 야립 광고" },
+      { key: "공항 / 기내, 항공기 광고", label: "공항 / 기내, 항공기 광고" },
+      { key: "버스 쉘터 광고", label: "버스 쉘터 광고" },
+      { key: "KTX 광고", label: "KTX 광고" },
+      { key: "터미널 광고", label: "터미널 광고" },
+    ],
+  },
+  {
+    key: "복합 쇼핑몰/대형마트",
+    label: "복합 쇼핑몰 / 대형마트",
+    children: [
+      { key: "복합 쇼핑몰", label: "복합 쇼핑몰" },
+      { key: "대형마트", label: "대형마트" },
+    ],
+  },
+  {
+    key: "극장 / 레저 / 휴양 시설",
+    label: "극장 / 레저 / 휴양 시설",
+    children: [
+      { key: "극장", label: "극장" },
+      { key: "레저", label: "레저" },
+      { key: "휴양, 편의시설", label: "휴양, 편의시설" },
+    ],
+  },
+  {
+    key: "생활 밀착형 매체",
+    label: "생활 밀착형 매체",
+    children: [
+      { key: "엘리베이터 광고", label: "엘리베이터 광고" },
+      { key: "병원", label: "병원" },
+      { key: "편의점", label: "편의점" },
+      { key: "운동시설", label: "운동시설" },
+      { key: "캠퍼스", label: "캠퍼스" },
+      { key: "식당, 주점", label: "식당, 주점" },
+      { key: "약국", label: "약국" },
+      { key: "헤어&뷰티살롱", label: "헤어&뷰티살롱" },
+      { key: "드럭스토어", label: "드럭스토어" },
+    ],
+  },
+  {
+    key: "4대 매체(ATL)",
+    label: "4대 매체(ATL)",
+    children: [
+      { key: "TV", label: "TV" },
+      { key: "라디오", label: "라디오" },
+      { key: "매거진", label: "매거진" },
+      { key: "신문", label: "신문" },
+    ],
+  },
+  {
+    key: "기타 매체",
+    label: "기타 매체",
+    children: [],
+  },
+  {
+    key: "해외 옥외 매체",
+    label: "해외 옥외 매체",
+    children: [],
+  },
+];
+
+// ===== Data + State =====
+let ALL = [];
+let map, cluster;
+let markersById = new Map();
+let current = []; // filtered items
+
+function getHigh(it) {
+  const v = (it.category_high ?? it.media_group ?? "").trim();
+  return v;
+}
+function getLow(it) {
+  const v = (it.category_low ?? it.media_sub ?? "").trim();
+  return v;
+}
+
+function initCategorySelects() {
+  const selGroup = $("catGroup") || $("catHigh"); // fallback
+  const selSub = $("catSub") || $("catLow"); // fallback
+
+  if (!selGroup) return;
+
+  // group options
+  selGroup.innerHTML = "";
+  addOption(selGroup, "", "매체 카테고리(대분류)");
+  CATEGORY_TREE.forEach((n) => addOption(selGroup, n.key, n.label || n.key));
+
+  // sub options
+  if (selSub) {
+    selSub.innerHTML = "";
+    addOption(selSub, "", "하위 카테고리(전체)");
+    selSub.disabled = true;
   }
 
-  function addOption(sel, value, label){
-    const op = document.createElement("option");
-    op.value = value;
-    op.textContent = label;
-    sel.appendChild(op);
-  }
-
-  // ====== Category Tree (대분류 → 하위) ======
-  // ※ 여기의 high/low는 data_public.json에 반영된 _high/_low 기준으로 필터링합니다.
-  const CATEGORY_TREE = [
-    { high:"전광판", lows:["전광판","LED전광판","옥외전광판","실내전광판","도로전광판","지하철전광판"] },
-    { high:"빌보드", lows:["빌보드","야립","고정식","대형빌보드","루프탑","고가도로"] },
-    { high:"외벽",   lows:["외벽","건물외벽","미디어파사드","래핑","대형현수막"] },
-    { high:"교통매체", lows:["버스","버스쉘터","지하철","택시","KTX/철도","공항/항공","터미널","렌터카/차량"] },
-    { high:"극장/레저", lows:["극장","영화관","레저","스키장","골프","테마파크"] },
-    { high:"리테일", lows:["백화점","대형마트","편의점","쇼핑몰","아울렛","면세점"] },
-    { high:"주거/오피스", lows:["아파트","오피스","엘리베이터","로비","상가"] },
-    { high:"기타", lows:["기타"] }
-  ];
-
-  function findHighByLow(low){
-    if (!low) return "";
-    for (const node of CATEGORY_TREE){
-      if (node.lows && node.lows.includes(low)) return node.high;
+  selGroup.addEventListener("change", () => {
+    const g = selGroup.value || "";
+    if (selSub) {
+      selSub.innerHTML = "";
+      addOption(selSub, "", "하위 카테고리(전체)");
+      const node = CATEGORY_TREE.find((x) => x.key === g);
+      const kids = node?.children || [];
+      kids.forEach((k) => addOption(selSub, k.key, k.label || k.key));
+      selSub.disabled = !g || kids.length === 0;
+      selSub.value = "";
     }
-    return "";
+    applyFilters(true);
+  });
+
+  if (selSub) {
+    selSub.addEventListener("change", () => applyFilters(true));
   }
 
-  function setCatGroupOptions(){
-    const sel = $("catGroup");
-    if (!sel) return;
-    sel.innerHTML = "";
-    addOption(sel, "", "매체 카테고리(대분류)");
-    CATEGORY_TREE.map(x=>x.high).forEach(v => addOption(sel, v, v));
+  // deep-link apply (hash)
+  const hp = parseHashParams();
+  const dg = hp.catGroup || hp.catHigh || "";
+  const ds = hp.catSub || hp.catLow || "";
+  if (dg) {
+    selGroup.value = dg;
+    // trigger population
+    selGroup.dispatchEvent(new Event("change"));
+    if (selSub && ds) selSub.value = ds;
   }
+}
 
-  function setCatSubOptions(high){
-    const sel = $("catSub");
-    if (!sel) return;
-    sel.innerHTML = "";
-    addOption(sel, "", "하위 카테고리(전체)");
-    if (!high){
-      sel.disabled = true;
-      return;
-    }
-    const node = CATEGORY_TREE.find(x => x.high === high);
-    const lows = node && node.lows ? node.lows : [];
-    lows.forEach(v => addOption(sel, v, v));
-    sel.disabled = false;
+function initMap() {
+  map = L.map("map", {
+    zoomControl: false,
+    preferCanvas: true,
+  });
+
+  // Base tiles
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 19,
+  }).addTo(map);
+
+  // cluster
+  cluster = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    maxClusterRadius: 48,
+  });
+  map.addLayer(cluster);
+
+  // initial view
+  map.setView([36.4, 127.9], 8);
+
+  // custom zoom UI
+  const zIn = $("zIn");
+  const zOut = $("zOut");
+  const zVal = $("zVal");
+  function syncZoom() {
+    if (zVal) zVal.textContent = String(map.getZoom());
   }
+  map.on("zoomend", syncZoom);
+  syncZoom();
+  if (zIn) zIn.addEventListener("click", () => map.zoomIn());
+  if (zOut) zOut.addEventListener("click", () => map.zoomOut());
+}
 
-  function getSelectedCats(){
-    const g = $("catGroup");
-    const s = $("catSub");
-    return {
-      high: g ? g.value : "",
-      low:  s ? s.value : ""
-    };
-  }
+function clearMarkers() {
+  markersById.clear();
+  cluster.clearLayers();
+}
 
-  // ====== Hash / Deep-link helpers ======
-  // 지원 형태:
-  // - #cat=전광판&sub=지하철
-  // - #item=KEY&cat=...&sub=...
-  // (상세 item과 필터 cat/sub를 동시에 유지)
-  let suppressHashHandler = false;
+function renderMarkers(items) {
+  clearMarkers();
+  for (const it of items) {
+    const lat = Number(it.lat), lng = Number(it.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
 
-  function parseHashParams(){
-    const raw = (location.hash || "").replace(/^#/, "");
-    return new URLSearchParams(raw);
-  }
-
-  function setHashParams(params){
-    const next = params.toString();
-    const hash = next ? ("#" + next) : "";
-    if (location.hash !== hash){
-      suppressHashHandler = true;
-      location.hash = hash;
-      setTimeout(()=>{ suppressHashHandler = false; }, 0);
-    }
-  }
-
-  function writeCatsToHash(high, low){
-    const p = parseHashParams();
-    if (high) p.set("cat", high); else p.delete("cat");
-    if (low)  p.set("sub", low);  else p.delete("sub");
-    setHashParams(p);
-  }
-
-  function readCatsFromUrl(){
-    const p = parseHashParams();
-    let high = (p.get("cat") || "").trim();
-    let low  = (p.get("sub") || "").trim();
-
-    // querystring도 안전장치로 지원
-    try{
-      const q = new URLSearchParams(location.search || "");
-      if (!high) high = (q.get("cat") || "").trim();
-      if (!low)  low  = (q.get("sub") || "").trim();
-    }catch(_){}
-
-    if (!high && low) high = findHighByLow(low);
-    return { high, low };
-  }
-
-  function applyCatsToUI(fromUrl){
-    const { high, low } = fromUrl || { high:"", low:"" };
-    const g = $("catGroup");
-    const s = $("catSub");
-    if (!g || !s) return;
-
-    g.value = high || "";
-    setCatSubOptions(g.value);
-
-    if (low && findHighByLow(low) === g.value){
-      s.value = low;
-    }else{
-      s.value = "";
-    }
-  }
-
-  function setHash(key){
-    const p = parseHashParams();
-    p.set("item", encodeURIComponent(key));
-    setHashParams(p);
-  }
-
-  function clearHash(){
-    const p = parseHashParams();
-    if (!p.has("item")) return;
-    p.delete("item");
-    setHashParams(p);
-  }
-
-  // ====== Data + App State ======
-  let ALL = [];
-  let curBase = [];
-  let map = null;
-  let cluster = null;
-
-  let activeQuery = "";
-  let pinnedTopKey = null;
-
-  // list infinite scroll
-  let listLimit = 60;
-  const LIST_STEP = 40;
-
-  // item index
-  const itemByKey = new Map();
-
-  // detail modal state
-  let currentOpenKey = null;
-
-  // cluster hint
-  let clusterHintTimer = null;
-
-  // ====== Error banner ======
-  function showErrorBanner(html){
-    const b = $("errBanner");
-    const t = $("errText");
-    if (!b || !t) return;
-    t.innerHTML = html;
-    b.style.display = "block";
-  }
-  function hideErrorBanner(){
-    const b = $("errBanner");
-    if (!b) return;
-    b.style.display = "none";
-  }
-
-  // ====== Map ======
-  function buildMap(){
-    map = L.map("map", { zoomControl:false, preferCanvas:true });
-    // 초기 뷰 (한국 중심)
-    map.setView([36.3, 127.8], 8);
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap"
-    }).addTo(map);
-
-    cluster = L.markerClusterGroup({
-      chunkedLoading:true,
-      spiderfyOnMaxZoom:true,
-      showCoverageOnHover:false,
-      disableClusteringAtZoom: 15
+    const m = L.marker([lat, lng]);
+    m.on("click", () => {
+      openDetail(it);
     });
-    map.addLayer(cluster);
+    cluster.addLayer(m);
+    markersById.set(it.id, m);
+  }
+}
 
-    map.on("moveend", () => {
-      viewportUpdate();
+function renderList(items) {
+  const wrap = $("list");
+  if (!wrap) return;
+
+  wrap.innerHTML = items.map((it) => cardHTML(it)).join("");
+  // card click bind (event delegation)
+  wrap.querySelectorAll("[data-id]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const id = el.getAttribute("data-id");
+      const found = items.find((x) => String(x.id) === String(id));
+      if (!found) return;
+      focusItem(found);
+      openDetail(found);
     });
-  }
+  });
+}
 
-  // ====== Utility / taxonomy ======
-  function normalizeStr(s){
-    return String(s ?? "").trim();
-  }
-
-  function stableHash(seed, str){
-    // simple deterministic-ish
-    let h = 2166136261 ^ Math.floor(seed*1e9);
-    for (let i=0;i<str.length;i++){
-      h ^= str.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return (h >>> 0).toString(16);
-  }
-
-  function computeKey(it, idx){
-    const a = normalizeStr(it.name || it.title || "");
-    const b = normalizeStr(it.address || it.addr || "");
-    const c = normalizeStr(it.media_group || it.group || "");
-    const d = normalizeStr(it.category || it.sub_category || "");
-    const base = [a,b,c,d, String(it.lat||""), String(it.lng||"")].join("|");
-    return stableHash(0.123, base) + "_" + String(idx);
-  }
-
-  function assignTaxonomy(it){
-    // data_public.json에 이미 _high/_low가 있으면 우선 사용
-    const high = normalizeStr(it._high || it.media_group || it.group || "");
-    const low  = normalizeStr(it._low  || it.category || it.sub_category || "");
-    // 기본값 방어
-    return {
-      high: high || "기타",
-      low:  low  || "기타"
-    };
-  }
-
-  function makeSearchText(it){
-    const parts = [];
-    ["name","title","address","addr","media_group","group","category","sub_category","brand","place"]
-      .forEach(k => { if (it[k]) parts.push(String(it[k])); });
-    // taxonomy도 포함
-    if (it._high) parts.push(it._high);
-    if (it._low) parts.push(it._low);
-    return parts.join(" ").toLowerCase();
-  }
-
-  function tokenMatchItem(token, it){
-    const t = token.toLowerCase();
-    return (it._searchText || "").includes(t);
-  }
-
-  // ====== Filtering ======
-  function getFilteredBase(){
-    const { high, low } = getSelectedCats();
-    const qRaw = (activeQuery || "").trim();
-
-    let arr = ALL;
-
-    if (qRaw){
-      const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
-      arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
-    }
-
-    if (high) arr = arr.filter(x => x._high === high);
-    if (high && low) arr = arr.filter(x => x._low === low);
-
-    return arr;
-  }
-
-  // ====== List rendering ======
-  function cardHtml(it){
-    const title = esc(it.name || it.title || "(이름 없음)");
-    const addr = esc(it.address || it.addr || "");
-    const h = esc(it._high || "");
-    const l = esc(it._low || "");
-    return `
-      <div class="card" data-key="${esc(it._key)}">
-        <div class="t">${title}</div>
-        <div class="s">${addr}</div>
-        <div class="tagRow">
-          ${h ? `<span class="tag">${h}</span>` : ""}
-          ${l ? `<span class="tag">${l}</span>` : ""}
-        </div>
+function cardHTML(it) {
+  const high = escapeHtml(getHigh(it));
+  const low = escapeHtml(getLow(it));
+  const title = escapeHtml(it.title || it.name || "(제목없음)");
+  const addr = escapeHtml(it.address || "");
+  const price = it.price ? `${fmt.format(Number(it.price))}원` : (it.inquiry ? "문의" : "");
+  const tags = `
+    <span class="tag">${high || "미분류"}</span>
+    ${low ? `<span class="tag sub">${low}</span>` : ""}
+  `;
+  return `
+    <div class="card" data-id="${escapeHtml(it.id)}">
+      <div class="img">${it.thumb ? `<img src="${escapeHtml(it.thumb)}" alt="">` : `<div class="noimg">NO IMAGE</div>`}</div>
+      <div class="body">
+        <div class="tags">${tags}</div>
+        <div class="title">${title}</div>
+        <div class="addr">${addr}</div>
+        <div class="price">${escapeHtml(price)}</div>
       </div>
-    `;
+    </div>
+  `;
+}
+
+function focusItem(it) {
+  const lat = Number(it.lat), lng = Number(it.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  map.setView([lat, lng], Math.max(map.getZoom(), 12), { animate: true });
+  const m = markersById.get(it.id);
+  if (m) m.openPopup?.();
+}
+
+// ===== Detail Modal =====
+function openDetail(it) {
+  const modal = $("detail");
+  const inner = $("detailInner");
+  if (!modal || !inner) return;
+
+  const high = escapeHtml(getHigh(it));
+  const low = escapeHtml(getLow(it));
+  const title = escapeHtml(it.title || it.name || "(제목없음)");
+  const addr = escapeHtml(it.address || "");
+  const price = it.price ? `${fmt.format(Number(it.price))}원` : (it.inquiry ? "문의" : "");
+  const op = escapeHtml(it.operator || "");
+  inner.innerHTML = `
+    <div class="dHead">
+      <div class="dTags">
+        <span class="tag">${high || "미분류"}</span>
+        ${low ? `<span class="tag sub">${low}</span>` : ""}
+      </div>
+      <div class="dTitle">${title}</div>
+      <div class="dAddr">${addr}</div>
+    </div>
+    <div class="dMeta">
+      ${price ? `<div class="dRow"><b>가격</b><span>${escapeHtml(price)}</span></div>` : ""}
+      ${op ? `<div class="dRow"><b>운영사</b><span>${op}</span></div>` : ""}
+    </div>
+  `;
+
+  modal.classList.add("open");
+}
+
+function closeDetail() {
+  const modal = $("detail");
+  if (modal) modal.classList.remove("open");
+}
+
+// ===== Filtering =====
+function getSelectedGroupSub() {
+  const selGroup = $("catGroup") || $("catHigh");
+  const selSub = $("catSub") || $("catLow");
+  return {
+    g: selGroup ? (selGroup.value || "") : "",
+    s: selSub ? (selSub.value || "") : "",
+  };
+}
+
+function applyFilters(resetPage) {
+  const q = ($("q")?.value || "").trim().toLowerCase();
+  const { g, s } = getSelectedGroupSub();
+
+  let arr = ALL;
+
+  if (g) {
+    arr = arr.filter((it) => getHigh(it) === g);
+  }
+  if (s) {
+    arr = arr.filter((it) => getLow(it) === s);
   }
 
-  function renderList(arr){
-    const list = $("list");
-    if (!list) return;
-    const lim = Math.min(listLimit, arr.length);
-    let html = "";
-    for (let i=0;i<lim;i++){
-      html += cardHtml(arr[i]);
-    }
-    list.innerHTML = html;
-
-    // click binding (event delegation)
-    list.onclick = (e) => {
-      const card = e.target.closest(".card");
-      if (!card) return;
-      const key = card.getAttribute("data-key");
-      if (!key) return;
-      const it = itemByKey.get(key);
-      if (!it) return;
-      openDetail(it, true);
-    };
-  }
-
-  function setupInfiniteScroll(){
-    const sentinel = $("sentinel");
-    if (!sentinel) return;
-
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach(en => {
-        if (en.isIntersecting){
-          listLimit += LIST_STEP;
-          renderList(curInView);
-        }
-      });
-    }, { root: document.querySelector(".listWrap"), threshold: 0.1 });
-
-    io.observe(sentinel);
-  }
-
-  // ====== Markers ======
-  function renderMarkers(base){
-    cluster.clearLayers();
-    for (const it of base){
-      const lat = Number(it.lat);
-      const lng = Number(it.lng);
-      if (!isFinite(lat) || !isFinite(lng)) continue;
-
-      const mk = L.marker([lat, lng]);
-      mk.on("click", () => openDetail(it, true));
-      cluster.addLayer(mk);
-    }
-  }
-
-  // ====== viewport list update ======
-  let curInView = [];
-  let suspendViewportOnce = false;
-
-  function viewportUpdate(){
-    if (!map) return;
-
-    if (suspendViewportOnce) return;
-
-    const b = map.getBounds();
-    const inView = (curBase || []).filter(x => {
-      const la = Number(x.lat);
-      const ln = Number(x.lng);
-      if (!isFinite(la) || !isFinite(ln)) return false;
-      return b.contains([la, ln]);
+  if (q) {
+    arr = arr.filter((it) => {
+      const hay = [
+        it.title, it.name, it.address, it.operator,
+        getHigh(it), getLow(it),
+      ].filter(Boolean).join(" ").toLowerCase();
+      return hay.includes(q);
     });
-
-    // 랜덤 셔플 방지: 항상 동일한 정렬
-    inView.sort((a,b) => (a._key > b._key ? 1 : -1));
-
-    curInView = inView;
-
-    // reset list limit when viewport changes
-    listLimit = 60;
-    renderList(curInView);
   }
 
-  function renderMarkersAndListFromBase(base){
-    curBase = base;
+  current = arr;
 
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
+  // counts
+  setText("countTotal", ALL.length);
+  setText("countAll", ALL.length);
+  setText("countFiltered", current.length);
+  setText("loaded", current.length);
+
+  renderList(current);
+  renderMarkers(current);
+}
+
+// ===== Init =====
+async function boot() {
+  // close detail
+  $("detailClose")?.addEventListener("click", closeDetail);
+  $("detailBg")?.addEventListener("click", closeDetail);
+
+  // search
+  $("q")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") applyFilters(true);
+  });
+  $("qGo")?.addEventListener("click", () => applyFilters(true));
+
+  // reset
+  $("reset")?.addEventListener("click", () => {
+    const selGroup = $("catGroup") || $("catHigh");
+    const selSub = $("catSub") || $("catLow");
+    if ($("q")) $("q").value = "";
+    if (selGroup) selGroup.value = "";
+    if (selSub) {
+      selSub.value = "";
+      selSub.disabled = true;
+      selSub.innerHTML = "";
+      addOption(selSub, "", "하위 카테고리(전체)");
     }
+    applyFilters(true);
+  });
 
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
+  initCategorySelects();
+  initMap();
 
-    renderMarkers(base);
-    viewportUpdate();
-  }
+  // data load
+  const raw = await loadJSON(DATA_URL);
+  const items = Array.isArray(raw) ? raw : (Array.isArray(raw.items) ? raw.items : []);
+  ALL = items;
 
-  // ====== Detail Modal ======
-  function openDetail(it, setHashFlag){
-    currentOpenKey = it._key;
+  applyFilters(true);
+}
 
-    $("dTitle").textContent = it.name || it.title || "상세";
-    const addr = esc(it.address || it.addr || "");
-    const h = esc(it._high || "");
-    const l = esc(it._low || "");
-
-    $("dBody").innerHTML = `
-      <div><b>주소</b> ${addr || "-"}</div>
-      <div style="margin-top:6px;"><b>카테고리</b> ${h}${l ? " / " + l : ""}</div>
-    `;
-
-    $("dOverlay").style.display = "block";
-    $("dModal").style.display = "block";
-
-    if (setHashFlag) setHash(it._key);
-  }
-
-  function closeDetail(clearHashFlag){
-    currentOpenKey = null;
-    $("dOverlay").style.display = "none";
-    $("dModal").style.display = "none";
-    if (clearHashFlag) clearHash();
-  }
-
-  function openDetailByHash(){
-    const p = parseHashParams();
-    let key = (p.get("item") || "").trim();
-
-    // 구버전 호환: "#item=..." 형태
-    if (!key && (location.hash || "").startsWith("#item=")){
-      try{ key = decodeURIComponent((location.hash || "").replace("#item=", "")); }catch(_){}
-    }
-    if (!key) return;
-
-    try{ key = decodeURIComponent(key); }catch(_){}
-
-    if (currentOpenKey === key && $("dOverlay").style.display === "block") return;
-
-    const it = itemByKey.get(key);
-    if (!it) return;
-    openDetail(it, false);
-  }
-
-  // ====== Search / Reset ======
-  function applySearchFromUI(){
-    const qVal = $("q").value.trim();
-    activeQuery = qVal;
-
-    pinnedTopKey = null;
-
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
-  }
-
-  function resetAll(){
-    $("q").value = "";
-    activeQuery = "";
-
-    const g = $("catGroup");
-    const s = $("catSub");
-    if (g) g.value = "";
-    setCatSubOptions("");
-    if (s) s.value = "";
-    writeCatsToHash("", "");
-
-    closeDetail(false);
-    hideErrorBanner();
-
-    pinnedTopKey = null;
-
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
-
-    // 홈 뷰 복귀
-    try{
-      if (map){
-        map.setView([36.3, 127.8], 8, { animate:false });
-      }
-    }catch(_){}
-  }
-
-  function isNeutralState(){
-    const { high, low } = getSelectedCats();
-    return (!activeQuery || !activeQuery.trim()) && !high && !low;
-  }
-
-  // ====== Data load ======
-  async function loadData(){
-    try{
-      const res = await fetch(DATA_URL, { cache:"no-store" });
-      if (!res.ok){
-        showErrorBanner(`데이터 로드 실패: <code>${esc(DATA_URL)}</code> (HTTP ${res.status})`);
-        return [];
-      }
-      const json = await res.json();
-      if (!Array.isArray(json)){
-        showErrorBanner(`데이터 형식 오류: <code>${esc(DATA_URL)}</code> (배열이 아닙니다)`);
-        return [];
-      }
-      return json;
-    }catch(err){
-      showErrorBanner(`데이터 로드 예외: <code>${esc(DATA_URL)}</code><br/>${esc(String(err))}`);
-      return [];
-    }
-  }
-
-  function normalizeItems(raw){
-    const out = [];
-    for (let i=0;i<raw.length;i++){
-      const it = raw[i] || {};
-      const lat = Number(it.lat ?? it.latitude);
-      const lng = Number(it.lng ?? it.longitude);
-
-      // 좌표 필수 (완전 방어)
-      if (!isFinite(lat) || !isFinite(lng)) continue;
-
-      const { high, low } = assignTaxonomy(it);
-
-      const n = {
-        ...it,
-        lat, lng,
-        _high: high,
-        _low: low
-      };
-
-      n._key = normalizeStr(it._key) || computeKey(n, i);
-      n._searchText = makeSearchText(n);
-
-      out.push(n);
-    }
-    return out;
-  }
-
-  // ====== Init ======
-  async function init(){
-    $("ver").textContent = VERSION;
-
-    const errClose = $("errClose");
-    if (errClose) errClose.addEventListener("click", hideErrorBanner);
-
-    buildMap();
-    setupInfiniteScroll();
-
-    // 상세 모달 닫기
-    $("dx").addEventListener("click", () => closeDetail(true));
-    $("dOverlay").addEventListener("click", (e) => {
-      if (e.target.id === "dOverlay") closeDetail(true);
-    });
-
-    // 검색/초기화
-    $("btnSearch").addEventListener("click", applySearchFromUI);
-    $("btnReset").addEventListener("click", resetAll);
-    $("q").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") applySearchFromUI();
-    });
-
-    // 카테고리(대분류/하위) - 2단 드롭다운
-    $("catGroup").addEventListener("change", () => {
-      pinnedTopKey = null;
-      const g = $("catGroup").value || "";
-      setCatSubOptions(g);
-      const s = $("catSub");
-      if (s) s.value = "";
-      writeCatsToHash(g, "");
-      const base = getFilteredBase();
-      renderMarkersAndListFromBase(base);
-    });
-
-    $("catSub").addEventListener("change", () => {
-      pinnedTopKey = null;
-      const { high, low } = getSelectedCats();
-      writeCatsToHash(high, low);
-      const base = getFilteredBase();
-      renderMarkersAndListFromBase(base);
-    });
-
-    // 해시 변경: 상세(item) + 카테고리(cat/sub) 모두 반영
-    window.addEventListener("hashchange", () => {
-      if (suppressHashHandler) return;
-
-      const p = parseHashParams();
-      if (p.has("item") || (location.hash || "").startsWith("#item=")) openDetailByHash();
-      else closeDetail(true);
-
-      const cats = readCatsFromUrl();
-      applyCatsToUI(cats);
-      const base = getFilteredBase();
-      renderMarkersAndListFromBase(base);
-    });
-
-    // ===== data load =====
-    const raw = await loadData();
-    ALL = normalizeItems(raw);
-
-    $("loadedCnt").textContent = String(ALL.length);
-
-    // build index
-    itemByKey.clear();
-    for (const it of ALL) itemByKey.set(it._key, it);
-
-    // 카테고리 드롭다운 초기 세팅 + URL 반영
-    setCatGroupOptions();
-    const initCats = readCatsFromUrl();
-    applyCatsToUI(initCats);
-
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
-
-    // URL에 item이 있으면 상세 오픈
-    openDetailByHash();
-  }
-
-  document.addEventListener("DOMContentLoaded", init);
-
-})();
+boot().catch((err) => {
+  console.error("[BOOT ERROR]", err);
+  alert("앱 초기화 중 에러가 발생했습니다. 콘솔(Console)을 열어 에러 메시지를 확인해 주세요.");
+});
