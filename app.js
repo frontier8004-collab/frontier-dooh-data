@@ -800,129 +800,96 @@
   }
 
   function renderList(items){
-   // ===== 리스트 렌더 상한/점진 로딩 (내부용 3만+ 대비) =====
-const LIST_INIT_LIMIT = 300;   // 초기 표시 상한
-const LIST_MORE_STEP  = 200;   // "더 보기" 1회 증가치
+    const list = $("list");
+    list.innerHTML = "";
+    cardByKey.clear();
+    renderLimit = BATCH;
 
-function setupLoadMoreButton(){
-  // 더보기 버튼은 appendList()에서 매번 갱신되므로 별도 이벤트 등록 불필요
-}
+    $("empty").style.display = items.length ? "none" : "block";
+    $("moreHint").style.display = "none";
 
-function renderMoreHint(total){
-  const box = $("moreHint");
-  if (!box) return;
-
-  const shown = Math.min(renderLimit, total);
-
-  if (total <= shown){
-    box.style.display = "none";
-    box.innerHTML = "";
-    return;
+    appendList(items);
   }
 
-  box.style.display = "block";
-  box.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;">
-      <div style="opacity:.9;">
-        결과가 많습니다. <b>총 ${total.toLocaleString()}</b>개 중 <b>${shown.toLocaleString()}</b>개만 표시 중입니다.
-        (필터/지도 범위를 좁히면 더 정확합니다.)
-      </div>
-      <button id="btnMore"
-        type="button"
-        style="cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid rgba(162,222,204,.55);
-               background:rgba(0,0,0,.35);color:#e9f5f2;font-weight:800;">
-        +${LIST_MORE_STEP}개 더 보기
-      </button>
-    </div>
-  `;
+  function appendList(items){
+    const list = $("list");
+    let arr = items.slice();
 
-  const btn = $("btnMore");
-  if (btn){
-    btn.onclick = () => {
-      if (renderLimit >= curInView.length) return;
-      renderLimit = Math.min(curInView.length, renderLimit + LIST_MORE_STEP);
-      appendList(curInView);
-    };
-  }
-}
-
-function renderList(items){
-  const list = $("list");
-  list.innerHTML = "";
-  cardByKey.clear();
-
-  // 초기 300개 상한
-  renderLimit = Math.min(items.length, LIST_INIT_LIMIT);
-
-  $("empty").style.display = items.length ? "none" : "block";
-  renderMoreHint(items.length);
-
-  appendList(items);
-}
-
-function appendList(items){
-  const list = $("list");
-  let arr = items.slice();
-
-  if (isNeutralState()){
-    arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
-  }
-  if (pinnedTopKey){
-    const idx = arr.findIndex(x => x._key === pinnedTopKey);
-    if (idx >= 0){
-      const [one] = arr.splice(idx, 1);
-      arr.unshift(one);
+    if (isNeutralState()){
+      arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
+
+    if (pinnedTopKey){
+      const idx = arr.findIndex(x => x._key === pinnedTopKey);
+      if (idx >= 0){
+        const [one] = arr.splice(idx, 1);
+        arr.unshift(one);
+      }
+    }
+
+    const slice = arr.slice(0, renderLimit);
+    list.innerHTML = "";
+    cardByKey.clear();
+
+    for (const it of slice){
+      const el = document.createElement("div");
+      el.className = "item";
+      el.dataset.key = it._key;
+
+      el.innerHTML = `
+        <div class="thumb">
+          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
+        </div>
+        <div class="body">
+          <div class="catRow">
+            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
+            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
+          </div>
+          <div class="name">${escapeHtml(it.title || "-")}</div>
+          <div class="place">${escapeHtml(guessPlace(it))}</div>
+          <div class="price">
+            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
+          </div>
+        </div>
+      `;
+
+      cardByKey.set(it._key, el);
+
+      el.addEventListener("mouseenter", () => {
+        clearAllCardHighlights();
+        highlightCard(it._key, false);
+        setHoverKey(it._key);
+        highlightClusterOnlyByKey(it._key);
+      });
+      el.addEventListener("mouseleave", () => {
+        unhighlightCard(it._key);
+        if (hoverKey === it._key) setHoverKey(null);
+        clearClusterHighlight();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
+      });
+      el.addEventListener("click", () => {
+        returnToCartAfterDetail = false;
+        openDetail(it, true);
+      });
+
+      list.appendChild(el);
+    }
+
+    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
   }
 
-  const slice = arr.slice(0, renderLimit);
-  list.innerHTML = "";
-  cardByKey.clear();
+  function setupInfiniteScroll(){
+    const panel = $("panel");
+    panel.addEventListener("scroll", () => {
+      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
+      if (!nearBottom) return;
+      if (renderLimit >= curInView.length) return;
 
-  for (const it of slice){
-    const el = document.createElement("div");
-    el.className = "item";
-    el.dataset.key = it._key;
-    el.innerHTML = `
-${it.thumb ? `` : `
-NO IMAGE
-`}
-${it._high ? `${it._high}` : ``} ${it._low ? `${it._low}` : ``}
-${escapeHtml(it.title || "-")}
-${escapeHtml(guessPlace(it))}
-${escapeHtml(fmtWon(it.price, it.price_unit))}
-${escapeHtml(it.price_unit ? it.price_unit : "")}
-`;
-    cardByKey.set(it._key, el);
-
-    el.addEventListener("mouseenter", () => {
-      clearAllCardHighlights();
-      highlightCard(it._key, false);
-      setHoverKey(it._key);
-      highlightClusterOnlyByKey(it._key);
-    });
-    el.addEventListener("mouseleave", () => {
-      unhighlightCard(it._key);
-      if (hoverKey === it._key) setHoverKey(null);
-      clearClusterHighlight();
-      if (activeMiniKey) highlightCard(activeMiniKey, false);
-    });
-    el.addEventListener("click", () => {
-      returnToCartAfterDetail = false;
-      openDetail(it, true);
-    });
-
-    list.appendChild(el);
+      renderLimit = Math.min(curInView.length, renderLimit + STEP);
+      appendList(curInView);
+    }, { passive:true });
   }
-
-  renderMoreHint(items.length);
-}
-
-function setupInfiniteScroll(){
-  // (비활성) 내부용 3만+ 대비: 무한 스크롤 대신 "더 보기" 버튼 사용
-  return;
-}
-
 
   function showSuggest(values){
     const box = $("qSuggest");
@@ -1648,7 +1615,7 @@ function setupInfiniteScroll(){
     if (errClose) errClose.addEventListener("click", hideErrorBanner);
 
     buildMap();
-setupLoadMoreButton();
+    setupInfiniteScroll();
 
     // 미니모달 버튼 처리
     document.addEventListener("click", (e) => {
