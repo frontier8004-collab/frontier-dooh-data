@@ -1,9 +1,12 @@
 /* =========================================================
 Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반)
 v1.1.27 (PATCH)
-- 리스트 폭주 방지(내부용): 초기 300개만 표시 + “+200개 더 보기” 버튼
+- 내부용 대용량 대비: 리스트 폭주 방지
+  · 초기 표시는 최대 300개
+  · "+200개 더 보기" 버튼으로 단계적 로드
 - 자동 무한 스크롤 비활성화(버튼 기반 로드만)
 ========================================================= */
+
 (() => {
   "use strict";
 
@@ -44,7 +47,7 @@ v1.1.27 (PATCH)
   const BATCH = 36;
   const STEP  = 24;
 
-  // v1.1.27: 리스트 폭주 방지(내부용) - 초기 300개 + 200개 더보기
+  // v1.1.27: 리스트 폭주 방지(내부용) - 초기 300개만 표시 + "+200개 더 보기"
   const LIST_INIT_LIMIT = 300;
   const LIST_MORE_STEP  = 200;
 
@@ -92,8 +95,12 @@ v1.1.27 (PATCH)
   function showErrorBanner(msg){
     const b = $("errBanner");
     if (!b) return;
-    $("errMsg").textContent = msg || "알 수 없는 오류";
-    $("errUrl").textContent = DATA_URL;
+
+    const em = $("errMsg");
+    const eu = $("errUrl");
+    if (em) em.textContent = msg || "알 수 없는 오류";
+    if (eu) eu.textContent = DATA_URL;
+
     b.style.display = "block";
   }
   function hideErrorBanner(){
@@ -399,8 +406,8 @@ v1.1.27 (PATCH)
     const qn = searchNorm(t);
     const qj = toJamo(t);
 
-    const tns = it._tokensNorm || [];
-    const tjs = it._tokensJamo || [];
+    const tns = it._tokNorms || [];
+    const tjs = it._tokJamos || [];
 
     if (qn && qn.length >= 2){
       for (const tn of tns){
@@ -436,8 +443,7 @@ v1.1.27 (PATCH)
   }
 
   function getFilteredBase(){
-    const catSel = $("catHigh");
-    const high = catSel ? catSel.value : "";
+    const high = $("catHigh") ? $("catHigh").value : "";
     const qRaw = (activeQuery || "").trim();
 
     let arr = ALL;
@@ -450,36 +456,6 @@ v1.1.27 (PATCH)
 
     return arr;
   }
-
-  function pinSvg(fill, stroke){
-    return `
-      <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
-        <path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 27 15 27s15-16.5 15-27C30 6.7 23.3 0 15 0z" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
-        <circle cx="15" cy="15" r="6" fill="rgba(0,0,0,0.25)"/>
-      </svg>
-    `;
-  }
-  function pinSvgHover(fill, stroke){
-    return `
-      <svg width="36" height="50" viewBox="0 0 36 50" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18 0C8 0 0 8 0 18c0 12.5 18 32 18 32s18-19.5 18-32C36 8 28 0 18 0z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
-        <circle cx="18" cy="18" r="7" fill="rgba(0,0,0,0.25)"/>
-      </svg>
-    `;
-  }
-
-  const normalIcon = L.divIcon({
-    className:"",
-    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
-    iconSize:[30,42],
-    iconAnchor:[15,41]
-  });
-  const hoverIcon = L.divIcon({
-    className:"",
-    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
-    iconSize:[36,50],
-    iconAnchor:[18,49]
-  });
 
   function stableHash(seed, str){
     let h = 2166136261 ^ Math.floor(seed * 1e9);
@@ -505,6 +481,11 @@ v1.1.27 (PATCH)
       }
       return base;
     });
+  }
+
+  function isNeutralState(){
+    const catSel = $("catHigh");
+    return (!activeQuery || !activeQuery.trim()) && !(catSel && catSel.value);
   }
 
   function clearClusterHighlight(){
@@ -543,6 +524,36 @@ v1.1.27 (PATCH)
       el.classList.remove("isPinFlash");
     }
   }
+
+  function pinSvg(fill, stroke){
+    return `
+      <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+        <path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 27 15 27s15-16.5 15-27C30 6.7 23.3 0 15 0z" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
+        <circle cx="15" cy="15" r="6" fill="rgba(0,0,0,0.25)"/>
+      </svg>
+    `;
+  }
+  function pinSvgHover(fill, stroke){
+    return `
+      <svg width="36" height="50" viewBox="0 0 36 50" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 0C8 0 0 8 0 18c0 12.5 18 32 18 32s18-19.5 18-32C36 8 28 0 18 0z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+        <circle cx="18" cy="18" r="7" fill="rgba(0,0,0,0.25)"/>
+      </svg>
+    `;
+  }
+
+  const normalIcon = L.divIcon({
+    className:"",
+    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
+    iconSize:[30,42],
+    iconAnchor:[15,41]
+  });
+  const hoverIcon = L.divIcon({
+    className:"",
+    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
+    iconSize:[36,50],
+    iconAnchor:[18,49]
+  });
 
   function updateMarkerVisual(key){
     const m = markerByKey.get(key);
@@ -590,19 +601,6 @@ v1.1.27 (PATCH)
     if (parent && parent !== m && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
-  }
-
-  function clearAllMarkerStates(){
-    hoverKey = null;
-    activeMiniKey = null;
-    for (const k of markerByKey.keys()){
-      try{
-        const m = markerByKey.get(k);
-        m.setIcon(normalIcon);
-        m.setZIndexOffset(0);
-      }catch(_){}
-    }
-    clearClusterHighlight();
   }
 
   function closeMiniPopup(){
@@ -742,21 +740,15 @@ v1.1.27 (PATCH)
     openDetail(it, false);
   }
 
-  function isNeutralState(){
-    const catSel = $("catHigh");
-    return (!activeQuery || !activeQuery.trim()) && !(catSel && catSel.value);
-  }
-
-  // v1.1.27: 더보기 UI(+200) 표시/동작
+  // v1.1.27: "+200개 더 보기" 버튼(자동 무한스크롤 대신)
   function renderMoreHint(total){
     const box = $("moreHint");
     if (!box) return;
 
     const shown = Math.min(renderLimit, total);
-
-    if (total <= shown){
+    if (shown >= total){
       box.style.display = "none";
-      box.innerHTML = "더 불러오는 중…";
+      box.innerHTML = "";
       return;
     }
 
@@ -764,7 +756,7 @@ v1.1.27 (PATCH)
     box.innerHTML = `
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;">
         <div style="opacity:.9;">
-          결과가 많습니다. <b>총 ${total.toLocaleString()}</b>개 중 <b>${shown.toLocaleString()}</b>개만 표시 중입니다.
+          결과가 많습니다. <b>총 ${total.toLocaleString("ko-KR")}</b>개 중 <b>${shown.toLocaleString("ko-KR")}</b>개만 표시 중입니다.
           (필터/지도 범위를 좁히면 더 정확합니다.)
         </div>
         <button id="btnMore" type="button"
@@ -785,84 +777,149 @@ v1.1.27 (PATCH)
     }
   }
 
-  function renderList(items){
-    const list = $("list");
-    list.innerHTML = "";
-    cardByKey.clear();
-
-    // v1.1.27: 폭주 방지 - 처음은 최대 300개만
-    renderLimit = Math.min(items.length, LIST_INIT_LIMIT);
-
-    $("empty").style.display = items.length ? "none" : "block";
-    renderMoreHint(items.length);
-
-    appendList(items);
+  function openCartModal(){
+    $("cartModal").style.display = "block";
+    renderCart();
+  }
+  function closeCartModal(){
+    $("cartModal").style.display = "none";
   }
 
-  function appendList(items){
-    const list = $("list");
-    let arr = items.slice();
+  function addToCart(key){
+    if (!key) return;
+    if (cartKeys.includes(key)) return;
+    cartKeys.push(key);
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    $("cartCount").textContent = String(cartKeys.length);
+  }
 
-    if (isNeutralState()){
-      arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
+  function loadCart(){
+    try{
+      const raw = sessionStorage.getItem(SS_CART);
+      cartKeys = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(cartKeys)) cartKeys = [];
+    }catch(_){
+      cartKeys = [];
     }
+    $("cartCount").textContent = String(cartKeys.length);
+  }
 
-    if (pinnedTopKey){
-      const idx = arr.findIndex(x => x._key === pinnedTopKey);
-      if (idx >= 0){
-        const [one] = arr.splice(idx, 1);
-        arr.unshift(one);
-      }
-    }
-
-    const slice = arr.slice(0, renderLimit);
-
+  function renderCart(){
+    const list = $("cartList");
     list.innerHTML = "";
-    cardByKey.clear();
 
-    for (const it of slice){
-      const el = document.createElement("div");
-      el.className = "item";
-      el.dataset.key = it._key;
-      el.innerHTML = `
-        ${it.thumb ? `<img class="thumb" src="${escapeHtml(it.thumb)}" alt="" />` : `<div class="noImg">NO IMAGE</div>`}
-        <div class="cat">${it._high ? `${it._high}` : ``} ${it._low ? `${it._low}` : ``}</div>
-        <div class="title">${escapeHtml(it.title || "-")}</div>
-        <div class="place">${escapeHtml(guessPlace(it))}</div>
-        <div class="price">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+    let sum = 0;
+    let hasInquiry = false;
+
+    for (const key of cartKeys){
+      const it = itemByKey.get(key);
+      if (!it) continue;
+
+      const row = document.createElement("div");
+      row.className = "cartRow";
+      row.innerHTML = `
+        <div class="cartTitle">${escapeHtml(it.title || "-")}</div>
+        <div class="cartPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <button class="cartDel" data-k="${escapeHtml(key)}">✕</button>
       `;
+      row.querySelector(".cartDel").onclick = (e) => {
+        e.preventDefault();
+        const k = e.currentTarget.getAttribute("data-k");
+        cartKeys = cartKeys.filter(x => x !== k);
+        try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
+        $("cartCount").textContent = String(cartKeys.length);
+        renderCart();
+      };
+      list.appendChild(row);
 
-      cardByKey.set(it._key, el);
+      const n = parsePriceNumber(it.price);
+      if (n == null) hasInquiry = true;
+      else sum += n;
+    }
 
-      el.addEventListener("mouseenter", () => {
-        clearAllCardHighlights();
-        highlightCard(it._key, false);
-        setHoverKey(it._key);
-        highlightClusterOnlyByKey(it._key);
-      });
+    $("cartTotal").textContent = hasInquiry
+      ? `${sum.toLocaleString("ko-KR")}원 + α(문의)`
+      : `${sum.toLocaleString("ko-KR")}원`;
+  }
 
-      el.addEventListener("mouseleave", () => {
-        unhighlightCard(it._key);
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        if (activeMiniKey) highlightCard(activeMiniKey, false);
-      });
+  function loadRecent(){
+    try{
+      const raw = sessionStorage.getItem(SS_RECENT);
+      recentKeys = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(recentKeys)) recentKeys = [];
+    }catch(_){
+      recentKeys = [];
+    }
+    recentPage = 0;
+  }
 
-      el.addEventListener("click", () => {
+  function renderRecentPanel(){
+    const box = $("recentList");
+    box.innerHTML = "";
+
+    const valid = recentKeys.filter(k => itemByKey.has(k));
+    recentKeys = valid;
+    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+
+    const total = valid.length;
+    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+    if (recentPage >= pages) recentPage = pages - 1;
+
+    const from = recentPage * RECENT_PAGE_SIZE;
+    const slice = valid.slice(from, from + RECENT_PAGE_SIZE);
+
+    for (const key of slice){
+      const it = itemByKey.get(key);
+      if (!it) continue;
+
+      const el = document.createElement("div");
+      el.className = "recentItem";
+      el.innerHTML = `
+        <div class="recentTitle">${escapeHtml(it.title || "-")}</div>
+        <div class="recentPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+      `;
+      el.onclick = () => {
         returnToCartAfterDetail = false;
         openDetail(it, true);
-      });
-
-      list.appendChild(el);
+      };
+      box.appendChild(el);
     }
 
-    // v1.1.27: 더보기 UI 갱신
-    renderMoreHint(items.length);
+    $("recentMeta").textContent = `${recentPage + 1}/${pages}`;
+    $("btnRecentPrev").disabled = (recentPage <= 0);
+    $("btnRecentNext").disabled = (recentPage >= pages - 1);
   }
 
-  function setupInfiniteScroll(){
-    // v1.1.27: 내부용 대용량 대비 - 자동 무한스크롤 비활성화, "더 보기" 버튼만 사용
-    return;
+  function buildSuggestPool(){
+    SUG_POOL = [];
+    SUG_META = new Map();
+
+    try{
+      const hist = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
+      if (Array.isArray(hist)){
+        for (const h of hist){
+          SUG_POOL.push(h);
+          SUG_META.set(h, { hint:"최근 검색" });
+        }
+      }
+    }catch(_){}
+
+    for (const q of QUICK_SUGGEST){
+      if (!SUG_META.has(q)){
+        SUG_POOL.push(q);
+        SUG_META.set(q, { hint:"추천" });
+      }
+    }
+  }
+
+  function saveQueryHistory(q){
+    const t = (q ?? "").toString().trim();
+    if (!t) return;
+    try{
+      const arr = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
+      const next = [t, ...arr.filter(x => x !== t)].slice(0, 50);
+      localStorage.setItem(LS_QHIST, JSON.stringify(next));
+    }catch(_){}
   }
 
   function showSuggest(values){
@@ -908,42 +965,6 @@ v1.1.27 (PATCH)
     saveQueryHistory(v);
     runFilterAndRender(true);
     showSuggest([]);
-  }
-
-  function saveQueryHistory(q){
-    const t = (q ?? "").toString().trim();
-    if (!t) return;
-    try{
-      const arr = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
-      const next = [t, ...arr.filter(x => x !== t)].slice(0, 50);
-      localStorage.setItem(LS_QHIST, JSON.stringify(next));
-    }catch(_){}
-  }
-
-  function loadQueryHistory(){
-    try{
-      const arr = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
-      return Array.isArray(arr) ? arr : [];
-    }catch(_){
-      return [];
-    }
-  }
-
-  function buildSuggestPool(){
-    SUG_POOL = [];
-    SUG_META = new Map();
-
-    const hist = loadQueryHistory();
-    for (const h of hist){
-      SUG_POOL.push(h);
-      SUG_META.set(h, { hint:"최근 검색" });
-    }
-    for (const q of QUICK_SUGGEST){
-      if (!SUG_META.has(q)){
-        SUG_POOL.push(q);
-        SUG_META.set(q, { hint:"추천" });
-      }
-    }
   }
 
   function suggestForInput(input){
@@ -1016,8 +1037,8 @@ v1.1.27 (PATCH)
       o._blob = searchNorm(makeSearchText(o));
       o._jamo = toJamo(makeSearchText(o));
       const toks = extractTokens(makeSearchText(o));
-      o._tokensNorm = toks.map(searchNorm).filter(Boolean);
-      o._tokensJamo = toks.map(toJamo).filter(Boolean);
+      o._tokNorms = toks.map(searchNorm).filter(Boolean);
+      o._tokJamos = toks.map(toJamo).filter(Boolean);
       return o;
     }).filter(Boolean);
 
@@ -1099,6 +1120,7 @@ v1.1.27 (PATCH)
       const ln = (it._lngDisp ?? it.lng);
 
       const m = L.marker([la, ln], { icon: normalIcon });
+
       m.on("mouseover", () => {
         setHoverKey(it._key);
         highlightCard(it._key, false);
@@ -1142,118 +1164,6 @@ v1.1.27 (PATCH)
     });
   }
 
-  function addToCart(key){
-    if (!key) return;
-    if (cartKeys.includes(key)) return;
-    cartKeys.push(key);
-    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-  }
-
-  function loadCart(){
-    try{
-      const v = sessionStorage.getItem(SS_CART);
-      cartKeys = v ? JSON.parse(v) : [];
-      if (!Array.isArray(cartKeys)) cartKeys = [];
-    }catch(_){
-      cartKeys = [];
-    }
-  }
-
-  function renderCart(){
-    $("cartCount").textContent = cartKeys.length.toString();
-    const list = $("cartList");
-    if (!list) return;
-
-    list.innerHTML = "";
-    let sum = 0;
-    let hasInquiry = false;
-
-    cartKeys.forEach((k) => {
-      const it = itemByKey.get(k);
-      if (!it) return;
-
-      const row = document.createElement("div");
-      row.className = "cartRow";
-      row.innerHTML = `
-        <div class="cartTitle">${escapeHtml(it.title || "-")}</div>
-        <div class="cartPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-        <button class="cartDel" data-k="${escapeHtml(k)}">✕</button>
-      `;
-      row.querySelector(".cartDel").onclick = (e) => {
-        e.preventDefault();
-        const key = e.currentTarget.getAttribute("data-k");
-        cartKeys = cartKeys.filter(x => x !== key);
-        try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-        renderCart();
-      };
-      list.appendChild(row);
-
-      const n = parsePriceNumber(it.price);
-      if (n == null) hasInquiry = true;
-      else sum += n;
-    });
-
-    const totalText = hasInquiry ? `${sum.toLocaleString("ko-KR")}원 + α(문의)` : `${sum.toLocaleString("ko-KR")}원`;
-    $("cartTotal").textContent = totalText;
-  }
-
-  function openCartModal(){
-    $("cartModal").style.display = "block";
-    renderCart();
-  }
-  function closeCartModal(){
-    $("cartModal").style.display = "none";
-  }
-
-  function loadRecent(){
-    try{
-      const v = sessionStorage.getItem(SS_RECENT);
-      recentKeys = v ? JSON.parse(v) : [];
-      if (!Array.isArray(recentKeys)) recentKeys = [];
-    }catch(_){
-      recentKeys = [];
-    }
-  }
-
-  function renderRecentPanel(){
-    const box = $("recentList");
-    if (!box) return;
-
-    const valid = recentKeys.filter(k => itemByKey.has(k));
-    recentKeys = valid;
-    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-
-    const total = valid.length;
-    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
-    if (recentPage >= pages) recentPage = pages - 1;
-
-    const from = recentPage * RECENT_PAGE_SIZE;
-    const slice = valid.slice(from, from + RECENT_PAGE_SIZE);
-
-    box.innerHTML = "";
-    slice.forEach((key) => {
-      const it = itemByKey.get(key);
-      if (!it) return;
-
-      const el = document.createElement("div");
-      el.className = "recentItem";
-      el.innerHTML = `
-        <div class="recentTitle">${escapeHtml(it.title || "-")}</div>
-        <div class="recentPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-      `;
-      el.onclick = () => {
-        returnToCartAfterDetail = false;
-        openDetail(it, true);
-      };
-      box.appendChild(el);
-    });
-
-    $("recentMeta").textContent = `${recentPage + 1}/${pages}`;
-    $("recentCount").textContent = `${Math.min(total, RECENT_PAGE_SIZE)}/${RECENT_PAGE_SIZE}`;
-    $("btnRecentPrev").disabled = (recentPage <= 0);
-    $("btnRecentNext").disabled = (recentPage >= pages - 1);
-  }
-
   function runFilterAndRender(rebuild){
     curBase = getFilteredBase();
     if (rebuild){
@@ -1261,6 +1171,85 @@ v1.1.27 (PATCH)
       lastInViewHash = "";
     }
     updateInViewAndRender();
+  }
+
+  function renderList(items){
+    const list = $("list");
+    list.innerHTML = "";
+    cardByKey.clear();
+
+    // v1.1.27: 처음은 최대 300개만 표시
+    renderLimit = Math.min(items.length, LIST_INIT_LIMIT);
+
+    $("empty").style.display = items.length ? "none" : "block";
+    renderMoreHint(items.length);
+
+    appendList(items);
+  }
+
+  function appendList(items){
+    const list = $("list");
+    let arr = items.slice();
+
+    if (isNeutralState()){
+      arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
+    }
+
+    if (pinnedTopKey){
+      const idx = arr.findIndex(x => x._key === pinnedTopKey);
+      if (idx >= 0){
+        const [one] = arr.splice(idx, 1);
+        arr.unshift(one);
+      }
+    }
+
+    const slice = arr.slice(0, renderLimit);
+
+    list.innerHTML = "";
+    cardByKey.clear();
+
+    for (const it of slice){
+      const el = document.createElement("div");
+      el.className = "item";
+      el.dataset.key = it._key;
+      el.innerHTML = `
+        ${it.thumb ? `<img class="thumb" src="${escapeHtml(it.thumb)}" alt="" />` : `<div class="noImg">NO IMAGE</div>`}
+        <div class="cat">${it._high ? `${it._high}` : ``} ${it._low ? `${it._low}` : ``}</div>
+        <div class="title">${escapeHtml(it.title || "-")}</div>
+        <div class="place">${escapeHtml(guessPlace(it))}</div>
+        <div class="price">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+      `;
+
+      cardByKey.set(it._key, el);
+
+      el.addEventListener("mouseenter", () => {
+        clearAllCardHighlights();
+        highlightCard(it._key, false);
+        setHoverKey(it._key);
+        highlightClusterOnlyByKey(it._key);
+      });
+
+      el.addEventListener("mouseleave", () => {
+        unhighlightCard(it._key);
+        if (hoverKey === it._key) setHoverKey(null);
+        clearClusterHighlight();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
+      });
+
+      el.addEventListener("click", () => {
+        returnToCartAfterDetail = false;
+        openDetail(it, true);
+      });
+
+      list.appendChild(el);
+    }
+
+    renderMoreHint(items.length);
+  }
+
+  function setupInfiniteScroll(){
+    // v1.1.27: 자동 무한 스크롤 비활성화 (버튼 "+200개 더 보기"로만 추가 로드)
+    return;
   }
 
   function bindUI(){
