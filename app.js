@@ -914,18 +914,6 @@ function updateLoadMoreUI(items){
 updateLoadMoreUI(items);
   }
 
-  function setupInfiniteScroll(){
-    const panel = $("panel");
-    panel.addEventListener("scroll", () => {
-      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
-      if (!nearBottom) return;
-      if (renderLimit >= curInView.length) return;
-
-      renderLimit = Math.min(curInView.length, renderLimit + STEP);
-      appendList(curInView);
-    }, { passive:true });
-  }
-
   function showSuggest(values){
     const box = $("qSuggest");
     if (!box) return;
@@ -1650,7 +1638,6 @@ updateLoadMoreUI(items);
     if (errClose) errClose.addEventListener("click", hideErrorBanner);
 
     buildMap();
-    setupInfiniteScroll();
 
     // 미니모달 버튼 처리
     document.addEventListener("click", (e) => {
