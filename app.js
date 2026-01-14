@@ -1,6 +1,6 @@
 /* =========================================================
    Frontier DOOH 전국 DB
-   JS 분리 버전 (v1.1.26 기반 안정화)
+   JS 분리 버전 (v1.1.27 기반 안정화)
    - index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
    - index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
    ========================================================= */
@@ -8,7 +8,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "v1.1.26";
+  const VERSION = "v1.1.27";
   const DATA_URL = "./data_public.json";
    
   const CATEGORY_TREE = [
@@ -45,6 +45,8 @@
   const itemByKey = new Map();
 
   const BATCH = 36;
+  const LIST_INITIAL_LIMIT = 200;
+  const LIST_MORE_STEP = 200;
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
@@ -799,17 +801,51 @@
     return (!activeQuery || !activeQuery.trim()) && !(catSel && catSel.value);
   }
 
-  function renderList(items){
-    const list = $("list");
-    list.innerHTML = "";
-    cardByKey.clear();
-    renderLimit = BATCH;
+function renderList(items){
+  const list = $("list");
+  list.innerHTML = "";
+  cardByKey.clear();
 
-    $("empty").style.display = items.length ? "none" : "block";
-    $("moreHint").style.display = "none";
+  // v1.1.27 PATCH: 초기 표시 상한 200
+  renderLimit = Math.min(items.length, LIST_INITIAL_LIMIT);
 
-    appendList(items);
+  $("empty").style.display = items.length ? "none" : "block";
+  $("moreHint").style.display = "none"; // 아래 appendList에서 필요 시 다시 켬
+
+  appendList(items);
+}
+function updateLoadMoreUI(items){
+  const box = $("moreHint");
+  if (!box) return;
+
+  const total = items.length;
+  const shown = Math.min(renderLimit, total);
+
+  // 더 볼 게 없으면 숨김(샘플 20개에서는 항상 이 케이스)
+  if (!total || shown >= total){
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
   }
+
+  box.style.display = "block";
+  box.innerHTML = `
+    <button type="button" id="loadMoreBtn"
+      style="width:100%; padding:10px 12px; border:1px solid rgba(162,222,204,.45);
+             background:rgba(0,0,0,.25); color:var(--mint); border-radius:12px;
+             cursor:pointer; font-weight:700;">
+      더보기 (+${LIST_MORE_STEP}개) — ${shown}/${total}
+    </button>
+  `;
+
+  const btn = document.getElementById("loadMoreBtn");
+  if (!btn) return;
+
+  btn.onclick = () => {
+    renderLimit = Math.min(items.length, renderLimit + LIST_MORE_STEP);
+    appendList(items);
+  };
+}
 
   function appendList(items){
     const list = $("list");
@@ -876,7 +912,7 @@
       list.appendChild(el);
     }
 
-    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
+updateLoadMoreUI(items);
   }
 
   function setupInfiniteScroll(){
