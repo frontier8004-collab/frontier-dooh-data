@@ -1,14 +1,16 @@
 /* =========================================================
-Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
+   Frontier DOOH 전국 DB
+   JS 분리 버전 (v1.1.26 기반 안정화)
    - index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
-   - index.html에는 <script src="./app.js"></script> 한 줄만 남깁니다.
-========================================================= */
+   - index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
+   ========================================================= */
+
 (() => {
   "use strict";
 
-  const VERSION = "v1.1.27";
+  const VERSION = "v1.1.26";
   const DATA_URL = "./data_public.json";
-
+   
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -18,6 +20,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   ];
 
   const HOME_ZOOM = 8;
+
   const HOME_BOUNDS_FIXED = { north:39.5, south:33.0, west:123.5, east:130.5 };
   const HOME_CENTER_SHIFT = { upPct:-0.07, leftPct:-0.10 };
 
@@ -26,6 +29,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     const midLng = (HOME_BOUNDS_FIXED.west + HOME_BOUNDS_FIXED.east) / 2;
     const latSpan = (HOME_BOUNDS_FIXED.north - HOME_BOUNDS_FIXED.south);
     const lngSpan = (HOME_BOUNDS_FIXED.east - HOME_BOUNDS_FIXED.west);
+
     const latShift = latSpan * HOME_CENTER_SHIFT.upPct;
     const lngShift = lngSpan * HOME_CENTER_SHIFT.leftPct;
     return [ midLat + latShift, midLng - lngShift ];
@@ -42,10 +46,6 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
   const BATCH = 36;
   const STEP  = 24;
-  // 리스트 폭주 방지(내부용): 초기 300개 + 200개 더보기
-  const LIST_INIT_LIMIT = 300;
-  const LIST_MORE_STEP  = 200;
-
   let renderLimit = BATCH;
   let curInView = [];
   let curBase = [];
@@ -55,8 +55,8 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
   let highlightedClusterEl = null;
   let isMapInteracting = false;
-  let suspendViewportOnce = false;
 
+  let suspendViewportOnce = false;
   let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
@@ -70,8 +70,8 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   let shuffleSeed = Math.random();
 
   const SS_RECENT = "frontier_recent_viewed_v1";
-  const SS_CART = "frontier_cart_v1";
-  const LS_QHIST = "frontier_query_hist_v1";
+  const SS_CART   = "frontier_cart_v1";
+  const LS_QHIST  = "frontier_query_hist_v1";
 
   let recentKeys = [];
   let cartKeys = [];
@@ -81,6 +81,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
   let pinnedTopKey = null;
   let pinFlashTimer = null;
+
   let returnToCartAfterDetail = false;
 
   let lastInViewHash = "";
@@ -109,11 +110,8 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
   function escapeHtml(s){
     return (s ?? "").toString()
-      .replace(/&/g,"&amp;")
-      .replace(/</g,"&lt;")
-      .replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;")
-      .replace(/'/g,"&#39;");
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   }
 
   function searchNorm(s){
@@ -123,10 +121,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       .replace(/\s+/g,"")
       .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
   }
-
-  function stripDigits(s){
-    return (s ?? "").toString().replace(/[0-9]/g,"");
-  }
+  function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
 
   function extractTokens(text){
     const s = (text ?? "").toString();
@@ -135,15 +130,13 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   }
 
   // 한글 자모 분해
-  const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  const CHO  = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
   const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
   const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
-
   function isCompatConsonant(c){
     const code = c.charCodeAt(0);
     return (code >= 0x3131 && code <= 0x314E);
   }
-
   function toJamo(str){
     const s = (str ?? "").toString();
     let out = "";
@@ -152,7 +145,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       const code = ch.charCodeAt(0);
       if (code >= 0xAC00 && code <= 0xD7A3){
         const v = code - 0xAC00;
-        const cho = Math.floor(v / 588);
+        const cho  = Math.floor(v / 588);
         const jung = Math.floor((v % 588) / 28);
         const jong = v % 28;
         out += (CHO[cho] || "") + (JUNG[jung] || "") + (JONG[jong] || "");
@@ -174,9 +167,8 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   }
 
   const PROTECT_SHORT_NORM = new Set([
-    searchNorm("대구"), searchNorm("대전"), searchNorm("부산"),
-    searchNorm("광주"), searchNorm("울산"), searchNorm("인천"),
-    searchNorm("서울"), searchNorm("세종"),
+    searchNorm("대구"), searchNorm("대전"), searchNorm("부산"), searchNorm("광주"),
+    searchNorm("울산"), searchNorm("인천"), searchNorm("서울"), searchNorm("세종")
   ]);
 
   function isProtectedShortWord(raw){
@@ -201,8 +193,8 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
     const t0 = searchNorm(raw);
     const t1 = stripDigits(t0);
-
     const vars = new Set();
+
     if (t0) vars.add(t0);
     if (t1) vars.add(t1);
 
@@ -266,13 +258,12 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
   }
 
-  function norm(s){
-    return (s ?? "").toString().toLowerCase().replace(/\s+/g,"");
-  }
+  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
   function normalizeLow(raw){
     const s = norm(raw);
-    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led")) return "전광판";
+    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led"))
+      return "전광판";
     if (s.includes("빌보드") || s.includes("billboard")) return "빌보드";
     if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("facade") || s.includes("façade")) return "외벽";
     if (s.includes("지하철") || s.includes("subway") || s.includes("metro")) return "지하철 광고";
@@ -293,11 +284,21 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     const title = norm(it.title);
     const any = mg + " " + cl + " " + title;
 
-    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽")) return "전광판 / 빌보드 / 외벽";
-    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport")) return "교통매체";
-    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛")) return "복합 쇼핑몰 / 대형마트";
-    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트")) return "극장 / 레저 / 휴양 시설";
-    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스")) return "생활 밀착형 매체";
+    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽"))
+      return "전광판 / 빌보드 / 외벽";
+
+    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport"))
+      return "교통매체";
+
+    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛"))
+      return "복합 쇼핑몰 / 대형마트";
+
+    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트"))
+      return "극장 / 레저 / 휴양 시설";
+
+    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스"))
+      return "생활 밀착형 매체";
+
     return "";
   }
 
@@ -349,6 +350,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       if (lk.includes("url") || lk.includes("link") || lk.includes("api")) continue;
       add(v);
     }
+
     return parts.join(" ");
   }
 
@@ -361,13 +363,16 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   function applyOverlapJitter(items){
     const CELL = 1e-4;
     const groups = new Map();
+
     for (const it of items){
       const k = Math.round(it.lat / CELL) + "," + Math.round(it.lng / CELL);
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(it);
     }
+
     for (const arr of groups.values()){
       if (arr.length <= 1) continue;
+
       const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
       const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
 
@@ -375,46 +380,66 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       const step = 9;
 
       for (let i=0;i<arr.length;i++){
-        const angle = (i / arr.length) * Math.PI * 2;
-        const r = base + step * Math.floor(i / 8);
-        const dLat = metersToLat(r) * Math.sin(angle);
-        const dLng = metersToLng(r, centerLat) * Math.cos(angle);
-        arr[i]._latDisp = centerLat + dLat;
-        arr[i]._lngDisp = centerLng + dLng;
+        const it = arr[i];
+
+        if (i === 0){
+          it._latDisp = it.lat;
+          it._lngDisp = it.lng;
+          continue;
+        }
+
+        const j = i - 1;
+        const a = j * 1.85;
+        const r = base + step * Math.sqrt(j);
+        const dx = r * Math.cos(a);
+        const dy = r * Math.sin(a);
+
+        it._latDisp = centerLat + metersToLat(dy);
+        it._lngDisp = centerLng + metersToLng(dx, centerLat);
       }
     }
   }
 
   function isAdminSuffixToken(raw){
-    return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test((raw ?? "").toString().trim());
+    const s = (raw ?? "").toString().trim();
+    if (!s) return false;
+    return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
   }
 
-  function tokenMatchItem(raw, it){
-    const t = (raw ?? "").toString().trim();
-    if (!t) return true;
+  function tokenMatchItem(tok, it){
+    const raw = (tok ?? "").toString().trim();
+    if (!raw) return true;
 
-    const protectedShort = isProtectedShortWord(t);
+    const qn = searchNorm(raw);
+    const qj = toJamo(raw);
+    if (!qn && !qj) return true;
 
-    const qn = searchNorm(t);
-    const qj = toJamo(t);
+    const protectedShort = isProtectedShortWord(raw);
 
-    const tns = it._tokensNorm || [];
-    const tjs = it._tokensJamo || [];
+    const tns = it._tokNorms || [];
+    const tjs = it._tokJamos || [];
 
-    if (qn && qn.length >= 2){
+    if (qn){
       for (const tn of tns){
-        if (tn && tn.includes(qn)) return true;
+        if (tn && tn.startsWith(qn)) return true;
       }
     }
-    if (qj && qj.length >= 3){
+    if (qj){
       for (const tj of tjs){
-        if (tj && tj.includes(qj)) return true;
+        if (tj && tj.startsWith(qj)) return true;
       }
     }
 
-    if (qj && qj.length >= 6){
-      for (const tj of tjs){
-        if (tj && tj.includes(qj)) return true;
+    if (!protectedShort){
+      if (qn && qn.length >= 3){
+        for (const tn of tns){
+          if (tn && tn.includes(qn)) return true;
+        }
+      }
+      if (qj && qj.length >= 6){
+        for (const tj of tjs){
+          if (tj && tj.includes(qj)) return true;
+        }
       }
     }
 
@@ -445,26 +470,34 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
       arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
     }
-    if (high) arr = arr.filter(x => x._high === high);
 
+    if (high) arr = arr.filter(x => x._high === high);
     return arr;
   }
 
   /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
     return `
-      <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
-        <path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 27 15 27s15-16.5 15-27C30 6.7 23.3 0 15 0z" fill="${fill}" stroke="${stroke}" stroke-width="1.5"/>
-        <circle cx="15" cy="15" r="6" fill="rgba(0,0,0,0.25)"/>
-      </svg>
+      <div class="pinWrap">
+        <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2" />
+          <circle cx="15" cy="15" r="6" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.92"/>
+        </svg>
+      </div>
     `;
   }
   function pinSvgHover(fill, stroke){
     return `
-      <svg width="36" height="50" viewBox="0 0 36 50" xmlns="http://www.w3.org/2000/svg">
-        <path d="M18 0C8 0 0 8 0 18c0 12.5 18 32 18 32s18-19.5 18-32C36 8 28 0 18 0z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
-        <circle cx="18" cy="18" r="7" fill="rgba(0,0,0,0.25)"/>
-      </svg>
+      <div class="pinHover">
+        <svg width="36" height="50" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
+                fill="${fill}" stroke="${stroke}" stroke-width="2.5" />
+          <circle cx="15" cy="15" r="6.5" fill="#0b0c0d" opacity="0.65"/>
+          <circle cx="15" cy="15" r="3.8" fill="#ffffff" opacity="0.95"/>
+        </svg>
+      </div>
     `;
   }
 
@@ -474,7 +507,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-  const hoverIcon = L.divIcon({
+  const hoverIcon  = L.divIcon({
     className:"",
     html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
     iconSize:[36,50],
@@ -488,7 +521,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       h ^= str.charCodeAt(i);
       h = Math.imul(h, 16777619);
     }
-    return (h >>> 0);
+    return h >>> 0;
   }
 
   function makeUniqueKeys(rawItems){
@@ -496,6 +529,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     return rawItems.map((it, idx) => {
       const hasId = (it.id != null && String(it.id).trim() !== "");
       let base = hasId ? ("id:" + String(it.id).trim()) : ("k:" + idx);
+
       if (seen.has(base)){
         const c = (seen.get(base) || 1) + 1;
         seen.set(base, c);
@@ -514,7 +548,6 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       highlightedClusterEl = null;
     }
   }
-
   function highlightClusterElement(el){
     clearClusterHighlight();
     if (!el) return;
@@ -530,14 +563,12 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       el.scrollIntoView({ block:"start", behavior:"auto" });
     }
   }
-
   function unhighlightCard(key){
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.remove("isActive");
     el.classList.remove("isPinFlash");
   }
-
   function clearAllCardHighlights(){
     for (const el of cardByKey.values()){
       el.classList.remove("isActive");
@@ -576,6 +607,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     const idx = curInView.findIndex(x => x._key === key);
     if (idx < 0) return;
     if (idx < renderLimit) return;
+
     let next = renderLimit;
     while (next <= idx) next += STEP;
     renderLimit = Math.min(curInView.length, next);
@@ -586,8 +618,10 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     clearClusterHighlight();
     const m = markerByKey.get(key);
     if (!m || !markers) return;
+
     const parent = markers.getVisibleParent(m);
     if (!parent) return;
+
     if (parent && parent !== m && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
@@ -619,11 +653,14 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
   function pinToTopAndFlash(key){
     pinnedTopKey = key;
     appendList(curInView);
+
     const el = cardByKey.get(key);
     if (el){
       el.classList.add("isPinFlash");
       if (pinFlashTimer) clearTimeout(pinFlashTimer);
-      pinFlashTimer = setTimeout(()=>{ try{ el.classList.remove("isPinFlash"); }catch(_){} }, 900);
+      pinFlashTimer = setTimeout(()=>{
+        try{ el.classList.remove("isPinFlash"); }catch(_){}
+      }, 900);
     }
   }
 
@@ -631,19 +668,25 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
     const price = escapeHtml(fmtWon(it.price, it.price_unit));
-    const img = it.thumb ? `<img src="${escapeHtml(it.thumb)}" alt="" style="width:100%;height:110px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.08);"/>` : `
-      <div class="noImgMini">NO IMAGE</div>
-    `;
+
+    const img = it.thumb
+      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>';"/>`
+      : `<div class="fallback">NO IMAGE</div>`;
+
     return `
-      <div class="miniWrap">
-        ${img}
-        <div class="miniTitle">${title}</div>
-        <div class="miniCat">${cat}</div>
-        <div class="miniPrice">${price}</div>
-        <div class="miniHint">클릭하면 상세보기</div>
-        <div class="miniBtns">
-          <button class="btnMiniAdd">담기</button>
-          <button class="btnMiniOpen">상세보기</button>
+      <div class="pinPopCard" data-key="${escapeHtml(it._key)}" title="클릭해서 상세보기">
+        <div class="pinPopImg">${img}</div>
+        <div class="pinPopBody">
+          <div class="pinPopTitle">${title}</div>
+          <div class="pinPopSub">${cat}</div>
+          <div class="pinPopPrice">${price}</div>
+          <div class="pinPopCtaRow">
+            <div class="pinPopHint">클릭하면 상세보기</div>
+            <div class="pinPopBtnRow">
+              <button class="pinPopBtn ghost pinPopAddCart" type="button" data-key="${escapeHtml(it._key)}">담기</button>
+              <button class="pinPopBtn pinPopGoDetail" type="button">상세보기</button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -651,14 +694,18 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
   function openMiniPopupFor(it, marker){
     clearClusterHighlight();
+
     if (activeMiniKey && activeMiniKey !== it._key){
       closeMiniPopup();
     }
     setActiveMiniKey(it._key);
+
     pinToTopAndFlash(it._key);
+
     clearAllCardHighlights();
     ensureCardVisible(it._key);
     highlightCard(it._key, true);
+
     try{
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
@@ -673,7 +720,6 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       setTimeout(()=>{ suppressHashHandler = false; }, 0);
     }
   }
-
   function clearHash(){
     if (!location.hash.startsWith("#item=")) return;
     suppressHashHandler = true;
@@ -697,23 +743,27 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
 
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
+
     $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
     $("dop").textContent = it.operator || "문의";
-    $("dimg").innerHTML = it.thumb ? `<img src="${escapeHtml(it.thumb)}" alt="" />` : `<div class="noImgDetail">NO IMAGE</div>`;
+
+    $("dimg").innerHTML = it.thumb
+      ? `<img src="${it.thumb}" alt="">`
+      : `<div class="fallback">NO IMAGE</div>`;
 
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
-    $("dlinks").innerHTML = `<a href="${kakao}" target="_blank" rel="noopener">카카오맵</a> · <a href="${google}" target="_blank" rel="noopener">구글맵</a>`;
+    $("dlinks").innerHTML = `
+      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
+      <a href="${google}" target="_blank" rel="noopener">구글맵</a>
+    `;
 
     $("dOverlay").style.display = "block";
 
     suspendViewportOnce = true;
-    map.once("moveend", () => {
-      suspendViewportOnce = false;
-      updateZoomUI();
-    });
+    map.once("moveend", () => { suspendViewportOnce = false; updateZoomUI(); });
 
     const la = (it._latDisp ?? it.lat);
     const ln = (it._lngDisp ?? it.lng);
@@ -738,6 +788,7 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     if (!location.hash.startsWith("#item=")) return;
     const key = decodeURIComponent(location.hash.replace("#item=", ""));
     if (currentOpenKey === key && $("dOverlay").style.display === "block") return;
+
     const it = itemByKey.get(key);
     if (!it) return;
     openDetail(it, false);
@@ -748,54 +799,14 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     return (!activeQuery || !activeQuery.trim()) && !(catSel && catSel.value);
   }
 
-  // ===== v1.1.27: 리스트 300 상한 + 200 더보기 버튼 =====
-  function renderMoreHint(total){
-    const box = $("moreHint");
-    if (!box) return;
-
-    const shown = Math.min(renderLimit, total);
-
-    if (total <= shown){
-      box.style.display = "none";
-      box.innerHTML = "";
-      return;
-    }
-
-    box.style.display = "block";
-    box.innerHTML = `
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;">
-        <div style="opacity:.9;">
-          결과가 많습니다. <b>총 ${total.toLocaleString()}</b>개 중 <b>${shown.toLocaleString()}</b>개만 표시 중입니다.
-          (필터/지도 범위를 좁히면 더 정확합니다.)
-        </div>
-        <button id="btnMore" type="button"
-          style="cursor:pointer;padding:10px 12px;border-radius:10px;border:1px solid rgba(162,222,204,.55);
-                 background:rgba(0,0,0,.35);color:#e9f5f2;font-weight:800;">
-          +${LIST_MORE_STEP}개 더 보기
-        </button>
-      </div>
-    `;
-
-    const btn = $("btnMore");
-    if (btn){
-      btn.onclick = () => {
-        if (renderLimit >= curInView.length) return;
-        renderLimit = Math.min(curInView.length, renderLimit + LIST_MORE_STEP);
-        appendList(curInView);
-      };
-    }
-  }
-
   function renderList(items){
     const list = $("list");
     list.innerHTML = "";
     cardByKey.clear();
-
-    // 초기 300개 상한
-    renderLimit = Math.min(items.length, LIST_INIT_LIMIT);
+    renderLimit = BATCH;
 
     $("empty").style.display = items.length ? "none" : "block";
-    renderMoreHint(items.length);
+    $("moreHint").style.display = "none";
 
     appendList(items);
   }
@@ -817,7 +828,6 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
     }
 
     const slice = arr.slice(0, renderLimit);
-
     list.innerHTML = "";
     cardByKey.clear();
 
@@ -825,12 +835,23 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       const el = document.createElement("div");
       el.className = "item";
       el.dataset.key = it._key;
+
       el.innerHTML = `
-        ${it.thumb ? `<img class="thumb" src="${escapeHtml(it.thumb)}" alt="" />` : `<div class="noImg">NO IMAGE</div>`}
-        <div class="cat">${it._high ? `${it._high}` : ``} ${it._low ? `${it._low}` : ``}</div>
-        <div class="title">${escapeHtml(it.title || "-")}</div>
-        <div class="place">${escapeHtml(guessPlace(it))}</div>
-        <div class="price">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <div class="thumb">
+          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
+        </div>
+        <div class="body">
+          <div class="catRow">
+            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
+            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
+          </div>
+          <div class="name">${escapeHtml(it.title || "-")}</div>
+          <div class="place">${escapeHtml(guessPlace(it))}</div>
+          <div class="price">
+            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
+          </div>
+        </div>
       `;
 
       cardByKey.set(it._key, el);
@@ -841,14 +862,12 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
         setHoverKey(it._key);
         highlightClusterOnlyByKey(it._key);
       });
-
       el.addEventListener("mouseleave", () => {
         unhighlightCard(it._key);
         if (hoverKey === it._key) setHoverKey(null);
         clearClusterHighlight();
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
-
       el.addEventListener("click", () => {
         returnToCartAfterDetail = false;
         openDetail(it, true);
@@ -857,20 +876,25 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       list.appendChild(el);
     }
 
-    // 더보기 안내/버튼 갱신
-    renderMoreHint(items.length);
+    $("moreHint").style.display = (renderLimit < items.length) ? "block" : "none";
   }
 
   function setupInfiniteScroll(){
-    // 내부용 3만+ 대비: 무한 스크롤 대신 "더 보기" 버튼 사용
-    return;
-  }
+    const panel = $("panel");
+    panel.addEventListener("scroll", () => {
+      const nearBottom = (panel.scrollTop + panel.clientHeight) > (panel.scrollHeight - 600);
+      if (!nearBottom) return;
+      if (renderLimit >= curInView.length) return;
 
-  /* 이하 v1.1.26 원본 로직 계속 ... (데이터 로드/지도/필터/검색/최근본/장바구니 등) */
+      renderLimit = Math.min(curInView.length, renderLimit + STEP);
+      appendList(curInView);
+    }, { passive:true });
+  }
 
   function showSuggest(values){
     const box = $("qSuggest");
     if (!box) return;
+
     const arr = Array.isArray(values) ? values : [];
     if (!arr.length){
       box.style.display = "none";
@@ -878,498 +902,934 @@ Frontier DOOH 전국 DB JS 분리 버전 (v1.1.26 기반 안정화)
       sugIndex = -1;
       return;
     }
+
     box.innerHTML = "";
     arr.forEach((v) => {
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
       row.dataset.value = v;
+
       const meta = SUG_META.get(v);
       const hint = meta?.hint || "추천";
-      row.innerHTML = `
-        <div class="qSugMain">${escapeHtml(v)}</div>
-        <div class="qSugHint">${escapeHtml(hint)}</div>
-      `;
-      row.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        applySuggest(v);
+
+      row.innerHTML = `<div>${escapeHtml(v)}</div><small>${escapeHtml(hint)}</small>`;
+      row.addEventListener("mousedown", (e)=>{ e.preventDefault(); });
+      row.addEventListener("click", ()=>{
+        $("q").value = v;
+        box.style.display = "none";
+        applySearchFromUI();
       });
       box.appendChild(row);
     });
+
+    sugIndex = -1;
     box.style.display = "block";
   }
 
-  function applySuggest(v){
-    const q = $("q");
-    if (!q) return;
-    q.value = v;
-    activeQuery = v;
-    saveQueryHistory(v);
-    runFilterAndRender(true);
-    showSuggest([]);
+  function buildSuggestPool(){
+    const mapT = new Map();
+
+    const add = (term, hint) => {
+      const t = (term ?? "").toString().trim();
+      if (!t) return;
+      if (t.length < 2) return;
+
+      const prev = mapT.get(t);
+      if (prev){
+        prev.count += 1;
+      }else{
+        mapT.set(t, { term:t, hint:hint || "추천", count:1 });
+      }
+    };
+
+    for (const it of ALL){
+      add(it.title, "매체명");
+
+      const src = `${it.title || ""} ${it.address || ""}`;
+      const ms = src.match(/[가-힣0-9A-Za-z]{2,14}역/g);
+      if (ms) ms.forEach(x => add(x, "역"));
+
+      const toks = (it.address || "").match(/[가-힣0-9A-Za-z]{2,20}/g);
+      if (toks) toks.forEach(t => add(t, "지역"));
+    }
+
+    for (const x of CATEGORY_TREE){
+      add(x.high, "카테고리");
+      for (const low of (x.lows || [])) add(low, "카테고리");
+    }
+
+    SUG_META = new Map();
+    SUG_POOL = Array.from(mapT.values()).map(o => {
+      SUG_META.set(o.term, { hint:o.hint, count:o.count });
+      return {
+        term: o.term,
+        hint: o.hint,
+        count: o.count,
+        _norm: searchNorm(o.term),
+        _jamo: toJamo(o.term),
+      };
+    });
+
+    SUG_POOL.sort((a,b)=> (b.count - a.count) || (a.term.length - b.term.length) || a.term.localeCompare(b.term));
   }
 
-  function saveQueryHistory(q){
-    const t = (q ?? "").toString().trim();
-    if (!t) return;
-    try{
-      const arr = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
-      const next = [t, ...arr.filter(x => x !== t)].slice(0, 50);
-      localStorage.setItem(LS_QHIST, JSON.stringify(next));
-    }catch(_){}
+  function suggestScore(qNorm, qJ, it){
+    let s = 0;
+
+    if (qJ){
+      if (it._jamo && it._jamo.startsWith(qJ)) s = Math.max(s, 95);
+      else if (it._jamo && it._jamo.includes(qJ)) s = Math.max(s, 65);
+    }
+    if (qNorm){
+      if (it._norm && it._norm.startsWith(qNorm)) s = Math.max(s, 90);
+      else if (it._norm && it._norm.includes(qNorm)) s = Math.max(s, 60);
+    }
+    if (!s) return 0;
+
+    s += Math.min(8, Math.log2(1 + (it.count || 1)));
+    s += Math.min(4, 10 / (it.term.length + 2));
+    return s;
   }
 
   function loadQueryHistory(){
     try{
-      const arr = JSON.parse(localStorage.getItem(LS_QHIST) || "[]") || [];
-      return Array.isArray(arr) ? arr : [];
+      const raw = localStorage.getItem(LS_QHIST);
+      const arr = JSON.parse(raw || "[]");
+      return Array.isArray(arr) ? arr.filter(x => typeof x === "string") : [];
     }catch(_){
       return [];
     }
   }
-
-  function buildSuggestPool(){
-    SUG_POOL = [];
-    SUG_META = new Map();
-
-    const hist = loadQueryHistory();
-    for (const h of hist){
-      SUG_POOL.push(h);
-      SUG_META.set(h, { hint:"최근 검색" });
-    }
-    for (const q of QUICK_SUGGEST){
-      if (!SUG_META.has(q)){
-        SUG_POOL.push(q);
-        SUG_META.set(q, { hint:"추천" });
-      }
-    }
+  function saveQueryHistory(q){
+    const t = (q || "").trim();
+    if (!t) return;
+    let arr = loadQueryHistory();
+    arr = arr.filter(x => x !== t);
+    arr.unshift(t);
+    if (arr.length > 10) arr.length = 10;
+    try{ localStorage.setItem(LS_QHIST, JSON.stringify(arr)); }catch(_){}
   }
 
-  function suggestForInput(input){
-    const q = (input ?? "").toString().trim();
-    if (!q){
-      showSuggest([]);
+  function updateSuggest(){
+    const box = $("qSuggest");
+    if (!box) return;
+
+    const qRaw = $("q").value.trim();
+
+    if (!qRaw){
+      const hist = loadQueryHistory();
+      if (hist.length){
+        showSuggest(hist.slice(0, 10));
+      }else{
+        showSuggest(QUICK_SUGGEST);
+      }
       return;
     }
-    const n = searchNorm(q);
-    const j = toJamo(q);
-    const protectedShort = isProtectedShortWord(q);
+
+    const qNorm = searchNorm(qRaw);
+    const qJ = toJamo(qRaw);
+
+    const scored = [];
+    for (const it of SUG_POOL){
+      const sc = suggestScore(qNorm, qJ, it);
+      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
+    }
+
+    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
 
     const out = [];
-    for (const v of SUG_POOL){
-      const vn = searchNorm(v);
-      const vj = toJamo(v);
-
-      if (n && vn.includes(n)) out.push(v);
-      else if (j && vj.includes(j) && j.length >= (protectedShort ? 4 : 2)) out.push(v);
-
-      if (out.length >= 8) break;
+    const seen = new Set();
+    for (const x of scored){
+      if (seen.has(x.v)) continue;
+      seen.add(x.v);
+      out.push(x.v);
+      if (out.length >= 10) break;
     }
+
     showSuggest(out);
   }
 
-  async function loadData(){
-    hideErrorBanner();
-    $("status").textContent = "Loading...";
+  function moveSugIndex(delta){
+    const box = $("qSuggest");
+    if (box.style.display !== "block") return;
+    const items = Array.from(box.querySelectorAll(".qSugItem"));
+    if (!items.length) return;
 
-    let res;
-    try{
-      res = await fetch(DATA_URL, { cache:"no-store" });
-    }catch(e){
-      showErrorBanner("데이터를 불러오지 못했습니다. 네트워크를 확인하세요.");
-      $("status").textContent = "Loaded: 0";
-      return;
+    sugIndex = Math.max(-1, Math.min(items.length-1, sugIndex + delta));
+    items.forEach((el, i) => el.classList.toggle("isActive", i === sugIndex));
+    if (sugIndex >= 0){
+      items[sugIndex].scrollIntoView({block:"nearest"});
     }
-
-    if (!res.ok){
-      showErrorBanner(`데이터 로드 실패 (HTTP ${res.status})`);
-      $("status").textContent = "Loaded: 0";
-      return;
-    }
-
-    let json;
-    try{
-      json = await res.json();
-    }catch(e){
-      showErrorBanner("JSON 파싱 실패 (형식 오류)");
-      $("status").textContent = "Loaded: 0";
-      return;
-    }
-
-    const items = Array.isArray(json.items) ? json.items : [];
-    const keys = makeUniqueKeys(items);
-
-    ALL = items.map((it, idx) => {
-      const lat = Number(it.lat);
-      const lng = Number(it.lng);
-      if (!isFinite(lat) || !isFinite(lng)) return null;
-
-      const tax = assignTaxonomy(it);
-      const o = {
-        ...it,
-        lat, lng,
-        _key: keys[idx],
-        _high: tax.high || (it.category_high || it.media_group || "UNKNOWN"),
-        _low: tax.low || (it.category_low || ""),
-      };
-      o._blob = searchNorm(makeSearchText(o));
-      o._jamo = toJamo(makeSearchText(o));
-      const toks = extractTokens(makeSearchText(o));
-      o._tokensNorm = toks.map(searchNorm).filter(Boolean);
-      o._tokensJamo = toks.map(toJamo).filter(Boolean);
-      return o;
-    }).filter(Boolean);
-
-    applyOverlapJitter(ALL);
-
-    itemByKey.clear();
-    for (const it of ALL) itemByKey.set(it._key, it);
-
-    $("status").textContent = `Loaded: ${ALL.length}`;
   }
 
-  function initMap(){
-    map = L.map("map", {
-      zoomControl:false,
-      preferCanvas:true,
-      attributionControl:false,
+  function pickSugIndex(){
+    const box = $("qSuggest");
+    if (box.style.display !== "block") return false;
+    const items = Array.from(box.querySelectorAll(".qSugItem"));
+    if (!items.length) return false;
+    if (sugIndex < 0 || sugIndex >= items.length) return false;
+    const v = items[sugIndex].dataset.value;
+    if (!v) return false;
+    $("q").value = v;
+    box.style.display = "none";
+    applySearchFromUI();
+    return true;
+  }
+
+  function renderMarkersAndListFromBase(base){
+    curBase = base;
+
+    if (currentOpenKey){
+      const exists = base.some(x => x._key === currentOpenKey);
+      if (!exists) closeDetail(false);
+    }
+
+    $("mAll").textContent = ALL.length;
+    $("mFilter").textContent = base.length;
+
+    renderMarkers(base);
+    viewportUpdate();
+  }
+
+  function computeInViewHash(arr){
+    const keys = arr.map(x=>x._key).sort();
+    let s = "";
+    for (let i=0;i<Math.min(60, keys.length);i++){
+      s += keys[i] + "|";
+    }
+    return String(keys.length) + "::" + stableHash(0.777, s);
+  }
+
+  function viewportUpdate(){
+    if (!map) return;
+    const b = map.getBounds();
+    const inView = (curBase || []).filter(x => {
+      const la = (x._latDisp ?? x.lat);
+      const ln = (x._lngDisp ?? x.lng);
+      return b.contains([la, ln]);
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 20,
+    curInView = inView;
+    $("mInView").textContent = inView.length;
+
+    const newHash = computeInViewHash(inView);
+    const changed = (newHash !== lastInViewHash);
+    lastInViewHash = newHash;
+
+    if (changed){
+      const panel = $("panel");
+      if (panel) panel.scrollTop = 0;
+      renderList(inView);
+    }else{
+      if (pinnedTopKey){
+        appendList(inView);
+      }
+    }
+
+    if (activeMiniKey){
+      ensureCardVisible(activeMiniKey);
+      clearAllCardHighlights();
+      highlightCard(activeMiniKey, false);
+      highlightClusterOnlyByKey(activeMiniKey);
+      updateMarkerVisual(activeMiniKey);
+    }
+  }
+
+  function updateStickyHeights(){
+    const topbar = $("topbar");
+    const h = topbar ? topbar.getBoundingClientRect().height : 72;
+    document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
+  }
+
+  function updateZoomUI(){
+    if (!map) return;
+    const zi = Math.round(map.getZoom());
+    $("zVal").textContent = zi;
+  }
+
+  function forceIntegerZoom(){
+    if (!map) return;
+    const z = map.getZoom();
+    const zi = Math.round(z);
+    if (Math.abs(z - zi) > 1e-6){
+      try{ map.setZoom(zi, { animate:false }); }catch(_){}
+    }
+    updateZoomUI();
+  }
+
+  function showClusterHint(latlng){
+    const hint = $("clusterHint");
+    if (!hint) return;
+    const p = map.latLngToContainerPoint(latlng);
+    hint.style.left = p.x + "px";
+    hint.style.top  = p.y + "px";
+    hint.style.display = "block";
+  }
+  function hideClusterHint(){
+    const hint = $("clusterHint");
+    if (!hint) return;
+    hint.style.display = "none";
+  }
+
+  function buildMap(){
+    map = L.map("map", {
+      zoomControl:false,
+      zoomSnap: 1,
+      zoomDelta: 1,
+      wheelPxPerZoomLevel: 80
+    }).setView(HOME_CENTER, HOME_ZOOM);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
-      spiderfyOnMaxZoom:true,
-      removeOutsideVisibleBounds:true,
-      maxClusterRadius: 60,
+      spiderfyOnMaxZoom:false,
+      animate:false,
+      animateAddingMarkers:false,
+      removeOutsideVisibleBounds:false,
+      disableClusteringAtZoom: 18,
+      maxClusterRadius: 52,
+      zoomToBoundsOnClick:false
     });
+
+    markers.on("clustermouseover", (e) => {
+      try{
+        const el = e.layer && e.layer.getElement ? e.layer.getElement() : null;
+        if (el) highlightClusterElement(el);
+      }catch(_){}
+      if (e && e.layer && e.layer.getLatLng){
+        showClusterHint(e.layer.getLatLng());
+      }
+    });
+    markers.on("clustermouseout", () => {
+      clearClusterHighlight();
+      hideClusterHint();
+    });
+
+    markers.on("clusterclick", (e) => {
+      try{
+        if (e && e.originalEvent){
+          L.DomEvent.stopPropagation(e.originalEvent);
+          L.DomEvent.preventDefault(e.originalEvent);
+        }
+      }catch(_){}
+
+      hideClusterHint();
+      closeMiniPopup();
+      clearAllMarkerStates();
+      clearAllCardHighlights();
+      clearClusterHighlight();
+
+      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
+
+      if (bb && bb.isValid && bb.isValid()){
+        map.fitBounds(bb, { padding:[90,90], maxZoom: 18, animate:false });
+      }else if (e.layer && e.layer.getLatLng){
+        const ll = e.layer.getLatLng();
+        map.setView(ll, Math.min(map.getZoom() + 2, 18), { animate:false });
+      }
+    });
+
+    markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
+    markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
 
     map.addLayer(markers);
 
-    map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
+    map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("dragend",   ()=>{ isMapInteracting = false; });
+    map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
+    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
 
-    map.on("movestart", () => { isMapInteracting = true; });
+    map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
+
+    window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
+
+    map.getContainer().addEventListener("mouseleave", ()=>{
+      hideClusterHint();
+      closeMiniPopup();
+      clearAllMarkerStates();
+      clearAllCardHighlights();
+    }, { passive:true });
+
     map.on("moveend", () => {
-      isMapInteracting = false;
       if (suspendViewportOnce) return;
-      updateInViewAndRender();
-      updateZoomUI();
-    });
-
-    map.on("zoomstart", () => { isMapInteracting = true; });
-    map.on("zoomend", () => {
-      isMapInteracting = false;
-      if (suspendViewportOnce) return;
-      updateInViewAndRender();
-      updateZoomUI();
+      viewportUpdate();
+      forceIntegerZoom();
     });
   }
 
-  function updateZoomUI(){
-    const z = map.getZoom();
-    const el = $("zoomNum");
-    if (el) el.textContent = `ZOOM${z}`;
-  }
+  function renderMarkers(items){
+    closeMiniPopup();
+    clearClusterHighlight();
+    setHoverKey(null);
 
-  function updateInViewAndRender(){
-    const b = map.getBounds();
-    const inView = curBase.filter(it => b.contains([it._latDisp ?? it.lat, it._lngDisp ?? it.lng]));
-    const hash = `${inView.length}|${activeQuery}|${$("catHigh")?.value || ""}|${map.getZoom()}`;
-
-    if (hash === lastInViewHash) return;
-    lastInViewHash = hash;
-
-    curInView = inView;
-    renderList(curInView);
-
-    $("cntAll").textContent = ALL.length.toLocaleString("ko-KR");
-    $("cntFilter").textContent = curBase.length.toLocaleString("ko-KR");
-    $("cntView").textContent = curInView.length.toLocaleString("ko-KR");
-  }
-
-  function rebuildMarkers(items){
-    markers.clearLayers();
     markerByKey.clear();
+    markers.clearLayers();
 
-    items.forEach((it) => {
+    const ms = [];
+    for (const it of items){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
       const m = L.marker([la, ln], { icon: normalIcon });
+      m.__key = it._key;
+
+      m.bindPopup(miniPopupHtml(it), {
+        closeButton:false,
+        autoClose:true,
+        closeOnClick:false,
+        autoPan:false,
+        className:"pinPopWrap",
+        offset: L.point(0, -86)
+      });
+
       m.on("mouseover", () => {
+        if (isMapInteracting) return;
         setHoverKey(it._key);
-        highlightCard(it._key, false);
         highlightClusterOnlyByKey(it._key);
+
+        clearAllCardHighlights();
+        ensureCardVisible(it._key);
+        highlightCard(it._key, false);
       });
+
       m.on("mouseout", () => {
+        if (isMapInteracting) return;
         if (hoverKey === it._key) setHoverKey(null);
-        unhighlightCard(it._key);
         clearClusterHighlight();
+        clearAllCardHighlights();
+        if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
-      m.on("click", () => {
+
+      m.on("click", (ev) => {
+        try{
+          if (ev && ev.originalEvent){
+            L.DomEvent.stopPropagation(ev.originalEvent);
+            L.DomEvent.preventDefault(ev.originalEvent);
+          }
+        }catch(_){}
+
+        suspendViewportOnce = true;
+        map.once("moveend", () => { suspendViewportOnce = false; updateZoomUI(); });
+
+        try{ map.panTo(m.getLatLng(), { animate:true, duration:0.35 }); }catch(_){}
+
+        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
+          returnToCartAfterDetail = false;
+          openDetail(it, true);
+          return;
+        }
         openMiniPopupFor(it, m);
       });
 
-      m.bindPopup(miniPopupHtml(it), { closeButton:false, className:"miniPopup" });
-      m.on("popupopen", () => {
-        const el = m.getPopup()?.getElement();
-        if (!el) return;
-        const btnAdd = el.querySelector(".btnMiniAdd");
-        const btnOpen = el.querySelector(".btnMiniOpen");
-        if (btnAdd){
-          btnAdd.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            addToCart(it._key);
-            renderCart();
-          };
-        }
-        if (btnOpen){
-          btnOpen.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            returnToCartAfterDetail = false;
-            openDetail(it, true);
-          };
+      m.on("popupclose", () => {
+        if (activeMiniKey === it._key){
+          setActiveMiniKey(null);
+          updateMarkerVisual(it._key);
+          clearAllCardHighlights();
         }
       });
 
       markerByKey.set(it._key, m);
-      markers.addLayer(m);
-    });
-  }
-
-  function addToCart(key){
-    if (!key) return;
-    if (cartKeys.includes(key)) return;
-    cartKeys.push(key);
-    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-  }
-
-  function loadCart(){
-    try{
-      const v = sessionStorage.getItem(SS_CART);
-      cartKeys = v ? JSON.parse(v) : [];
-      if (!Array.isArray(cartKeys)) cartKeys = [];
-    }catch(_){
-      cartKeys = [];
+      ms.push(m);
     }
+
+    markers.addLayers(ms);
   }
 
-  function renderCart(){
-    $("cartCount").textContent = cartKeys.length.toString();
-    const list = $("cartList");
-    if (!list) return;
-
-    list.innerHTML = "";
-    let sum = 0;
-    let hasInquiry = false;
-
-    cartKeys.forEach((k) => {
-      const it = itemByKey.get(k);
-      if (!it) return;
-
-      const row = document.createElement("div");
-      row.className = "cartRow";
-      row.innerHTML = `
-        <div class="cartTitle">${escapeHtml(it.title || "-")}</div>
-        <div class="cartPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-        <button class="cartDel" data-k="${escapeHtml(k)}">✕</button>
-      `;
-      row.querySelector(".cartDel").onclick = (e) => {
-        e.preventDefault();
-        const key = e.currentTarget.getAttribute("data-k");
-        cartKeys = cartKeys.filter(x => x !== key);
-        try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-        renderCart();
-      };
-      list.appendChild(row);
-
-      const n = parsePriceNumber(it.price);
-      if (n == null) hasInquiry = true;
-      else sum += n;
-    });
-
-    const totalText = hasInquiry ? `${sum.toLocaleString("ko-KR")}원 + α(문의)` : `${sum.toLocaleString("ko-KR")}원`;
-    $("cartTotal").textContent = totalText;
-  }
-
-  function openCartModal(){
-    $("cartModal").style.display = "block";
-    renderCart();
-  }
-  function closeCartModal(){
-    $("cartModal").style.display = "none";
-  }
-
-  function loadRecent(){
-    try{
-      const v = sessionStorage.getItem(SS_RECENT);
-      recentKeys = v ? JSON.parse(v) : [];
-      if (!Array.isArray(recentKeys)) recentKeys = [];
-    }catch(_){
-      recentKeys = [];
-    }
+  function clampRecentPage(total){
+    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+    if (recentPage < 0) recentPage = 0;
+    if (recentPage > pages - 1) recentPage = pages - 1;
+    return pages;
   }
 
   function renderRecentPanel(){
-    const box = $("recentList");
-    if (!box) return;
+    const list = $("recentList");
+    const pager = $("recentPager");
+    const prev = $("recentPrev");
+    const next = $("recentNext");
+    const meta = $("recentPageMeta");
 
     const valid = recentKeys.filter(k => itemByKey.has(k));
     recentKeys = valid;
     try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
 
-    const total = valid.length;
-    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
-    if (recentPage >= pages) recentPage = pages - 1;
+    const pages = clampRecentPage(valid.length);
 
-    const from = recentPage * RECENT_PAGE_SIZE;
-    const slice = valid.slice(from, from + RECENT_PAGE_SIZE);
+    const start = recentPage * RECENT_PAGE_SIZE;
+    const slice = valid.slice(start, start + RECENT_PAGE_SIZE);
 
-    box.innerHTML = "";
+    $("recentMeta").textContent = `${slice.length}/4`;
+
+    list.innerHTML = "";
     slice.forEach((key) => {
       const it = itemByKey.get(key);
       if (!it) return;
 
       const el = document.createElement("div");
-      el.className = "recentItem";
+      el.className = "rRow";
       el.innerHTML = `
-        <div class="recentTitle">${escapeHtml(it.title || "-")}</div>
-        <div class="recentPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <div class="rThumb">
+          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
+        </div>
+        <div class="rName" title="${escapeHtml(it.title || "-")}">${escapeHtml(it.title || "-")}</div>
+        <div class="rPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <div class="rX" title="제거">✕</div>
       `;
-      el.onclick = () => {
+
+      el.addEventListener("click", () => {
         returnToCartAfterDetail = false;
         openDetail(it, true);
-      };
-      box.appendChild(el);
+      });
+
+      el.querySelector(".rX").addEventListener("click", (e) => {
+        e.preventDefault(); e.stopPropagation();
+        recentKeys = recentKeys.filter(x => x !== key);
+        try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+        renderRecentPanel();
+      });
+
+      list.appendChild(el);
     });
 
-    $("recentMeta").textContent = `${recentPage + 1}/${pages}`;
-    $("recentCount").textContent = `${Math.min(total, RECENT_PAGE_SIZE)}/${RECENT_PAGE_SIZE}`;
-    $("btnRecentPrev").disabled = (recentPage <= 0);
-    $("btnRecentNext").disabled = (recentPage >= pages - 1);
-  }
-
-  function runFilterAndRender(rebuild){
-    curBase = getFilteredBase();
-    if (rebuild){
-      rebuildMarkers(curBase);
-      lastInViewHash = "";
+    if (valid.length > RECENT_PAGE_SIZE){
+      pager.style.display = "flex";
+      meta.textContent = `${recentPage + 1}/${pages}`;
+      prev.disabled = (recentPage <= 0);
+      next.disabled = (recentPage >= pages - 1);
+    }else{
+      pager.style.display = "none";
+      meta.textContent = "1/1";
     }
-    updateInViewAndRender();
   }
 
-  function bindUI(){
-    $("ver").textContent = VERSION;
+  function saveCart(){
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    renderCartSummary();
+  }
+
+  function addToCart(key){
+    if (!key) return;
+    if (!cartKeys.includes(key)){
+      cartKeys.push(key);
+      saveCart();
+    }
+  }
+
+  function removeFromCart(key){
+    cartKeys = cartKeys.filter(k => k !== key);
+    saveCart();
+  }
+
+  function cartTotalText(){
+    let sum = 0;
+    let hasInquiry = false;
+    for (const key of cartKeys){
+      const it = itemByKey.get(key);
+      if (!it) continue;
+      const n = parsePriceNumber(it.price);
+      if (n == null) hasInquiry = true;
+      else sum += n;
+    }
+    const won = sum.toLocaleString("ko-KR") + "원";
+    return hasInquiry ? `${won} + α(문의)` : won;
+  }
+
+  function renderCartSummary(){
+    const valid = cartKeys.filter(k => itemByKey.has(k));
+    cartKeys = valid;
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    $("cartCount").textContent = String(cartKeys.length);
+  }
+
+  function openCartModal(){
+    const body = $("cartModalBody");
+    body.innerHTML = "";
+
+    const valid = cartKeys.filter(k => itemByKey.has(k));
+    if (!valid.length){
+      body.innerHTML = `<div style="color:rgba(255,255,255,.65); font-size:13px;">장바구니가 비어 있습니다.</div>`;
+    }else{
+      valid.forEach((key) => {
+        const it = itemByKey.get(key);
+        if (!it) return;
+
+        const row = document.createElement("div");
+        row.className = "mRow";
+        row.innerHTML = `
+          <div class="mLeft">
+            <div class="mThumb">${it.thumb ? `<img src="${it.thumb}" alt="">` : ``}</div>
+            <div class="mTitle">${escapeHtml(it.title || "-")}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="mPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+            <button class="mX" title="삭제">✕</button>
+          </div>
+        `;
+
+        row.addEventListener("click", ()=>{
+          returnToCartAfterDetail = true;
+          closeCartModal();
+          openDetail(it, true);
+        });
+
+        row.querySelector(".mX").addEventListener("click", (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          removeFromCart(key);
+          openCartModal();
+        });
+
+        body.appendChild(row);
+      });
+
+      const sum = document.createElement("div");
+      sum.className = "mSum";
+      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()}</div></div>
+                       <div style="color:rgba(255,255,255,.65);font-size:12px;font-weight:900;">총 ${valid.length}개</div>`;
+      body.appendChild(sum);
+    }
+
+    $("cartModalOverlay").style.display = "block";
+  }
+  function closeCartModal(){ $("cartModalOverlay").style.display = "none"; }
+
+  function moveMapToSearch(base){
+    if (!map) return;
+    if (!Array.isArray(base) || !base.length) return;
+
+    if (base.length === 1){
+      const it = base[0];
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      try{ map.setView([la, ln], 15, { animate:false }); }catch(_){}
+      forceIntegerZoom();
+      return;
+    }
+
+    let bounds = null;
+    for (const it of base){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      if (typeof la !== "number" || typeof ln !== "number") continue;
+      const ll = L.latLng(la, ln);
+      if (!bounds) bounds = L.latLngBounds(ll, ll);
+      else bounds.extend(ll);
+    }
+    if (!bounds || !bounds.isValid()) return;
+
+    try{ map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false }); }catch(_){}
+
+    try{
+      const z = Math.round(map.getZoom());
+      if (z < 8) map.setZoom(8, { animate:false });
+    }catch(_){}
+    forceIntegerZoom();
+  }
+
+  function applySearchFromUI(){
+    const qVal = $("q").value.trim();
+    activeQuery = qVal;
+    saveQueryHistory(activeQuery);
+
+    pinnedTopKey = null;
+
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
+
+    if (qVal && base.length){
+      moveMapToSearch(base);
+    }
+  }
+
+  function applyHomeView(animate){
+    if (!map) return;
+
+    suspendViewportOnce = true;
+
+    try{
+      if (animate) map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
+      else map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
+    }catch(_){}
+
+    map.once("moveend", () => {
+      suspendViewportOnce = false;
+      forceIntegerZoom();
+      viewportUpdate();
+    });
+  }
+
+  function resetAll(){
+    $("q").value = "";
+    activeQuery = "";
+    $("catHigh").value = "";
+    $("qSuggest").style.display = "none";
+    closeDetail(false);
+    closeMiniPopup();
+
+    shuffleSeed = Math.random();
+    pinnedTopKey = null;
+
+    applyHomeView(true);
+
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
+  }
+
+  async function fetchJsonRobust(url){
+    const res = await fetch(url, { cache:"no-store" });
+    if (!res.ok){
+      const text = await res.text().catch(()=> "");
+      throw new Error(`HTTP ${res.status} ${res.statusText} (응답 일부: ${text.slice(0, 80)})`);
+    }
+    const raw = await res.text();
+    try{
+      return JSON.parse(raw);
+    }catch(e){
+      const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
+      throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
+    }
+  }
+
+  function loadRecentAndCart(){
+    try{
+      const r = JSON.parse(sessionStorage.getItem(SS_RECENT) || "[]");
+      if (Array.isArray(r)) recentKeys = r.filter(x => typeof x === "string");
+    }catch(_){ recentKeys = []; }
+
+    try{
+      const c = JSON.parse(sessionStorage.getItem(SS_CART) || "[]");
+      if (Array.isArray(c)) cartKeys = c.filter(x => typeof x === "string");
+    }catch(_){ cartKeys = []; }
+  }
+
+  async function init(){
+    updateStickyHeights();
+    window.addEventListener("resize", updateStickyHeights);
+
+    const errClose = $("errClose");
+    if (errClose) errClose.addEventListener("click", hideErrorBanner);
+
+    buildMap();
+    setupInfiniteScroll();
+
+    // 미니모달 버튼 처리
+    document.addEventListener("click", (e) => {
+      const addBtn = e.target && e.target.closest ? e.target.closest(".pinPopAddCart") : null;
+      if (addBtn){
+        const key = addBtn.getAttribute("data-key");
+        if (key){
+          e.preventDefault();
+          e.stopPropagation();
+          addToCart(key);
+          renderCartSummary();
+        }
+        return;
+      }
+
+      const goBtn = e.target && e.target.closest ? e.target.closest(".pinPopGoDetail") : null;
+      if (goBtn){
+        const card = e.target.closest(".pinPopCard");
+        const key = card ? card.getAttribute("data-key") : null;
+        if (key){
+          const it = itemByKey.get(key);
+          if (it){
+            e.preventDefault();
+            e.stopPropagation();
+            returnToCartAfterDetail = false;
+            openDetail(it, true);
+          }
+        }
+        return;
+      }
+
+      const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
+      if (!card) return;
+      const key = card.getAttribute("data-key");
+      if (!key) return;
+
+      const it = itemByKey.get(key);
+      if (!it) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      returnToCartAfterDetail = false;
+      openDetail(it, true);
+    }, true);
+
+    // ===== 데이터 로드 1회 =====
+    let raw = [];
+    try{
+      const json = await fetchJsonRobust(DATA_URL);
+      raw = Array.isArray(json) ? json
+          : (Array.isArray(json.items)   ? json.items
+          :  Array.isArray(json.data)    ? json.data
+          :  Array.isArray(json.rows)    ? json.rows
+          :  Array.isArray(json.points)  ? json.points
+          :  Array.isArray(json.records) ? json.records
+          :  []);
+      hideErrorBanner();
+    }catch(err){
+      console.error("[DATA LOAD FAIL]", err);
+      showErrorBanner(err?.message || "data 로드 실패");
+      raw = [];
+    }
+
+    const pts = (raw || [])
+      .map(x => {
+        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
+        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
+        return { ...x, lat: la, lng: ln };
+      })
+      .filter(x => {
+        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
+        if (x.lat < 32.0 || x.lat > 39.8) return false;
+        if (x.lng < 123.0 || x.lng > 132.5) return false;
+        return true;
+      });
+
+    const uniqueKeys = makeUniqueKeys(pts);
+
+    ALL = pts.map((it, idx) => {
+      const t = assignTaxonomy(it);
+      const key = uniqueKeys[idx];
+
+      const row = { ...it, _key: key, _high: t.high, _low: t.low };
+
+      row._blobText = makeSearchText(row);
+      row._blob = searchNorm(row._blobText);
+      row._jamo = toJamo(row._blobText);
+
+      const toks = extractTokens(row._blobText);
+      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
+      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
+
+      return row;
+    });
+
+    applyOverlapJitter(ALL);
+
+    itemByKey.clear();
+    ALL.forEach(it => itemByKey.set(it._key, it));
+
+    const loaded = $("pillLoaded");
+    if (loaded) loaded.textContent = String(ALL.length);
 
     setCatHighOptions();
     buildSuggestPool();
 
-    $("btnReset").onclick = () => {
-      const q = $("q");
-      if (q) q.value = "";
-      activeQuery = "";
-      const cat = $("catHigh");
-      if (cat) cat.value = "";
-      pinnedTopKey = null;
-      lastInViewHash = "";
-      map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
-      runFilterAndRender(true);
-    };
+    loadRecentAndCart();
+    renderRecentPanel();
+    renderCartSummary();
 
-    $("q").addEventListener("input", (e) => {
-      activeQuery = e.target.value || "";
-      suggestForInput(activeQuery);
-      runFilterAndRender(false);
+    applyHomeView(false);
+    forceIntegerZoom();
+
+    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
+    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
+
+    $("recentPrev").addEventListener("click", ()=>{
+      recentPage = Math.max(0, recentPage - 1);
+      renderRecentPanel();
+    });
+    $("recentNext").addEventListener("click", ()=>{
+      const pages = Math.max(1, Math.ceil(recentKeys.length / RECENT_PAGE_SIZE));
+      recentPage = Math.min(pages - 1, recentPage + 1);
+      renderRecentPanel();
     });
 
-    $("q").addEventListener("keydown", (e) => {
-      const box = $("qSuggest");
-      const items = box ? Array.from(box.querySelectorAll(".qSugItem")) : [];
-      if (e.key === "ArrowDown"){
-        if (!items.length) return;
-        e.preventDefault();
-        sugIndex = Math.min(items.length - 1, sugIndex + 1);
-        items.forEach((x,i)=>x.classList.toggle("isSel", i===sugIndex));
-      }else if (e.key === "ArrowUp"){
-        if (!items.length) return;
-        e.preventDefault();
-        sugIndex = Math.max(0, sugIndex - 1);
-        items.forEach((x,i)=>x.classList.toggle("isSel", i===sugIndex));
-      }else if (e.key === "Enter"){
-        if (sugIndex >= 0 && items[sugIndex]){
-          e.preventDefault();
-          const v = items[sugIndex].dataset.value;
-          applySuggest(v);
-          sugIndex = -1;
-        }else{
-          saveQueryHistory(activeQuery);
-          showSuggest([]);
-          runFilterAndRender(true);
-        }
-      }else if (e.key === "Escape"){
-        showSuggest([]);
-        sugIndex = -1;
-      }
+    $("cartBtn").addEventListener("click", openCartModal);
+    $("cartClose").addEventListener("click", closeCartModal);
+    $("cartModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "cartModalOverlay") closeCartModal(); });
+
+    $("dAddCart").addEventListener("click", ()=>{
+      if (!currentOpenKey) return;
+      addToCart(currentOpenKey);
+      renderCartSummary();
     });
 
     $("catHigh").addEventListener("change", () => {
       pinnedTopKey = null;
-      runFilterAndRender(true);
+      const base = getFilteredBase();
+      renderMarkersAndListFromBase(base);
     });
 
-    $("btnZoomIn").onclick = () => map.zoomIn();
-    $("btnZoomOut").onclick = () => map.zoomOut();
+    const q = $("q");
+    const qBox = $("qSuggest");
 
-    $("btnCart").onclick = () => openCartModal();
-    $("cartClose").onclick = () => closeCartModal();
-    $("cartModal").addEventListener("click", (e) => {
-      if (e.target && e.target.id === "cartModal") closeCartModal();
+    q.addEventListener("focus", updateSuggest);
+    q.addEventListener("blur", ()=>{ setTimeout(()=>{ qBox.style.display = "none"; }, 140); });
+
+    document.addEventListener("click", (e)=>{
+      const wrap = q.parentElement;
+      if (!wrap.contains(e.target)){
+        qBox.style.display = "none";
+      }
     });
 
-    $("dClose").onclick = () => closeDetail(false);
-    $("dOverlay").addEventListener("click", (e) => {
-      if (e.target && e.target.id === "dOverlay") closeDetail(false);
+    let sugTimer = null;
+    q.addEventListener("input", () => {
+      clearTimeout(sugTimer);
+      sugTimer = setTimeout(updateSuggest, 60);
     });
 
-    $("errClose").onclick = () => hideErrorBanner();
+    q.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown"){ e.preventDefault(); moveSugIndex(+1); return; }
+      if (e.key === "ArrowUp"){ e.preventDefault(); moveSugIndex(-1); return; }
+      if (e.key === "Enter"){
+        if (pickSugIndex()) return;
+        e.preventDefault();
+        applySearchFromUI();
+        return;
+      }
+      if (e.key === "Escape"){
+        qBox.style.display = "none";
+        sugIndex = -1;
+        return;
+      }
+      if (e.key === "Backspace" && !q.value){
+        e.preventDefault();
+        resetAll();
+      }
+    });
 
-    $("btnRecentPrev").onclick = () => { recentPage = Math.max(0, recentPage - 1); renderRecentPanel(); };
-    $("btnRecentNext").onclick = () => { recentPage = recentPage + 1; renderRecentPanel(); };
+    $("qGo").addEventListener("click", applySearchFromUI);
+    $("reset").addEventListener("click", resetAll);
+    $("titleReset").addEventListener("click", resetAll);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Backspace") return;
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+      const inTyping = (tag === "input" || tag === "textarea" || e.target.isContentEditable);
+      if (inTyping) return;
+      e.preventDefault();
+      resetAll();
+    });
+
+    $("dx").addEventListener("click", () => closeDetail(false));
+    $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
 
     window.addEventListener("hashchange", () => {
       if (suppressHashHandler) return;
-      openDetailByHash();
+      if (location.hash.startsWith("#item=")) openDetailByHash();
+      else closeDetail(true);
     });
-  }
 
-  async function init(){
-    bindUI();
-    loadCart();
-    loadRecent();
-
-    initMap();
-    setupInfiniteScroll();
-
-    await loadData();
-
-    curBase = ALL.slice();
-    rebuildMarkers(curBase);
-
-    runFilterAndRender(true);
-    renderCart();
-    renderRecentPanel();
-
+    const base = getFilteredBase();
+    renderMarkersAndListFromBase(base);
     openDetailByHash();
   }
 
-  init().catch((e) => {
-    console.error(e);
-    showErrorBanner(e?.message || String(e));
-    $("status").textContent = "Loaded: 0";
+  // DOM 준비 후 실행 (index.html에서 defer로 불러오는 것을 전제로 함)
+  document.addEventListener("DOMContentLoaded", () => {
+    init().catch(err => {
+      console.error("[INIT FAIL]", err);
+      showErrorBanner(err?.message || "초기화 실패");
+    });
   });
 
 })();
