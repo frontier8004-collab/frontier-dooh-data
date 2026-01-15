@@ -1304,8 +1304,11 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
-      m.__key = it._key;
+     const [c,s] = getCategoryColor(it.media_group);
+const m = L.marker([la, ln], { icon: makePinIcon(c,s) });
+m._baseIcon = { c, s };
+m._key = it._key;
+
 
       m.bindPopup(miniPopupHtml(it), {
         closeButton:false,
