@@ -524,6 +524,8 @@
     "복합 쇼핑몰 / 대형마트": ["rgba(255,240,160,0.95)", "rgba(0,0,0,0.35)"],       // 연노랑
     "극장 / 레저 / 휴양 시설": ["rgba(255,200,150,0.95)", "rgba(0,0,0,0.35)"],      // 연주황
     "생활 밀착형 매체":       ["rgba(220,190,255,0.95)", "rgba(0,0,0,0.35)"],       // 연보라
+     "기타": ["rgba(200,200,200,0.95)", "rgba(0,0,0,0.35)"],
+
   };
 
   const __pinIconCache = new Map();
@@ -532,9 +534,10 @@
     return (it && typeof it._high === "string") ? it._high : "";
   }
 
-  function __getPinIconByHigh(high, isHover){
-    const colors = PIN_COLORS_BY_HIGH[high];
-    if (!colors) return isHover ? hoverIcon : normalIcon;
+function _getPinIconByHigh(high, isHover){
+  const h = (high && typeof high === "string" && high.trim()) ? high.trim() : "기타";
+  const colors = PIN_COLORS_BY_HIGH[h] || PIN_COLORS_BY_HIGH["기타"];
+
 
     const key = high + "|" + (isHover ? "H" : "N");
     const cached = __pinIconCache.get(key);
