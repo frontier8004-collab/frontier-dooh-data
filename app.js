@@ -501,17 +501,6 @@
       </div>
     `;
   }
-function getPinFillByHigh(high){
-  const h = (high || "").toLowerCase();
-
-  if (h.includes("교통")) return "rgba(162,222,204,0.95)"; // 민트
-  if (h.includes("전광") || h.includes("빌보드") || h.includes("외벽")) return "rgba(255,170,200,0.95)"; // 연핑크
-  if (h.includes("쇼핑") || h.includes("몰") || h.includes("마트")) return "rgba(255,230,150,0.95)"; // 연노랑
-  if (h.includes("극장") || h.includes("영화") || h.includes("레저")) return "rgba(255,200,140,0.95)"; // 연주황
-  if (h.includes("생활") || h.includes("편의") || h.includes("동네")) return "rgba(200,180,255,0.95)"; // 연보라
-
-  return "rgba(42,158,255,0.92)"; // 기본 파랑
-}
 
   const normalIcon = L.divIcon({
     className:"",
@@ -593,7 +582,7 @@ function getPinFillByHigh(high){
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(L.divIcon({ className:"", html: (mint ? pinSvgHover(getPinFillByHigh(m._mg), "rgba(0,0,0,0.35)") : pinSvg(getPinFillByHigh(m._mg), "rgba(255,255,255,0.85)")), iconSize:(mint ? [36,50] : [30,42]), iconAnchor:(mint ? [18,49] : [15,41]) }));
+      m.setIcon(mint ? hoverIcon : normalIcon);
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
@@ -644,7 +633,7 @@ function getPinFillByHigh(high){
     activeMiniKey = null;
     for (const k of markerByKey.keys()){
       try{
-        const m.setIcon(L.divIcon({ className:"", html: pinSvg(getPinFillByHigh(m._mg), "rgba(255,255,255,0.85)"), iconSize:[30,42], iconAnchor:[15,41] }));
+        const m = markerByKey.get(k);
         m.setIcon(normalIcon);
         m.setZIndexOffset(0);
       }catch(_){}
@@ -1309,9 +1298,9 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: L.divIcon({ className:"", html: pinSvg(getPinFillByHigh(it.media_group), "rgba(255,255,255,0.85)"), iconSize:[30,42], iconAnchor:[15,41] }) });
+      const m = L.marker([la, ln], { icon: normalIcon });
       m.__key = it._key;
-      m._mg = it.media_group || "";
+
       m.bindPopup(miniPopupHtml(it), {
         closeButton:false,
         autoClose:true,
