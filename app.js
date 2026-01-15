@@ -585,10 +585,8 @@
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
- const { c, s } = m._baseIcon || {};
-m.setIcon(mint ? makeHoverPinIcon(c,s) : makePinIcon(c,s));
-m.setZIndexOffset(mint ? 9999 : 0);
-
+      m.setIcon(mint ? hoverIcon : normalIcon);
+      m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
 
@@ -638,10 +636,9 @@ m.setZIndexOffset(mint ? 9999 : 0);
     activeMiniKey = null;
     for (const k of markerByKey.keys()){
       try{
-       const m = markerByKey.get(k);
-const { c, s } = m._baseIcon || {};
-m.setIcon(makePinIcon(c,s));
-m.setZIndexOffset(0);
+        const m = markerByKey.get(k);
+        m.setIcon(normalIcon);
+        m.setZIndexOffset(0);
       }catch(_){}
     }
     clearClusterHighlight();
@@ -1304,11 +1301,8 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-     const [c,s] = getCategoryColor(it.media_group);
-const m = L.marker([la, ln], { icon: makePinIcon(c,s) });
-m._baseIcon = { c, s };
-m._key = it._key;
-
+      const m = L.marker([la, ln], { icon: normalIcon });
+      m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
         closeButton:false,
