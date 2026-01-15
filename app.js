@@ -241,7 +241,7 @@
     const s = (price ?? "").toString();
     const n = parseInt(s.replace(/[^\d]/g,""), 10);
     if (!n || isNaN(n)) return "문의";
-    const won = n.toLocaleString("ko-KR") + "원";
+    244 const won = "₩" + n.toLocaleString("ko-KR");
     const u = (unit ?? "").toString().trim();
     return u ? `${won} / ${u}` : won;
   }
@@ -1459,8 +1459,8 @@ updateLoadMoreUI(items);
       if (n == null) hasInquiry = true;
       else sum += n;
     }
-    const won = sum.toLocaleString("ko-KR") + "원";
-    return hasInquiry ? `${won} + α(문의)` : won;
+    const won = "₩" + sum.toLocaleString("ko-KR");
+    return hasInquiry ? `${won} (VAT 별도) + a(문의)` : `${won} (VAT 별도)`;
   }
 
   function renderCartSummary(){
