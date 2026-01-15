@@ -1384,13 +1384,17 @@ updateLoadMoreUI(items);
     const valid = recentKeys.filter(k => itemByKey.has(k));
     recentKeys = valid;
     try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+    if (recentKeys.length > 99){
+    recentKeys = recentKeys.slice(recentKeys.length - 99);
+    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
+}
 
     const pages = clampRecentPage(valid.length);
 
     const start = recentPage * RECENT_PAGE_SIZE;
     const slice = valid.slice(start, start + RECENT_PAGE_SIZE);
 
-    $("recentMeta").textContent = `${slice.length}/4`;
+   $("recentMeta").textContent = `${Math.min(valid.length, 99)}`;
 
     list.innerHTML = "";
     slice.forEach((key) => {
