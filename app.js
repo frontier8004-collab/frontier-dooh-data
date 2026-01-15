@@ -237,15 +237,14 @@
     return Array.from(vars).filter(v => v && v.length >= 1);
   }
 
-function fmtWon(price, unit){
-  const s = (price ?? "").toString();
-  const n = parseInt(s.replace(/[^\d]/g,""), 10);
-  if (!n || isNaN(n)) return "문의";
-  const won = "₩" + n.toLocaleString("ko-KR");
-  const u = (unit ?? "").toString().trim();
-  return u ? `${won} / ${u}` : won;
-}
-
+  function fmtWon(price, unit){
+    const s = (price ?? "").toString();
+    const n = parseInt(s.replace(/[^\d]/g,""), 10);
+    if (!n || isNaN(n)) return "문의";
+    const won = n.toLocaleString("ko-KR") + "원";
+    const u = (unit ?? "").toString().trim();
+    return u ? `${won} / ${u}` : won;
+  }
 
   function parsePriceNumber(price){
     const s = (price ?? "").toString();
@@ -503,42 +502,18 @@ function fmtWon(price, unit){
     `;
   }
 
-function getPinColors(high){
-  const h = (high || "").toLowerCase();
-
-  if (h.includes("교통")) return ["rgba(162,222,204,0.95)", "rgba(0,0,0,0.35)"];          // 민트
-  if (h.includes("전광") || h.includes("빌보드") || h.includes("외벽"))
-    return ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"];                               // 연핑크
-  if (h.includes("쇼핑") || h.includes("몰") || h.includes("마트"))
-    return ["rgba(255,230,150,0.95)", "rgba(0,0,0,0.35)"];                               // 연노랑
-  if (h.includes("극장") || h.includes("영화") || h.includes("레저"))
-    return ["rgba(255,200,140,0.95)", "rgba(0,0,0,0.35)"];                               // 연주황
-  if (h.includes("생활") || h.includes("편의") || h.includes("동네"))
-    return ["rgba(200,180,255,0.95)", "rgba(0,0,0,0.35)"];                               // 연보라
-
-  return ["rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"];                            // 기본(파랑)
-}
-
-const normalIcon = (high) => {
-  const [fill, stroke] = getPinColors(high);
-  return L.divIcon({
+  const normalIcon = L.divIcon({
     className:"",
-    html: pinSvg(fill, stroke),
+    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-};
-
-const hoverIcon = (high) => {
-  const [fill, stroke] = getPinColors(high);
-  return L.divIcon({
+  const hoverIcon  = L.divIcon({
     className:"",
-    html: pinSvgHover(fill, stroke),
+    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
-};
-
 
   /* 유니크 키 생성 */
   function stableHash(seed, str){
@@ -1323,7 +1298,7 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-   1326 const m = L.marker([la, ln], { icon: normalIcon(it.high) });
+      const m = L.marker([la, ln], { icon: normalIcon });
       m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
@@ -1474,20 +1449,19 @@ updateLoadMoreUI(items);
     saveCart();
   }
 
-function cartTotalText(){
-  let sum = 0;
-  let hasInquiry = false;
-  for (const key of cartKeys){
-    const it = itemByKey.get(key);
-    if (!it) continue;
-    const n = parsePriceNumber(it.price);
-    if (n === null) hasInquiry = true;
-    else sum += n;
+  function cartTotalText(){
+    let sum = 0;
+    let hasInquiry = false;
+    for (const key of cartKeys){
+      const it = itemByKey.get(key);
+      if (!it) continue;
+      const n = parsePriceNumber(it.price);
+      if (n == null) hasInquiry = true;
+      else sum += n;
+    }
+    const won = sum.toLocaleString("ko-KR") + "원";
+    return hasInquiry ? `${won} + α(문의)` : won;
   }
-  const won = "₩" + sum.toLocaleString("ko-KR");
-  return hasInquiry ? `${won} + @(문의)` : won;
-}
-
 
   function renderCartSummary(){
     const valid = cartKeys.filter(k => itemByKey.has(k));
@@ -1538,8 +1512,7 @@ function cartTotalText(){
 
       const sum = document.createElement("div");
       sum.className = "mSum";
-      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()} (VAT 별도)</div></div>
-
+      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()}</div></div>
                        <div style="color:rgba(255,255,255,.65);font-size:12px;font-weight:900;">총 ${valid.length}개</div>`;
       body.appendChild(sum);
     }
@@ -1882,3 +1855,4 @@ function cartTotalText(){
   });
 
 })();
+
