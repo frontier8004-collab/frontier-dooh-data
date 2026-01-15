@@ -237,14 +237,15 @@
     return Array.from(vars).filter(v => v && v.length >= 1);
   }
 
-  function fmtWon(price, unit){
-    const s = (price ?? "").toString();
-    const n = parseInt(s.replace(/[^\d]/g,""), 10);
-    if (!n || isNaN(n)) return "문의";
-    const won = n.toLocaleString("ko-KR") + "원";
-    const u = (unit ?? "").toString().trim();
-    return u ? `${won} / ${u}` : won;
-  }
+function fmtWon(price, unit){
+  const s = (price ?? "").toString();
+  const n = parseInt(s.replace(/[^\d]/g,""), 10);
+  if (!n || isNaN(n)) return "문의";
+  const won = "₩" + n.toLocaleString("ko-KR");
+  const u = (unit ?? "").toString().trim();
+  return u ? `${won} / ${u}` : won;
+}
+
 
   function parsePriceNumber(price){
     const s = (price ?? "").toString();
