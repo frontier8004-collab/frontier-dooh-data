@@ -1309,8 +1309,7 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: L.divIcon({ className:"", html: pinSvg(getPinFillByHigh(it.high), "rgba(255,255,255,0.85)"), iconSize:[30,42], iconAnchor:[15,41] }) });
-      console.log("PIN_HIGH_DEBUG", it.high, it.category_high, it.category, it.low, it.category_low, it.media_group);
+      const m = L.marker([la, ln], { icon: L.divIcon({ className:"", html: pinSvg(getPinFillByHigh(it.media_group), "rgba(255,255,255,0.85)"), iconSize:[30,42], iconAnchor:[15,41] }) });
       m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
