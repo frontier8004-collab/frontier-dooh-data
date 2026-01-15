@@ -638,9 +638,10 @@ m.setZIndexOffset(mint ? 9999 : 0);
     activeMiniKey = null;
     for (const k of markerByKey.keys()){
       try{
-        const m = markerByKey.get(k);
-        m.setIcon(normalIcon);
-        m.setZIndexOffset(0);
+       const m = markerByKey.get(k);
+const { c, s } = m._baseIcon || {};
+m.setIcon(makePinIcon(c,s));
+m.setZIndexOffset(0);
       }catch(_){}
     }
     clearClusterHighlight();
