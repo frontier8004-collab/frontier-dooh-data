@@ -1453,18 +1453,27 @@ updateLoadMoreUI(items);
   }
 
   function cartTotalText(){
-    let sum = 0;
-    let hasInquiry = false;
-    for (const key of cartKeys){
-      const it = itemByKey.get(key);
-      if (!it) continue;
-      const n = parsePriceNumber(it.price);
-      if (n == null) hasInquiry = true;
-      else sum += n;
-    }
-    const won = sum.toLocaleString("ko-KR") + "원";
-    return hasInquiry ? `${won} + α(문의)` : won;
+  let sum = 0;
+  let hasInquiry = false;
+
+  for (const key of cartKeys){
+    const it = itemByKey.get(key);
+    if (!it) continue;
+
+    const n = parsePriceNumber(it.price);
+    if (n === null) hasInquiry = true;
+    else sum += n;
   }
+
+  if (sum === 0 && hasInquiry){
+    return "문의";
+  }
+
+  const won = "₩" + sum.toLocaleString("ko-KR");
+  return hasInquiry
+    ? `${won} (VAT 별도) + 문의`
+    : `${won} (VAT 별도)`;
+}
 
   function renderCartSummary(){
     const valid = cartKeys.filter(k => itemByKey.has(k));
