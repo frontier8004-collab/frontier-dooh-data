@@ -1323,7 +1323,7 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
+   1326 const m = L.marker([la, ln], { icon: normalIcon(it.high) });
       m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
