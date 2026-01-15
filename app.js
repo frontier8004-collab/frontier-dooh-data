@@ -585,8 +585,10 @@
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(mint ? hoverIcon : normalIcon);
-      m.setZIndexOffset(mint ? 9999 : 0);
+ const { c, s } = m._baseIcon || {};
+m.setIcon(mint ? makeHoverPinIcon(c,s) : makePinIcon(c,s));
+m.setZIndexOffset(mint ? 9999 : 0);
+
     }catch(_){}
   }
 
