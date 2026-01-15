@@ -503,18 +503,42 @@ function fmtWon(price, unit){
     `;
   }
 
-  const normalIcon = L.divIcon({
+function getPinColors(high){
+  const h = (high || "").toLowerCase();
+
+  if (h.includes("교통")) return ["rgba(162,222,204,0.95)", "rgba(0,0,0,0.35)"];          // 민트
+  if (h.includes("전광") || h.includes("빌보드") || h.includes("외벽"))
+    return ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"];                               // 연핑크
+  if (h.includes("쇼핑") || h.includes("몰") || h.includes("마트"))
+    return ["rgba(255,230,150,0.95)", "rgba(0,0,0,0.35)"];                               // 연노랑
+  if (h.includes("극장") || h.includes("영화") || h.includes("레저"))
+    return ["rgba(255,200,140,0.95)", "rgba(0,0,0,0.35)"];                               // 연주황
+  if (h.includes("생활") || h.includes("편의") || h.includes("동네"))
+    return ["rgba(200,180,255,0.95)", "rgba(0,0,0,0.35)"];                               // 연보라
+
+  return ["rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"];                            // 기본(파랑)
+}
+
+const normalIcon = (high) => {
+  const [fill, stroke] = getPinColors(high);
+  return L.divIcon({
     className:"",
-    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
+    html: pinSvg(fill, stroke),
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-  const hoverIcon  = L.divIcon({
+};
+
+const hoverIcon = (high) => {
+  const [fill, stroke] = getPinColors(high);
+  return L.divIcon({
     className:"",
-    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
+    html: pinSvgHover(fill, stroke),
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
+};
+
 
   /* 유니크 키 생성 */
   function stableHash(seed, str){
