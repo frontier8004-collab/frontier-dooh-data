@@ -1450,19 +1450,20 @@ updateLoadMoreUI(items);
     saveCart();
   }
 
-  function cartTotalText(){
-    let sum = 0;
-    let hasInquiry = false;
-    for (const key of cartKeys){
-      const it = itemByKey.get(key);
-      if (!it) continue;
-      const n = parsePriceNumber(it.price);
-      if (n == null) hasInquiry = true;
-      else sum += n;
-    }
-    const won = sum.toLocaleString("ko-KR") + "원";
-    return hasInquiry ? `${won} + α(문의)` : won;
+function cartTotalText(){
+  let sum = 0;
+  let hasInquiry = false;
+  for (const key of cartKeys){
+    const it = itemByKey.get(key);
+    if (!it) continue;
+    const n = parsePriceNumber(it.price);
+    if (n === null) hasInquiry = true;
+    else sum += n;
   }
+  const won = "₩" + sum.toLocaleString("ko-KR");
+  return hasInquiry ? `${won} + @(문의)` : won;
+}
+
 
   function renderCartSummary(){
     const valid = cartKeys.filter(k => itemByKey.has(k));
