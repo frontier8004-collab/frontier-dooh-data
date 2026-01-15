@@ -644,7 +644,7 @@ function getPinFillByHigh(high){
     activeMiniKey = null;
     for (const k of markerByKey.keys()){
       try{
-        const m = markerByKey.get(k);
+        const m.setIcon(L.divIcon({ className:"", html: pinSvg(getPinFillByHigh(m._mg), "rgba(255,255,255,0.85)"), iconSize:[30,42], iconAnchor:[15,41] }));
         m.setIcon(normalIcon);
         m.setZIndexOffset(0);
       }catch(_){}
