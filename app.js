@@ -1488,7 +1488,7 @@ updateLoadMoreUI(items);
 
     const valid = cartKeys.filter(k => itemByKey.has(k));
     if (!valid.length){
-      body.innerHTML = `<div style="color:rgba(255,255,255,.65); font-size:13px;">장바구니가 비어 있습니다.</div>`;
+      body.innerHTML = `<div style="color:rgba(255,255,255,.65); font-size:13px;">담아둔 목록이 비어 있습니다.</div>`;
     }else{
       valid.forEach((key) => {
         const it = itemByKey.get(key);
