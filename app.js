@@ -593,7 +593,7 @@ function getPinFillByHigh(high){
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(mint ? hoverIcon : normalIcon);
+      m.setIcon(L.divIcon({ className:"", html: (mint ? pinSvgHover(getPinFillByHigh(itBemyKey.get(m._key)?.media_group), "rgba(0,0,0,0.35)") : pinSvg(getPinFillByHigh(itBemyKey.get(m._key)?.media_group), "rgba(255,255,255,0.85)")), iconSize:(mint ? [36,50] : [30,42]), iconAnchor:(mint ? [18,49] : [15,41]) }));
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
