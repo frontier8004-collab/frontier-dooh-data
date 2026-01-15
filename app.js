@@ -505,18 +505,46 @@
     `;
   }
 
-  const normalIcon = L.divIcon({
+  const CATEGORY_COLORS = {
+  "전광판": ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"],
+  "빌보드": ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"],
+  "외벽": ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"],
+
+  "교통매체": ["rgba(162,222,204,0.95)", "rgba(0,0,0,0.35)"],
+
+  "복합쇼핑몰": ["rgba(255,240,160,0.95)", "rgba(0,0,0,0.35)"],
+  "대형마트": ["rgba(255,240,160,0.95)", "rgba(0,0,0,0.35)"],
+
+  "극장": ["rgba(255,200,150,0.95)", "rgba(0,0,0,0.35)"],
+  "레저": ["rgba(255,200,150,0.95)", "rgba(0,0,0,0.35)"],
+
+  "생활": ["rgba(220,190,255,0.95)", "rgba(0,0,0,0.35)"],
+};
+
+function getCategoryColor(group){
+  for(const k in CATEGORY_COLORS){
+    if(group && group.includes(k)) return CATEGORY_COLORS[k];
+  }
+  return ["rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"];
+}
+
+function makePinIcon(color, shadow){
+  return L.divIcon({
     className:"",
-    html: pinSvg("rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"),
+    html: pinSvg(color, shadow),
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-  const hoverIcon  = L.divIcon({
+}
+
+function makeHoverPinIcon(color, shadow){
+  return L.divIcon({
     className:"",
-    html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
+    html: pinSvgHover(color, shadow),
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
+}
 
   /* 유니크 키 생성 */
   function stableHash(seed, str){
@@ -585,7 +613,10 @@
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(mint ? hoverIcon : normalIcon);
+      const { c, s } = m._baseIcon || {};
+m.setIcon(mint ? makeHoverPinIcon(c,s) : makePinIcon(c,s));
+m.setZIndexOffset(mint ? 9999 : 0);
+
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
@@ -636,9 +667,10 @@
     activeMiniKey = null;
     for (const k of markerByKey.keys()){
       try{
-        const m = markerByKey.get(k);
-        m.setIcon(normalIcon);
-        m.setZIndexOffset(0);
+       const m = markerByKey.get(k);
+const { c, s } = m._baseIcon || {};
+m.setIcon(makePinIcon(c,s));
+m.setZIndexOffset(0); 
       }catch(_){}
     }
     clearClusterHighlight();
@@ -1301,7 +1333,10 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
+      const [c,s] = getCategoryColor(it.media_group);
+const m = L.marker([la, ln], { icon: makePinIcon(c,s) });
+m._baseIcon = { c, s };
+
       m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
