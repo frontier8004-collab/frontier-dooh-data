@@ -1,15 +1,16 @@
 /* =========================================================
-   Frontier DOOH 전국 DB
-   JS 분리 버전 (v1.1.27 기반 안정화)
-   - index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
-   - index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
-   ========================================================= */
+Frontier DOOH 전국 DB
+JS 분리 버전 (v1.1.27 기반 안정화)
 
+- index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
+- index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
+========================================================= */
 (() => {
   "use strict";
 
-  const VERSION = "v1.1.27";
- const DATA_URL = "./data_public.json";
+  const VERSION = "v1.1.27.2";
+  const DATA_URL = "./data_public.json";
+
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -17,7 +18,7 @@
     { high:"극장 / 레저 / 휴양 시설", lows:["극장","레저","휴양, 편의시설"] },
     { high:"생활 밀착형 매체", lows:["엘리베이터 광고","병원","편의점","운동시설","캠퍼스","식당, 주점","약국","헤어&뷰티살롱","드럭스토어"] },
   ];
-   
+
   const HOME_ZOOM = 8;
 
   const HOME_BOUNDS_FIXED = { north:39.5, south:33.0, west:123.5, east:130.5 };
@@ -46,18 +47,19 @@
   const BATCH = 36;
   const LIST_INITIAL_LIMIT = 200;
   const LIST_MORE_STEP = 200;
-  const STEP  = 24;
+  const STEP = 24;
+
   let renderLimit = BATCH;
   let curInView = [];
   let curBase = [];
-
   let currentOpenKey = null;
+
   let suppressHashHandler = false;
-
   let highlightedClusterEl = null;
-  let isMapInteracting = false;
 
+  let isMapInteracting = false;
   let suspendViewportOnce = false;
+
   let activeQuery = "";
 
   const QUICK_SUGGEST = ["강남구","강남역","홍대","홍대역","오송역","전광판","KTX","공항"];
@@ -71,8 +73,8 @@
   let shuffleSeed = Math.random();
 
   const SS_RECENT = "frontier_recent_viewed_v1";
-  const SS_CART   = "frontier_cart_v1";
-  const LS_QHIST  = "frontier_query_hist_v1";
+  const SS_CART = "frontier_cart_v1";
+  const LS_QHIST = "frontier_query_hist_v1";
 
   let recentKeys = [];
   let cartKeys = [];
@@ -111,8 +113,11 @@
 
   function escapeHtml(s){
     return (s ?? "").toString()
-      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#39;");
   }
 
   function searchNorm(s){
@@ -122,7 +127,10 @@
       .replace(/\s+/g,"")
       .replace(/[()［］\[\]{}<>.,\-_/\\]/g,"");
   }
-  function stripDigits(s){ return (s ?? "").toString().replace(/[0-9]/g,""); }
+
+  function stripDigits(s){
+    return (s ?? "").toString().replace(/[0-9]/g,"");
+  }
 
   function extractTokens(text){
     const s = (text ?? "").toString();
@@ -131,13 +139,15 @@
   }
 
   // 한글 자모 분해
-  const CHO  = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+  const CHO = ["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
   const JUNG = ["ㅏ","ㅐ","ㅑ","ㅒ","ㅓ","ㅔ","ㅕ","ㅖ","ㅗ","ㅘ","ㅙ","ㅚ","ㅛ","ㅜ","ㅝ","ㅞ","ㅟ","ㅠ","ㅡ","ㅢ","ㅣ"];
   const JONG = ["","ㄱ","ㄲ","ㄳ","ㄴ","ㄵ","ㄶ","ㄷ","ㄹ","ㄺ","ㄻ","ㄼ","ㄽ","ㄾ","ㄿ","ㅀ","ㅁ","ㅂ","ㅄ","ㅅ","ㅆ","ㅇ","ㅈ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+
   function isCompatConsonant(c){
     const code = c.charCodeAt(0);
     return (code >= 0x3131 && code <= 0x314E);
   }
+
   function toJamo(str){
     const s = (str ?? "").toString();
     let out = "";
@@ -146,7 +156,7 @@
       const code = ch.charCodeAt(0);
       if (code >= 0xAC00 && code <= 0xD7A3){
         const v = code - 0xAC00;
-        const cho  = Math.floor(v / 588);
+        const cho = Math.floor(v / 588);
         const jung = Math.floor((v % 588) / 28);
         const jong = v % 28;
         out += (CHO[cho] || "") + (JUNG[jung] || "") + (JONG[jong] || "");
@@ -175,36 +185,27 @@
   function isProtectedShortWord(raw){
     const t = (raw ?? "").toString().trim();
     if (!t) return false;
-
     const n0 = searchNorm(t);
     if (PROTECT_SHORT_NORM.has(n0)) return true;
-
     const n1 = stripAdminSuffix(stripDigits(n0));
     if (n1 && PROTECT_SHORT_NORM.has(n1)) return true;
-
     const baseStation = searchNorm(stripStationSuffix(t));
     if (baseStation && PROTECT_SHORT_NORM.has(baseStation)) return true;
-
     return false;
   }
 
   function tokenVariantsForLoose(tok){
     const raw = (tok ?? "").toString().trim();
     if (!raw) return [];
-
     const t0 = searchNorm(raw);
     const t1 = stripDigits(t0);
     const vars = new Set();
-
     if (t0) vars.add(t0);
     if (t1) vars.add(t1);
-
     const a0 = stripAdminSuffix(t1);
     if (a0 && a0 !== t1) vars.add(a0);
-
     const r0 = stripRoadSuffix(t1);
     if (r0 && r0 !== t1) vars.add(r0);
-
     const s0 = searchNorm(stripStationSuffix(raw));
     if (s0 && s0 !== t1) vars.add(s0);
 
@@ -237,17 +238,14 @@
     return Array.from(vars).filter(v => v && v.length >= 1);
   }
 
- function fmtWon(price, unit){
-  const s = (price ?? "").toString();
-  const n = parseInt(s.replace(/[^\d]/g,""), 10);
-  if (!n || isNaN(n)) return "문의";
-
-  const won = "₩" + n.toLocaleString("ko-KR");
-  const u = (unit ?? "").toString().trim();
-
-  return u ? `${won} / ${u}` : won;
-}
-
+  function fmtWon(price, unit){
+    const s = (price ?? "").toString();
+    const n = parseInt(s.replace(/[^\d]/g,""), 10);
+    if (!n || isNaN(n)) return "문의";
+    const won = "₩" + n.toLocaleString("ko-KR");
+    const u = (unit ?? "").toString().trim();
+    return u ? `${won} / ${u}` : won;
+  }
 
   function parsePriceNumber(price){
     const s = (price ?? "").toString();
@@ -262,14 +260,16 @@
     return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
   }
 
-  function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
+  function norm(s){
+    return (s ?? "").toString().toLowerCase().replace(/\s+/g,"");
+  }
 
   function normalizeLow(raw){
     const s = norm(raw);
-    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led"))
-      return "전광판";
+    if (s.includes("전광판") || s.includes("옥외전광판") || s.includes("디지털") || s.includes("digital") || s.includes("signage") || s.includes("screen") || s.includes("display") || s.includes("led")) return "전광판";
     if (s.includes("빌보드") || s.includes("billboard")) return "빌보드";
     if (s.includes("외벽") || s.includes("미디어파사드") || s.includes("facade") || s.includes("façade")) return "외벽";
+
     if (s.includes("지하철") || s.includes("subway") || s.includes("metro")) return "지하철 광고";
     if (s.includes("택시") || s.includes("taxi")) return "택시 광고";
     if (s.includes("ktx")) return "KTX 광고";
@@ -279,6 +279,7 @@
     if (s.includes("야립") || s.includes("도로")) return "주요 도로 야립 광고";
     if (s.includes("차량") || s.includes("vehicle")) return "차량 광고";
     if (s.includes("버스") || s.includes("bus")) return "버스광고";
+
     return "";
   }
 
@@ -288,21 +289,11 @@
     const title = norm(it.title);
     const any = mg + " " + cl + " " + title;
 
-    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽"))
-      return "전광판 / 빌보드 / 외벽";
-
-    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport"))
-      return "교통매체";
-
-    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛"))
-      return "복합 쇼핑몰 / 대형마트";
-
-    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트"))
-      return "극장 / 레저 / 휴양 시설";
-
-    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스"))
-      return "생활 밀착형 매체";
-
+    if (any.includes("전광판") || any.includes("billboard") || any.includes("led") || any.includes("digital") || any.includes("signage") || any.includes("screen") || any.includes("display") || any.includes("미디어파사드") || any.includes("facade") || any.includes("façade") || any.includes("외벽")) return "전광판 / 빌보드 / 외벽";
+    if (any.includes("교통") || any.includes("버스") || any.includes("지하철") || any.includes("택시") || any.includes("ktx") || any.includes("터미널") || any.includes("공항") || any.includes("airport")) return "교통매체";
+    if (any.includes("쇼핑몰") || any.includes("마트") || any.includes("대형") || any.includes("백화점") || any.includes("아울렛")) return "복합 쇼핑몰 / 대형마트";
+    if (any.includes("극장") || any.includes("cgv") || any.includes("메가박스") || any.includes("롯데시네마") || any.includes("레저") || any.includes("휴양") || any.includes("리조트")) return "극장 / 레저 / 휴양 시설";
+    if (any.includes("엘리베이터") || any.includes("병원") || any.includes("편의점") || any.includes("약국") || any.includes("캠퍼스") || any.includes("식당") || any.includes("주점") || any.includes("뷰티") || any.includes("드럭") || any.includes("헬스") || any.includes("피트니스") || any.includes("필라테스")) return "생활 밀착형 매체";
     return "";
   }
 
@@ -334,7 +325,6 @@
       if (!s) return;
       parts.push(s);
     };
-
     add(it.title);
     add(it.address);
     add(it._high);
@@ -354,7 +344,6 @@
       if (lk.includes("url") || lk.includes("link") || lk.includes("api")) continue;
       add(v);
     }
-
     return parts.join(" ");
   }
 
@@ -367,98 +356,75 @@
   function applyOverlapJitter(items){
     const CELL = 1e-4;
     const groups = new Map();
-
     for (const it of items){
       const k = Math.round(it.lat / CELL) + "," + Math.round(it.lng / CELL);
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(it);
     }
-
     for (const arr of groups.values()){
       if (arr.length <= 1) continue;
-
       const centerLat = arr.reduce((a,x)=>a + x.lat, 0) / arr.length;
       const centerLng = arr.reduce((a,x)=>a + x.lng, 0) / arr.length;
-
       const base = 10;
       const step = 9;
-
       for (let i=0;i<arr.length;i++){
+        const ang = (i / arr.length) * Math.PI * 2;
+        const r = base + step * Math.floor(i / 6);
+        const dx = Math.cos(ang) * r;
+        const dy = Math.sin(ang) * r;
         const it = arr[i];
-
-        if (i === 0){
-          it._latDisp = it.lat;
-          it._lngDisp = it.lng;
-          continue;
-        }
-
-        const j = i - 1;
-        const a = j * 1.85;
-        const r = base + step * Math.sqrt(j);
-        const dx = r * Math.cos(a);
-        const dy = r * Math.sin(a);
-
-        it._latDisp = centerLat + metersToLat(dy);
-        it._lngDisp = centerLng + metersToLng(dx, centerLat);
+        it._latDisp = it.lat + metersToLat(dy);
+        it._lngDisp = it.lng + metersToLng(dx, centerLat);
       }
+      arr[0]._latDisp = centerLat;
+      arr[0]._lngDisp = centerLng;
     }
+  }
+
+  function normalizeBlob(it){
+    const txt = makeSearchText(it);
+    it._blob = searchNorm(txt);
+    it._jamo = toJamo(txt);
   }
 
   function isAdminSuffixToken(raw){
-    const s = (raw ?? "").toString().trim();
-    if (!s) return false;
-    return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(s);
+    const t = (raw ?? "").toString().trim();
+    if (!t) return false;
+    return /(특별시|광역시|자치시|도|시|군|구|읍|면|동|리|가)$/.test(t);
   }
 
-  function tokenMatchItem(tok, it){
-    const raw = (tok ?? "").toString().trim();
-    if (!raw) return true;
-
-    const qn = searchNorm(raw);
-    const qj = toJamo(raw);
-    if (!qn && !qj) return true;
-
+  function tokenMatchItem(raw, it){
     const protectedShort = isProtectedShortWord(raw);
+    const qn = searchNorm(raw);
+    if (!qn) return false;
 
-    const tns = it._tokNorms || [];
-    const tjs = it._tokJamos || [];
+    const qj = toJamo(raw);
+    const blob = it._blob || "";
+    const jamo = it._jamo || "";
 
-    if (qn){
-      for (const tn of tns){
-        if (tn && tn.startsWith(qn)) return true;
-      }
-    }
-    if (qj){
-      for (const tj of tjs){
-        if (tj && tj.startsWith(qj)) return true;
-      }
-    }
-
-    if (!protectedShort){
-      if (qn && qn.length >= 3){
+    if (protectedShort){
+      const vars = tokenVariantsForLoose(raw);
+      const tns = vars.map(v => v).filter(Boolean);
+      if (tns.length >= 3){
         for (const tn of tns){
-          if (tn && tn.includes(qn)) return true;
+          if (tn && blob.includes(tn)) return true;
         }
       }
       if (qj && qj.length >= 6){
-        for (const tj of tjs){
-          if (tj && tj.includes(qj)) return true;
-        }
+        if (jamo && jamo.includes(qj)) return true;
       }
+      return false;
     }
 
-    if (!protectedShort){
-      if (qj && qj.length >= 6 && it._jamo && it._jamo.includes(qj)) return true;
-      if (qn && qn.length >= 3 && it._blob && it._blob.includes(qn)) return true;
+    const vars = tokenVariantsForLoose(raw);
+    if (vars.length){
+      if (vars.some(v => blob.includes(v))) return true;
     }
+
+    if (qj && qj.length >= 6 && jamo && jamo.includes(qj)) return true;
+    if (qn && qn.length >= 3 && blob && blob.includes(qn)) return true;
 
     if (isAdminSuffixToken(raw)) return false;
-
-    if (!protectedShort){
-      const vars = tokenVariantsForLoose(raw);
-      const blob = it._blob || "";
-      if (vars.length && vars.some(v => blob.includes(v))) return true;
-    }
 
     return false;
   }
@@ -467,41 +433,32 @@
     const catSel = $("catHigh");
     const high = catSel ? catSel.value : "";
     const qRaw = (activeQuery || "").trim();
-
     let arr = ALL;
-
     if (qRaw){
       const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
       arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
     }
-
     if (high) arr = arr.filter(x => x._high === high);
     return arr;
   }
 
   /* ===== ICONS ===== */
+
   function pinSvg(fill, stroke){
     return `
-      <div class="pinWrap">
-        <svg width="30" height="42" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
-                fill="${fill}" stroke="${stroke}" stroke-width="2" />
-          <circle cx="15" cy="15" r="6" fill="#0b0c0d" opacity="0.65"/>
-          <circle cx="15" cy="15" r="3.5" fill="#ffffff" opacity="0.92"/>
-        </svg>
-      </div>
+      <svg width="32" height="46" viewBox="0 0 32 46" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 45C16 45 30 29.8 30 17C30 7.6 23.7 1 16 1C8.3 1 2 7.6 2 17C2 29.8 16 45 16 45Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+        <circle cx="16" cy="17" r="6" fill="rgba(255,255,255,0.92)"/>
+      </svg>
     `;
   }
+
   function pinSvgHover(fill, stroke){
     return `
-      <div class="pinHover">
-        <svg width="36" height="50" viewBox="0 0 30 42" xmlns="http://www.w3.org/2000/svg">
-          <path d="M15 41c7-10 13-17 13-26C28 6.7 22.2 1 15 1S2 6.7 2 15c0 9 6 16 13 26z"
-                fill="${fill}" stroke="${stroke}" stroke-width="2.5" />
-          <circle cx="15" cy="15" r="6.5" fill="#0b0c0d" opacity="0.65"/>
-          <circle cx="15" cy="15" r="3.8" fill="#ffffff" opacity="0.95"/>
-        </svg>
-      </div>
+      <svg width="38" height="56" viewBox="0 0 38 56" xmlns="http://www.w3.org/2000/svg">
+        <path d="M19 55C19 55 36 36 36 21C36 9.7 28.4 2 19 2C9.6 2 2 9.7 2 21C2 36 19 55 19 55Z" fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+        <circle cx="19" cy="21" r="7" fill="rgba(255,255,255,0.94)"/>
+      </svg>
     `;
   }
 
@@ -511,12 +468,69 @@
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-  const hoverIcon  = L.divIcon({
+
+  const hoverIcon = L.divIcon({
     className:"",
     html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
+
+  // v1.1.27.2 pin colors (category-based)
+  const PIN_COLORS_BY_HIGH = {
+    "전광판 / 빌보드 / 외벽": ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"],  // 연핑크
+    "교통매체": ["rgba(162,222,204,0.95)", "rgba(0,0,0,0.35)"],              // 민트
+    "복합 쇼핑몰 / 대형마트": ["rgba(255,240,160,0.95)", "rgba(0,0,0,0.35)"], // 연노랑
+    "극장 / 레저 / 휴양 시설": ["rgba(255,200,150,0.95)", "rgba(0,0,0,0.35)"], // 연주황
+    "생활 밀착형 매체": ["rgba(220,190,255,0.95)", "rgba(0,0,0,0.35)"],       // 연보라
+  };
+
+  function resolveHighCategory(group){
+    if(!group) return null;
+
+    // 1) CATEGORY_TREE(공식 분류표) lows 우선 매칭
+    try{
+      for(const node of (CATEGORY_TREE || [])){
+        for(const low of (node.lows || [])){
+          if(group.includes(low)) return node.high;
+        }
+      }
+    }catch(_){}
+
+    // 2) fallback 키워드 (실데이터 변형 대응)
+    const g = String(group);
+
+    if (/(전광|빌보드|외벽)/.test(g)) return "전광판 / 빌보드 / 외벽";
+    if (/(버스|지하철|택시|차량|KTX|터미널|공항|기내|항공|쉘터|도로)/.test(g)) return "교통매체";
+    if (/(복합|쇼핑|몰|마트|백화점)/.test(g)) return "복합 쇼핑몰 / 대형마트";
+    if (/(극장|영화|CGV|롯데시네마|메가박스|레저|테마|파크|휴양|편의)/.test(g)) return "극장 / 레저 / 휴양 시설";
+    if (/(엘리베이터|승강기|아파트|오피스텔|로비|병원|의원|약국|편의점|운동|헬스|피트니스|캠퍼스|식당|주점|헤어|뷰티|드럭)/.test(g)) return "생활 밀착형 매체";
+
+    return null;
+  }
+
+  function getCategoryColor(group){
+    const high = resolveHighCategory(group);
+    return PIN_COLORS_BY_HIGH[high] || ["rgba(42,158,255,0.92)", "rgba(255,255,255,0.85)"]; // 기본 파랑
+  }
+
+  function makePinIcon(color, shadow){
+    return L.divIcon({
+      className:"",
+      html: pinSvg(color, shadow),
+      iconSize:[30,42],
+      iconAnchor:[15,41]
+    });
+  }
+
+  function makeHoverPinIcon(color, shadow){
+    return L.divIcon({
+      className:"",
+      html: pinSvgHover(color, shadow),
+      iconSize:[36,50],
+      iconAnchor:[18,49]
+    });
+  }
 
   /* 유니크 키 생성 */
   function stableHash(seed, str){
@@ -552,6 +566,7 @@
       highlightedClusterEl = null;
     }
   }
+
   function highlightClusterElement(el){
     clearClusterHighlight();
     if (!el) return;
@@ -567,12 +582,14 @@
       el.scrollIntoView({ block:"start", behavior:"auto" });
     }
   }
+
   function unhighlightCard(key){
     const el = cardByKey.get(key);
     if (!el) return;
     el.classList.remove("isActive");
     el.classList.remove("isPinFlash");
   }
+
   function clearAllCardHighlights(){
     for (const el of cardByKey.values()){
       el.classList.remove("isActive");
@@ -585,7 +602,9 @@
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(mint ? hoverIcon : normalIcon);
+      const { c, s } = m._baseIcon || {};
+      if (c && s) m.setIcon(mint ? makeHoverPinIcon(c,s) : makePinIcon(c,s));
+      else m.setIcon(mint ? hoverIcon : normalIcon);
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
@@ -611,7 +630,6 @@
     const idx = curInView.findIndex(x => x._key === key);
     if (idx < 0) return;
     if (idx < renderLimit) return;
-
     let next = renderLimit;
     while (next <= idx) next += STEP;
     renderLimit = Math.min(curInView.length, next);
@@ -622,10 +640,8 @@
     clearClusterHighlight();
     const m = markerByKey.get(key);
     if (!m || !markers) return;
-
     const parent = markers.getVisibleParent(m);
     if (!parent) return;
-
     if (parent && parent !== m && typeof parent.getElement === "function"){
       highlightClusterElement(parent.getElement());
     }
@@ -637,7 +653,9 @@
     for (const k of markerByKey.keys()){
       try{
         const m = markerByKey.get(k);
-        m.setIcon(normalIcon);
+        const { c, s } = m._baseIcon || {};
+        if (c && s) m.setIcon(makePinIcon(c,s));
+        else m.setIcon(normalIcon);
         m.setZIndexOffset(0);
       }catch(_){}
     }
@@ -657,7 +675,6 @@
   function pinToTopAndFlash(key){
     pinnedTopKey = key;
     appendList(curInView);
-
     const el = cardByKey.get(key);
     if (el){
       el.classList.add("isPinFlash");
@@ -672,25 +689,20 @@
     const title = escapeHtml(it.title || "-");
     const cat = escapeHtml(`${it._high || "-"}${it._low ? " > " + it._low : ""}`);
     const price = escapeHtml(fmtWon(it.price, it.price_unit));
-
     const img = it.thumb
-      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>';"/>`
+      ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>'"/>`
       : `<div class="fallback">NO IMAGE</div>`;
 
     return `
-      <div class="pinPopCard" data-key="${escapeHtml(it._key)}" title="클릭해서 상세보기">
-        <div class="pinPopImg">${img}</div>
-        <div class="pinPopBody">
-          <div class="pinPopTitle">${title}</div>
-          <div class="pinPopSub">${cat}</div>
-          <div class="pinPopPrice">${price}</div>
-          <div class="pinPopCtaRow">
-            <div class="pinPopHint">클릭하면 상세보기</div>
-            <div class="pinPopBtnRow">
-              <button class="pinPopBtn ghost pinPopAddCart" type="button" data-key="${escapeHtml(it._key)}">담기</button>
-              <button class="pinPopBtn pinPopGoDetail" type="button">상세보기</button>
-            </div>
-          </div>
+      <div class="pinPop">
+        ${img}
+        <div class="t">${title}</div>
+        <div class="c">${cat}</div>
+        <div class="p">${price}</div>
+        <div class="h">클릭하면 상세보기</div>
+        <div class="b">
+          <button class="miniAdd" data-key="${escapeHtml(it._key)}">담기</button>
+          <button class="miniDetail" data-key="${escapeHtml(it._key)}">상세보기</button>
         </div>
       </div>
     `;
@@ -698,18 +710,14 @@
 
   function openMiniPopupFor(it, marker){
     clearClusterHighlight();
-
     if (activeMiniKey && activeMiniKey !== it._key){
       closeMiniPopup();
     }
     setActiveMiniKey(it._key);
-
     pinToTopAndFlash(it._key);
-
     clearAllCardHighlights();
     ensureCardVisible(it._key);
     highlightCard(it._key, true);
-
     try{
       marker.setPopupContent(miniPopupHtml(it));
       marker.openPopup();
@@ -724,6 +732,7 @@
       setTimeout(()=>{ suppressHashHandler = false; }, 0);
     }
   }
+
   function clearHash(){
     if (!location.hash.startsWith("#item=")) return;
     suppressHashHandler = true;
@@ -747,22 +756,15 @@
 
     $("dt").textContent = it.title || "-";
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
-
     $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
     $("dop").textContent = it.operator || "문의";
-
-    $("dimg").innerHTML = it.thumb
-      ? `<img src="${it.thumb}" alt="">`
-      : `<div class="fallback">NO IMAGE</div>`;
+    $("dimg").innerHTML = it.thumb ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>'"/>` : `<div class="fallback">NO IMAGE</div>`;
 
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
-    $("dlinks").innerHTML = `
-      <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
-      <a href="${google}" target="_blank" rel="noopener">구글맵</a>
-    `;
+    $("dlinks").innerHTML = `<a href="${kakao}" target="_blank" rel="noopener noreferrer">카카오맵</a> <a href="${google}" target="_blank" rel="noopener noreferrer">구글맵</a>`;
 
     $("dOverlay").style.display = "block";
 
@@ -781,7 +783,6 @@
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
     if (!fromHashChange) clearHash();
-
     if (returnToCartAfterDetail){
       returnToCartAfterDetail = false;
       setTimeout(()=>{ try{ openCartModal(); }catch(_){ } }, 0);
@@ -792,7 +793,6 @@
     if (!location.hash.startsWith("#item=")) return;
     const key = decodeURIComponent(location.hash.replace("#item=", ""));
     if (currentOpenKey === key && $("dOverlay").style.display === "block") return;
-
     const it = itemByKey.get(key);
     if (!it) return;
     openDetail(it, false);
@@ -803,56 +803,48 @@
     return (!activeQuery || !activeQuery.trim()) && !(catSel && catSel.value);
   }
 
-function renderList(items){
-  const list = $("list");
-  list.innerHTML = "";
-  cardByKey.clear();
+  function renderList(items){
+    const list = $("list");
+    list.innerHTML = "";
+    cardByKey.clear();
 
-  // v1.1.27 PATCH: 초기 표시 상한 200
-  renderLimit = Math.min(items.length, LIST_INITIAL_LIMIT);
+    // v1.1.27 PATCH: 초기 표시 상한 200
+    renderLimit = Math.min(items.length, LIST_INITIAL_LIMIT);
 
-  $("empty").style.display = items.length ? "none" : "block";
-  $("moreHint").style.display = "none"; // 아래 appendList에서 필요 시 다시 켬
+    $("empty").style.display = items.length ? "none" : "block";
 
-  appendList(items);
-}
-function updateLoadMoreUI(items){
-  const box = $("moreHint");
-  if (!box) return;
-
-  const total = items.length;
-  const shown = Math.min(renderLimit, total);
-
-  // 더 볼 게 없으면 숨김(샘플 20개에서는 항상 이 케이스)
-  if (!total || shown >= total){
-    box.style.display = "none";
-    box.innerHTML = "";
-    return;
+    $("moreHint").style.display = "none";
+    appendList(items);
   }
 
-  box.style.display = "block";
-  box.innerHTML = `
-    <button type="button" id="loadMoreBtn"
-      style="width:100%; padding:10px 12px; border:1px solid rgba(162,222,204,.45);
-             background:rgba(0,0,0,.25); color:var(--mint); border-radius:12px;
-             cursor:pointer; font-weight:700;">
-      더보기 (+${LIST_MORE_STEP}개) — ${shown}/${total}
-    </button>
-  `;
+  function updateLoadMoreUI(items){
+    const box = $("moreHint");
+    if (!box) return;
 
-  const btn = document.getElementById("loadMoreBtn");
-  if (!btn) return;
+    const total = items.length;
+    const shown = Math.min(renderLimit, total);
 
-  btn.onclick = () => {
-    renderLimit = Math.min(items.length, renderLimit + LIST_MORE_STEP);
-    appendList(items);
-  };
-}
+    if (!total || shown >= total){
+      box.style.display = "none";
+      box.innerHTML = "";
+      return;
+    }
+
+    box.style.display = "block";
+    box.innerHTML = `<button id="loadMoreBtn">더보기 (+${LIST_MORE_STEP}개)</button> — ${shown}/${total}`;
+
+    const btn = document.getElementById("loadMoreBtn");
+    if (!btn) return;
+    btn.onclick = () => {
+      renderLimit = Math.min(items.length, renderLimit + LIST_MORE_STEP);
+      appendList(items);
+    };
+  }
 
   function appendList(items){
     const list = $("list");
-    let arr = items.slice();
 
+    let arr = items.slice();
     if (isNeutralState()){
       arr.sort((a,b) => (stableHash(shuffleSeed, a._key) - stableHash(shuffleSeed, b._key)));
     }
@@ -875,20 +867,12 @@ function updateLoadMoreUI(items){
       el.dataset.key = it._key;
 
       el.innerHTML = `
-        <div class="thumb">
-          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
-        </div>
-        <div class="body">
-          <div class="catRow">
-            ${it._high ? `<span class="tag">${it._high}</span>` : ``}
-            ${it._low ? `<span class="tag">${it._low}</span>` : ``}
-          </div>
-          <div class="name">${escapeHtml(it.title || "-")}</div>
-          <div class="place">${escapeHtml(guessPlace(it))}</div>
-          <div class="price">
-            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
-          </div>
+        <div class="thumb">${it.thumb ? `<img src="${escapeHtml(it.thumb)}" alt="" loading="lazy" onerror="this.remove(); this.parentElement.innerHTML='<div class=&quot;fallback&quot;>NO IMAGE</div>'"/>` : `<div class="fallback">NO IMAGE</div>`}</div>
+        <div class="meta">
+          <div class="cat">${escapeHtml(it._high || "")}${it._low ? " · " + escapeHtml(it._low) : ""}</div>
+          <div class="ttl">${escapeHtml(it.title || "-")}</div>
+          <div class="addr">${escapeHtml(guessPlace(it))}</div>
+          <div class="price">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
         </div>
       `;
 
@@ -914,13 +898,187 @@ function updateLoadMoreUI(items){
       list.appendChild(el);
     }
 
-updateLoadMoreUI(items);
+    updateLoadMoreUI(items);
+  }
+
+  function loadSessionArrays(){
+    try{
+      recentKeys = JSON.parse(sessionStorage.getItem(SS_RECENT) || "[]") || [];
+    }catch(_){ recentKeys = []; }
+    try{
+      cartKeys = JSON.parse(sessionStorage.getItem(SS_CART) || "[]") || [];
+    }catch(_){ cartKeys = []; }
+  }
+
+  function saveCart(){
+    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
+    renderCartBadge();
+  }
+
+  function renderCartBadge(){
+    const n = cartKeys.length;
+    const b = $("cartBadge");
+    if (b) b.textContent = (n > 99 ? "99+" : String(n));
+  }
+
+  function cartSumText(){
+    const sum = cartKeys.reduce((acc, k) => {
+      const it = itemByKey.get(k);
+      const n = it ? parsePriceNumber(it.price) : null;
+      return acc + (n || 0);
+    }, 0);
+    if (!sum) return "₩0 (VAT 별도)";
+    return "₩" + sum.toLocaleString("ko-KR") + " (VAT 별도)";
+  }
+
+  function openCartModal(){
+    $("cartModal").style.display = "block";
+    renderCartModal();
+  }
+
+  function closeCartModal(){
+    $("cartModal").style.display = "none";
+  }
+
+  function renderCartModal(){
+    const box = $("cartList");
+    box.innerHTML = "";
+    $("cartSum").textContent = cartSumText();
+
+    const arr = cartKeys.map(k => itemByKey.get(k)).filter(Boolean);
+
+    if (!arr.length){
+      box.innerHTML = `<div class="emptyCart">담아둔 목록이 비어 있습니다.</div>`;
+      return;
+    }
+
+    for (const it of arr){
+      const row = document.createElement("div");
+      row.className = "cartRow";
+      row.innerHTML = `
+        <div class="ct">${escapeHtml(it.title || "-")}</div>
+        <div class="cp">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <div class="cb">
+          <button class="cDetail" data-key="${escapeHtml(it._key)}">보기</button>
+          <button class="cDel" data-key="${escapeHtml(it._key)}">삭제</button>
+        </div>
+      `;
+      box.appendChild(row);
+    }
+
+    box.querySelectorAll(".cDetail").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const key = e.currentTarget.dataset.key;
+        const it = itemByKey.get(key);
+        if (!it) return;
+        returnToCartAfterDetail = true;
+        closeCartModal();
+        openDetail(it, true);
+      });
+    });
+
+    box.querySelectorAll(".cDel").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const key = e.currentTarget.dataset.key;
+        cartKeys = cartKeys.filter(k => k !== key);
+        saveCart();
+        renderCartModal();
+      });
+    });
+  }
+
+  function renderRecentPanel(){
+    const box = $("recentList");
+    if (!box) return;
+    box.innerHTML = "";
+
+    const arr = recentKeys.map(k => itemByKey.get(k)).filter(Boolean);
+
+    const total = arr.length;
+    const totalPages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+    if (recentPage >= totalPages) recentPage = 0;
+
+    const start = recentPage * RECENT_PAGE_SIZE;
+    const slice = arr.slice(start, start + RECENT_PAGE_SIZE);
+
+    $("recentCount").textContent = total > 99 ? "99+" : String(total);
+
+    for (const it of slice){
+      const row = document.createElement("div");
+      row.className = "recentRow";
+      row.innerHTML = `
+        <div class="rt">${escapeHtml(it.title || "-")}</div>
+        <div class="rc">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+      `;
+      row.addEventListener("click", () => {
+        returnToCartAfterDetail = false;
+        openDetail(it, true);
+      });
+      box.appendChild(row);
+    }
+
+    $("recentPage").textContent = total ? `${recentPage+1}/${totalPages}` : "0/0";
+  }
+
+  function nextRecentPage(){
+    const total = recentKeys.length;
+    const totalPages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
+    recentPage = (recentPage + 1) % totalPages;
+    renderRecentPanel();
+  }
+
+  function clearRecent(){
+    recentKeys = [];
+    try{ sessionStorage.setItem(SS_RECENT, "[]"); }catch(_){}
+    recentPage = 0;
+    renderRecentPanel();
+  }
+
+  function buildSuggestPool(){
+    const set = new Set();
+    const meta = new Map();
+
+    QUICK_SUGGEST.forEach(v => set.add(v));
+
+    for (const it of ALL){
+      const tokens = extractTokens(it.address || "");
+      tokens.slice(0, 4).forEach(t => set.add(t));
+      const high = it._high || "";
+      if (high) set.add(high);
+      const low = it._low || "";
+      if (low) set.add(low);
+      if (it.title) set.add(it.title);
+    }
+
+    const arr = Array.from(set).filter(x => (x || "").toString().trim().length >= 2);
+
+    for (const v of arr){
+      meta.set(v, { hint: "추천" });
+    }
+
+    SUG_POOL = arr;
+    SUG_META = meta;
+  }
+
+  function suggestForInput(q){
+    const raw = (q ?? "").toString().trim();
+    if (!raw) return [];
+    const n = searchNorm(raw);
+    if (!n) return [];
+    const out = [];
+    for (const v of SUG_POOL){
+      if (out.length >= 10) break;
+      const vn = searchNorm(v);
+      if (vn.includes(n) || n.includes(vn)){
+        out.push(v);
+      }
+    }
+    return out;
   }
 
   function showSuggest(values){
     const box = $("qSuggest");
     if (!box) return;
-
     const arr = Array.isArray(values) ? values : [];
     if (!arr.length){
       box.style.display = "none";
@@ -928,380 +1086,89 @@ updateLoadMoreUI(items);
       sugIndex = -1;
       return;
     }
-
     box.innerHTML = "";
     arr.forEach((v) => {
       const row = document.createElement("div");
       row.className = "qSugItem";
       row.setAttribute("role","option");
       row.dataset.value = v;
-
       const meta = SUG_META.get(v);
       const hint = meta?.hint || "추천";
-
-      row.innerHTML = `<div>${escapeHtml(v)}</div><small>${escapeHtml(hint)}</small>`;
-      row.addEventListener("mousedown", (e)=>{ e.preventDefault(); });
-      row.addEventListener("click", ()=>{
-        $("q").value = v;
-        box.style.display = "none";
-        applySearchFromUI();
+      row.innerHTML = `<span class="t">${escapeHtml(v)}</span><span class="h">${escapeHtml(hint)}</span>`;
+      row.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        applyQueryFromSuggest(v);
       });
       box.appendChild(row);
     });
-
-    sugIndex = -1;
     box.style.display = "block";
+    sugIndex = -1;
   }
 
-  function buildSuggestPool(){
-    const mapT = new Map();
-
-    const add = (term, hint) => {
-      const t = (term ?? "").toString().trim();
-      if (!t) return;
-      if (t.length < 2) return;
-
-      const prev = mapT.get(t);
-      if (prev){
-        prev.count += 1;
-      }else{
-        mapT.set(t, { term:t, hint:hint || "추천", count:1 });
-      }
-    };
-
-    for (const it of ALL){
-      add(it.title, "매체명");
-
-      const src = `${it.title || ""} ${it.address || ""}`;
-      const ms = src.match(/[가-힣0-9A-Za-z]{2,14}역/g);
-      if (ms) ms.forEach(x => add(x, "역"));
-
-      const toks = (it.address || "").match(/[가-힣0-9A-Za-z]{2,20}/g);
-      if (toks) toks.forEach(t => add(t, "지역"));
-    }
-
-    for (const x of CATEGORY_TREE){
-      add(x.high, "카테고리");
-      for (const low of (x.lows || [])) add(low, "카테고리");
-    }
-
-    SUG_META = new Map();
-    SUG_POOL = Array.from(mapT.values()).map(o => {
-      SUG_META.set(o.term, { hint:o.hint, count:o.count });
-      return {
-        term: o.term,
-        hint: o.hint,
-        count: o.count,
-        _norm: searchNorm(o.term),
-        _jamo: toJamo(o.term),
-      };
-    });
-
-    SUG_POOL.sort((a,b)=> (b.count - a.count) || (a.term.length - b.term.length) || a.term.localeCompare(b.term));
+  function applyQueryFromSuggest(v){
+    $("q").value = v;
+    showSuggest([]);
+    setQuery(v);
   }
 
-  function suggestScore(qNorm, qJ, it){
-    let s = 0;
-
-    if (qJ){
-      if (it._jamo && it._jamo.startsWith(qJ)) s = Math.max(s, 95);
-      else if (it._jamo && it._jamo.includes(qJ)) s = Math.max(s, 65);
-    }
-    if (qNorm){
-      if (it._norm && it._norm.startsWith(qNorm)) s = Math.max(s, 90);
-      else if (it._norm && it._norm.includes(qNorm)) s = Math.max(s, 60);
-    }
-    if (!s) return 0;
-
-    s += Math.min(8, Math.log2(1 + (it.count || 1)));
-    s += Math.min(4, 10 / (it.term.length + 2));
-    return s;
-  }
-
-  function loadQueryHistory(){
-    try{
-      const raw = localStorage.getItem(LS_QHIST);
-      const arr = JSON.parse(raw || "[]");
-      return Array.isArray(arr) ? arr.filter(x => typeof x === "string") : [];
-    }catch(_){
-      return [];
-    }
-  }
-  function saveQueryHistory(q){
-    const t = (q || "").trim();
-    if (!t) return;
-    let arr = loadQueryHistory();
-    arr = arr.filter(x => x !== t);
-    arr.unshift(t);
-    if (arr.length > 10) arr.length = 10;
-    try{ localStorage.setItem(LS_QHIST, JSON.stringify(arr)); }catch(_){}
-  }
-
-  function updateSuggest(){
+  function handleQueryKeydown(e){
     const box = $("qSuggest");
-    if (!box) return;
-
-    const qRaw = $("q").value.trim();
-
-    if (!qRaw){
-      const hist = loadQueryHistory();
-      if (hist.length){
-        showSuggest(hist.slice(0, 10));
-      }else{
-        showSuggest(QUICK_SUGGEST);
-      }
-      return;
-    }
-
-    const qNorm = searchNorm(qRaw);
-    const qJ = toJamo(qRaw);
-
-    const scored = [];
-    for (const it of SUG_POOL){
-      const sc = suggestScore(qNorm, qJ, it);
-      if (sc > 0) scored.push({ v: it.term, s: sc, c: it.count });
-    }
-
-    scored.sort((a,b)=> (b.s - a.s) || (b.c - a.c) || (a.v.length - b.v.length));
-
-    const out = [];
-    const seen = new Set();
-    for (const x of scored){
-      if (seen.has(x.v)) continue;
-      seen.add(x.v);
-      out.push(x.v);
-      if (out.length >= 10) break;
-    }
-
-    showSuggest(out);
-  }
-
-  function moveSugIndex(delta){
-    const box = $("qSuggest");
-    if (box.style.display !== "block") return;
+    if (!box || box.style.display === "none") return;
     const items = Array.from(box.querySelectorAll(".qSugItem"));
     if (!items.length) return;
 
-    sugIndex = Math.max(-1, Math.min(items.length-1, sugIndex + delta));
-    items.forEach((el, i) => el.classList.toggle("isActive", i === sugIndex));
-    if (sugIndex >= 0){
-      items[sugIndex].scrollIntoView({block:"nearest"});
+    if (e.key === "ArrowDown"){
+      e.preventDefault();
+      sugIndex = Math.min(items.length - 1, sugIndex + 1);
+      items.forEach((el, i) => el.classList.toggle("on", i === sugIndex));
+      return;
+    }
+    if (e.key === "ArrowUp"){
+      e.preventDefault();
+      sugIndex = Math.max(-1, sugIndex - 1);
+      items.forEach((el, i) => el.classList.toggle("on", i === sugIndex));
+      return;
+    }
+    if (e.key === "Enter"){
+      if (sugIndex >= 0){
+        e.preventDefault();
+        const v = items[sugIndex].dataset.value;
+        applyQueryFromSuggest(v);
+      }
+    }
+    if (e.key === "Escape"){
+      showSuggest([]);
     }
   }
 
-  function pickSugIndex(){
-    const box = $("qSuggest");
-    if (box.style.display !== "block") return false;
-    const items = Array.from(box.querySelectorAll(".qSugItem"));
-    if (!items.length) return false;
-    if (sugIndex < 0 || sugIndex >= items.length) return false;
-    const v = items[sugIndex].dataset.value;
-    if (!v) return false;
-    $("q").value = v;
-    box.style.display = "none";
-    applySearchFromUI();
-    return true;
-  }
-
-  function renderMarkersAndListFromBase(base){
+  function setQuery(q){
+    activeQuery = (q ?? "").toString();
+    const base = getFilteredBase();
     curBase = base;
-
-    if (currentOpenKey){
-      const exists = base.some(x => x._key === currentOpenKey);
-      if (!exists) closeDetail(false);
-    }
-
-    $("mAll").textContent = ALL.length;
-    $("mFilter").textContent = base.length;
-
-    renderMarkers(base);
-    viewportUpdate();
+    curInView = base.slice();
+    renderList(curInView);
+    rebuildMarkers(curInView);
+    updateCountPill(curInView.length);
   }
 
-  function computeInViewHash(arr){
-    const keys = arr.map(x=>x._key).sort();
-    let s = "";
-    for (let i=0;i<Math.min(60, keys.length);i++){
-      s += keys[i] + "|";
-    }
-    return String(keys.length) + "::" + stableHash(0.777, s);
+  function updateCountPill(n){
+    const el = $("loadedPill");
+    if (!el) return;
+    el.textContent = `Loaded ${n.toLocaleString("ko-KR")}`;
   }
 
-  function viewportUpdate(){
-    if (!map) return;
-    const b = map.getBounds();
-    const inView = (curBase || []).filter(x => {
-      const la = (x._latDisp ?? x.lat);
-      const ln = (x._lngDisp ?? x.lng);
-      return b.contains([la, ln]);
-    });
-
-    curInView = inView;
-    $("mInView").textContent = inView.length;
-
-    const newHash = computeInViewHash(inView);
-    const changed = (newHash !== lastInViewHash);
-    lastInViewHash = newHash;
-
-    if (changed){
-      const panel = $("panel");
-      if (panel) panel.scrollTop = 0;
-      renderList(inView);
-    }else{
-      if (pinnedTopKey){
-        appendList(inView);
-      }
-    }
-
-    if (activeMiniKey){
-      ensureCardVisible(activeMiniKey);
-      clearAllCardHighlights();
-      highlightCard(activeMiniKey, false);
-      highlightClusterOnlyByKey(activeMiniKey);
-      updateMarkerVisual(activeMiniKey);
-    }
-  }
-
-  function updateStickyHeights(){
-    const topbar = $("topbar");
-    const h = topbar ? topbar.getBoundingClientRect().height : 72;
-    document.documentElement.style.setProperty("--topbarH", Math.round(h) + "px");
-  }
-
-  function updateZoomUI(){
-    if (!map) return;
-    const zi = Math.round(map.getZoom());
-    $("zVal").textContent = zi;
-  }
-
-  function forceIntegerZoom(){
-    if (!map) return;
-    const z = map.getZoom();
-    const zi = Math.round(z);
-    if (Math.abs(z - zi) > 1e-6){
-      try{ map.setZoom(zi, { animate:false }); }catch(_){}
-    }
-    updateZoomUI();
-  }
-
-  function showClusterHint(latlng){
-    const hint = $("clusterHint");
-    if (!hint) return;
-    const p = map.latLngToContainerPoint(latlng);
-    hint.style.left = p.x + "px";
-    hint.style.top  = p.y + "px";
-    hint.style.display = "block";
-  }
-  function hideClusterHint(){
-    const hint = $("clusterHint");
-    if (!hint) return;
-    hint.style.display = "none";
-  }
-
-  function buildMap(){
-    map = L.map("map", {
-      zoomControl:false,
-      zoomSnap: 1,
-      zoomDelta: 1,
-      wheelPxPerZoomLevel: 80
-    }).setView(HOME_CENTER, HOME_ZOOM);
-
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
-
-    markers = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      spiderfyOnMaxZoom:false,
-      animate:false,
-      animateAddingMarkers:false,
-      removeOutsideVisibleBounds:false,
-      disableClusteringAtZoom: 18,
-      maxClusterRadius: 52,
-      zoomToBoundsOnClick:false
-    });
-
-    markers.on("clustermouseover", (e) => {
-      try{
-        const el = e.layer && e.layer.getElement ? e.layer.getElement() : null;
-        if (el) highlightClusterElement(el);
-      }catch(_){}
-      if (e && e.layer && e.layer.getLatLng){
-        showClusterHint(e.layer.getLatLng());
-      }
-    });
-    markers.on("clustermouseout", () => {
-      clearClusterHighlight();
-      hideClusterHint();
-    });
-
-    markers.on("clusterclick", (e) => {
-      try{
-        if (e && e.originalEvent){
-          L.DomEvent.stopPropagation(e.originalEvent);
-          L.DomEvent.preventDefault(e.originalEvent);
-        }
-      }catch(_){}
-
-      hideClusterHint();
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-      clearClusterHighlight();
-
-      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
-
-      if (bb && bb.isValid && bb.isValid()){
-        map.fitBounds(bb, { padding:[90,90], maxZoom: 18, animate:false });
-      }else if (e.layer && e.layer.getLatLng){
-        const ll = e.layer.getLatLng();
-        map.setView(ll, Math.min(map.getZoom() + 2, 18), { animate:false });
-      }
-    });
-
-    markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
-    markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
-
-    map.addLayer(markers);
-
-    map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("dragend",   ()=>{ isMapInteracting = false; });
-    map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
-
-    map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
-
-    window.addEventListener("mouseup", ()=>{ isMapInteracting = false; }, { passive:true });
-
-    map.getContainer().addEventListener("mouseleave", ()=>{
-      hideClusterHint();
-      closeMiniPopup();
-      clearAllMarkerStates();
-      clearAllCardHighlights();
-    }, { passive:true });
-
-    map.on("moveend", () => {
-      if (suspendViewportOnce) return;
-      viewportUpdate();
-      forceIntegerZoom();
-    });
-  }
-
-  function renderMarkers(items){
-    closeMiniPopup();
-    clearClusterHighlight();
-    setHoverKey(null);
-
+  function rebuildMarkers(items){
     markerByKey.clear();
-    markers.clearLayers();
+    if (markers) markers.clearLayers();
 
     const ms = [];
     for (const it of items){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
+      const [c,s] = getCategoryColor(it.media_group);
+      const m = L.marker([la, ln], { icon: makePinIcon(c,s) });
+      m._baseIcon = { c, s };
       m.__key = it._key;
 
       m.bindPopup(miniPopupHtml(it), {
@@ -1350,13 +1217,23 @@ updateLoadMoreUI(items);
           return;
         }
         openMiniPopupFor(it, m);
-      });
 
-      m.on("popupclose", () => {
-        if (activeMiniKey === it._key){
-          setActiveMiniKey(null);
-          updateMarkerVisual(it._key);
-          clearAllCardHighlights();
+        const btnAdd = document.querySelector(".pinPopWrap .miniAdd");
+        const btnDetail = document.querySelector(".pinPopWrap .miniDetail");
+        if (btnAdd){
+          btnAdd.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            addToCart(it._key);
+          });
+        }
+        if (btnDetail){
+          btnDetail.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            returnToCartAfterDetail = false;
+            openDetail(it, true);
+          });
         }
       });
 
@@ -1364,510 +1241,180 @@ updateLoadMoreUI(items);
       ms.push(m);
     }
 
-    markers.addLayers(ms);
-  }
-
-  function clampRecentPage(total){
-    const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
-    if (recentPage < 0) recentPage = 0;
-    if (recentPage > pages - 1) recentPage = pages - 1;
-    return pages;
-  }
-
-  function renderRecentPanel(){
-    const list = $("recentList");
-    const pager = $("recentPager");
-    const prev = $("recentPrev");
-    const next = $("recentNext");
-    const meta = $("recentPageMeta");
-
-    const valid = recentKeys.filter(k => itemByKey.has(k));
-    recentKeys = valid;
-    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-    if (recentKeys.length > 99){
-    recentKeys = recentKeys.slice(recentKeys.length - 99);
-    try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-}
-
-    const pages = clampRecentPage(valid.length);
-
-    const start = recentPage * RECENT_PAGE_SIZE;
-    const slice = valid.slice(start, start + RECENT_PAGE_SIZE);
-
-   $("recentMeta").textContent = `${Math.min(valid.length, 99)}`;
-
-    list.innerHTML = "";
-    slice.forEach((key) => {
-      const it = itemByKey.get(key);
-      if (!it) return;
-
-      const el = document.createElement("div");
-      el.className = "rRow";
-      el.innerHTML = `
-        <div class="rThumb">
-          ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
-        </div>
-        <div class="rName" title="${escapeHtml(it.title || "-")}">${escapeHtml(it.title || "-")}</div>
-        <div class="rPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-        <div class="rX" title="제거">✕</div>
-      `;
-
-      el.addEventListener("click", () => {
-        returnToCartAfterDetail = false;
-        openDetail(it, true);
-      });
-
-      el.querySelector(".rX").addEventListener("click", (e) => {
-        e.preventDefault(); e.stopPropagation();
-        recentKeys = recentKeys.filter(x => x !== key);
-        try{ sessionStorage.setItem(SS_RECENT, JSON.stringify(recentKeys)); }catch(_){}
-        renderRecentPanel();
-      });
-
-      list.appendChild(el);
-    });
-
-    if (valid.length > RECENT_PAGE_SIZE){
-      pager.style.display = "flex";
-      meta.textContent = `${recentPage + 1}/${pages}`;
-      prev.disabled = (recentPage <= 0);
-      next.disabled = (recentPage >= pages - 1);
-    }else{
-      pager.style.display = "none";
-      meta.textContent = "1/1";
+    if (markers){
+      ms.forEach(x => markers.addLayer(x));
     }
-  }
-
-  function saveCart(){
-    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-    renderCartSummary();
   }
 
   function addToCart(key){
     if (!key) return;
-    if (!cartKeys.includes(key)){
-      cartKeys.push(key);
-      saveCart();
-    }
-  }
-
-  function removeFromCart(key){
-    cartKeys = cartKeys.filter(k => k !== key);
+    if (!cartKeys.includes(key)) cartKeys.unshift(key);
     saveCart();
+    renderCartModal();
   }
 
-  function cartTotalText(){
-  let sum = 0;
-  let hasInquiry = false;
-
-  for (const key of cartKeys){
-    const it = itemByKey.get(key);
-    if (!it) continue;
-
-    const n = parsePriceNumber(it.price);
-    if (n === null) hasInquiry = true;
-    else sum += n;
+  function updateZoomUI(){
+    if (suspendViewportOnce) return;
+    const z = map ? map.getZoom() : 0;
+    const el = $("zoomPill");
+    if (el) el.textContent = `Zoom ${z}`;
   }
 
-  if (sum === 0 && hasInquiry){
-    return "문의";
-  }
+  function setupMap(){
+    map = L.map("map", {
+      zoomControl:true,
+      preferCanvas:true
+    }).setView(HOME_CENTER, HOME_ZOOM);
 
-  const won = "₩" + sum.toLocaleString("ko-KR");
-  return hasInquiry
-    ? `${won} (VAT 별도) + 문의`
-    : `${won} (VAT 별도)`;
-}
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
-  function renderCartSummary(){
-    const valid = cartKeys.filter(k => itemByKey.has(k));
-    cartKeys = valid;
-    try{ sessionStorage.setItem(SS_CART, JSON.stringify(cartKeys)); }catch(_){}
-    $("cartCount").textContent = String(cartKeys.length);
-  }
-
-  function openCartModal(){
-    const body = $("cartModalBody");
-    body.innerHTML = "";
-
-    const valid = cartKeys.filter(k => itemByKey.has(k));
-    if (!valid.length){
-      body.innerHTML = `<div style="color:rgba(255,255,255,.65); font-size:13px;">담아둔 목록이 비어 있습니다.</div>`;
-    }else{
-      valid.forEach((key) => {
-        const it = itemByKey.get(key);
-        if (!it) return;
-
-        const row = document.createElement("div");
-        row.className = "mRow";
-        row.innerHTML = `
-          <div class="mLeft">
-            <div class="mThumb">${it.thumb ? `<img src="${it.thumb}" alt="">` : ``}</div>
-            <div class="mTitle">${escapeHtml(it.title || "-")}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:12px;">
-            <div class="mPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <button class="mX" title="삭제">✕</button>
-          </div>
-        `;
-
-        row.addEventListener("click", ()=>{
-          returnToCartAfterDetail = true;
-          closeCartModal();
-          openDetail(it, true);
-        });
-
-        row.querySelector(".mX").addEventListener("click", (e)=>{
-          e.preventDefault(); e.stopPropagation();
-          removeFromCart(key);
-          openCartModal();
-        });
-
-        body.appendChild(row);
-      });
-
-      const sum = document.createElement("div");
-      sum.className = "mSum";
-      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()}</div></div>
-                       <div style="color:rgba(255,255,255,.65);font-size:12px;font-weight:900;">총 ${valid.length}개</div>`;
-      body.appendChild(sum);
-    }
-
-    $("cartModalOverlay").style.display = "block";
-  }
-  function closeCartModal(){ $("cartModalOverlay").style.display = "none"; }
-
-  function moveMapToSearch(base){
-    if (!map) return;
-    if (!Array.isArray(base) || !base.length) return;
-
-    if (base.length === 1){
-      const it = base[0];
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-      try{ map.setView([la, ln], 15, { animate:false }); }catch(_){}
-      forceIntegerZoom();
-      return;
-    }
-
-    let bounds = null;
-    for (const it of base){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-      if (typeof la !== "number" || typeof ln !== "number") continue;
-      const ll = L.latLng(la, ln);
-      if (!bounds) bounds = L.latLngBounds(ll, ll);
-      else bounds.extend(ll);
-    }
-    if (!bounds || !bounds.isValid()) return;
-
-    try{ map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false }); }catch(_){}
-
-    try{
-      const z = Math.round(map.getZoom());
-      if (z < 8) map.setZoom(8, { animate:false });
-    }catch(_){}
-    forceIntegerZoom();
-  }
-
-  function applySearchFromUI(){
-    const qVal = $("q").value.trim();
-    activeQuery = qVal;
-    saveQueryHistory(activeQuery);
-
-    pinnedTopKey = null;
-
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
-
-    if (qVal && base.length){
-      moveMapToSearch(base);
-    }
-  }
-
-  function applyHomeView(animate){
-    if (!map) return;
-
-    suspendViewportOnce = true;
-
-    try{
-      if (animate) map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
-      else map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
-    }catch(_){}
-
-    map.once("moveend", () => {
-      suspendViewportOnce = false;
-      forceIntegerZoom();
-      viewportUpdate();
-    });
-  }
-
-  function resetAll(){
-    $("q").value = "";
-    activeQuery = "";
-    $("catHigh").value = "";
-    $("qSuggest").style.display = "none";
-    closeDetail(false);
-    closeMiniPopup();
-
-    shuffleSeed = Math.random();
-    pinnedTopKey = null;
-
-    applyHomeView(true);
-
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
-  }
-
-  async function fetchJsonRobust(url){
-    const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok){
-      const text = await res.text().catch(()=> "");
-      throw new Error(`HTTP ${res.status} ${res.statusText} (응답 일부: ${text.slice(0, 80)})`);
-    }
-    const raw = await res.text();
-    try{
-      return JSON.parse(raw);
-    }catch(e){
-      const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
-      throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
-    }
-  }
-
-  function loadRecentAndCart(){
-    try{
-      const r = JSON.parse(sessionStorage.getItem(SS_RECENT) || "[]");
-      if (Array.isArray(r)) recentKeys = r.filter(x => typeof x === "string");
-    }catch(_){ recentKeys = []; }
-
-    try{
-      const c = JSON.parse(sessionStorage.getItem(SS_CART) || "[]");
-      if (Array.isArray(c)) cartKeys = c.filter(x => typeof x === "string");
-    }catch(_){ cartKeys = []; }
-  }
-
-  async function init(){
-    updateStickyHeights();
-    window.addEventListener("resize", updateStickyHeights);
-
-    const errClose = $("errClose");
-    if (errClose) errClose.addEventListener("click", hideErrorBanner);
-
-    buildMap();
-
-    // 미니모달 버튼 처리
-    document.addEventListener("click", (e) => {
-      const addBtn = e.target && e.target.closest ? e.target.closest(".pinPopAddCart") : null;
-      if (addBtn){
-        const key = addBtn.getAttribute("data-key");
-        if (key){
-          e.preventDefault();
-          e.stopPropagation();
-          addToCart(key);
-          renderCartSummary();
-        }
-        return;
-      }
-
-      const goBtn = e.target && e.target.closest ? e.target.closest(".pinPopGoDetail") : null;
-      if (goBtn){
-        const card = e.target.closest(".pinPopCard");
-        const key = card ? card.getAttribute("data-key") : null;
-        if (key){
-          const it = itemByKey.get(key);
-          if (it){
-            e.preventDefault();
-            e.stopPropagation();
-            returnToCartAfterDetail = false;
-            openDetail(it, true);
-          }
-        }
-        return;
-      }
-
-      const card = e.target && e.target.closest ? e.target.closest(".pinPopCard") : null;
-      if (!card) return;
-      const key = card.getAttribute("data-key");
-      if (!key) return;
-
-      const it = itemByKey.get(key);
-      if (!it) return;
-
-      e.preventDefault();
-      e.stopPropagation();
-      returnToCartAfterDetail = false;
-      openDetail(it, true);
-    }, true);
-
-    // ===== 데이터 로드 1회 =====
-    let raw = [];
-    try{
-      const json = await fetchJsonRobust(DATA_URL);
-      raw = Array.isArray(json) ? json
-          : (Array.isArray(json.items)   ? json.items
-          :  Array.isArray(json.data)    ? json.data
-          :  Array.isArray(json.rows)    ? json.rows
-          :  Array.isArray(json.points)  ? json.points
-          :  Array.isArray(json.records) ? json.records
-          :  []);
-      hideErrorBanner();
-    }catch(err){
-      console.error("[DATA LOAD FAIL]", err);
-      showErrorBanner(err?.message || "data 로드 실패");
-      raw = [];
-    }
-
-    const pts = (raw || [])
-      .map(x => {
-        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
-        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
-        return { ...x, lat: la, lng: ln };
-      })
-      .filter(x => {
-        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
-        if (x.lat < 32.0 || x.lat > 39.8) return false;
-        if (x.lng < 123.0 || x.lng > 132.5) return false;
-        return true;
-      });
-
-    const uniqueKeys = makeUniqueKeys(pts);
-
-    ALL = pts.map((it, idx) => {
-      const t = assignTaxonomy(it);
-      const key = uniqueKeys[idx];
-
-      const row = { ...it, _key: key, _high: t.high, _low: t.low };
-
-      row._blobText = makeSearchText(row);
-      row._blob = searchNorm(row._blobText);
-      row._jamo = toJamo(row._blobText);
-
-      const toks = extractTokens(row._blobText);
-      row._tokNorms = toks.map(x => searchNorm(x)).filter(Boolean);
-      row._tokJamos = toks.map(x => toJamo(x)).filter(Boolean);
-
-      return row;
+    markers = L.markerClusterGroup({
+      chunkedLoading: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 60
     });
 
-    applyOverlapJitter(ALL);
+    map.addLayer(markers);
 
-    itemByKey.clear();
-    ALL.forEach(it => itemByKey.set(it._key, it));
+    map.on("movestart", ()=>{ isMapInteracting = true; });
+    map.on("moveend", ()=>{
+      isMapInteracting = false;
+      updateZoomUI();
+    });
 
-    const loaded = $("pillLoaded");
-    if (loaded) loaded.textContent = String(ALL.length);
+    updateZoomUI();
+  }
 
+  function wireUI(){
     setCatHighOptions();
-    buildSuggestPool();
 
-    loadRecentAndCart();
-    renderRecentPanel();
-    renderCartSummary();
-
-    applyHomeView(false);
-    forceIntegerZoom();
-
-    $("zIn").addEventListener("click", ()=> { map.zoomIn(); setTimeout(forceIntegerZoom, 0); });
-    $("zOut").addEventListener("click", ()=> { map.zoomOut(); setTimeout(forceIntegerZoom, 0); });
-
-    $("recentPrev").addEventListener("click", ()=>{
-      recentPage = Math.max(0, recentPage - 1);
-      renderRecentPanel();
-    });
-    $("recentNext").addEventListener("click", ()=>{
-      const pages = Math.max(1, Math.ceil(recentKeys.length / RECENT_PAGE_SIZE));
-      recentPage = Math.min(pages - 1, recentPage + 1);
-      renderRecentPanel();
+    $("q").addEventListener("input", (e) => {
+      const q = e.target.value;
+      showSuggest(suggestForInput(q));
     });
 
-    $("cartBtn").addEventListener("click", openCartModal);
-    $("cartClose").addEventListener("click", closeCartModal);
-    $("cartModalOverlay").addEventListener("click", (e)=>{ if (e.target.id === "cartModalOverlay") closeCartModal(); });
+    $("q").addEventListener("keydown", handleQueryKeydown);
 
-    $("dAddCart").addEventListener("click", ()=>{
-      if (!currentOpenKey) return;
-      addToCart(currentOpenKey);
-      renderCartSummary();
+    $("q").addEventListener("keyup", (e) => {
+      if (e.key === "Enter"){
+        showSuggest([]);
+        setQuery($("q").value);
+      }
+    });
+
+    $("go").addEventListener("click", () => {
+      showSuggest([]);
+      setQuery($("q").value);
+    });
+
+    $("clear").addEventListener("click", () => {
+      $("q").value = "";
+      showSuggest([]);
+      setQuery("");
     });
 
     $("catHigh").addEventListener("change", () => {
-      pinnedTopKey = null;
-      const base = getFilteredBase();
-      renderMarkersAndListFromBase(base);
+      setQuery($("q").value);
     });
 
-    const q = $("q");
-    const qBox = $("qSuggest");
-
-    q.addEventListener("focus", updateSuggest);
-    q.addEventListener("blur", ()=>{ setTimeout(()=>{ qBox.style.display = "none"; }, 140); });
-
-    document.addEventListener("click", (e)=>{
-      const wrap = q.parentElement;
-      if (!wrap.contains(e.target)){
-        qBox.style.display = "none";
-      }
+    $("homeBtn").addEventListener("click", () => {
+      closeMiniPopup();
+      clearAllMarkerStates();
+      try{ map.setView(HOME_CENTER, HOME_ZOOM, { animate:true }); }catch(_){}
     });
 
-    let sugTimer = null;
-    q.addEventListener("input", () => {
-      clearTimeout(sugTimer);
-      sugTimer = setTimeout(updateSuggest, 60);
+    $("closeDetail").addEventListener("click", () => closeDetail(false));
+    $("dOverlay").addEventListener("click", (e) => {
+      if (e.target && e.target.id === "dOverlay") closeDetail(false);
     });
 
-    q.addEventListener("keydown", (e) => {
-      if (e.key === "ArrowDown"){ e.preventDefault(); moveSugIndex(+1); return; }
-      if (e.key === "ArrowUp"){ e.preventDefault(); moveSugIndex(-1); return; }
-      if (e.key === "Enter"){
-        if (pickSugIndex()) return;
-        e.preventDefault();
-        applySearchFromUI();
-        return;
-      }
-      if (e.key === "Escape"){
-        qBox.style.display = "none";
-        sugIndex = -1;
-        return;
-      }
-      if (e.key === "Backspace" && !q.value){
-        e.preventDefault();
-        resetAll();
-      }
+    $("openCart").addEventListener("click", openCartModal);
+    $("closeCart").addEventListener("click", closeCartModal);
+    $("cartModal").addEventListener("click", (e) => {
+      if (e.target && e.target.id === "cartModal") closeCartModal();
     });
 
-    $("qGo").addEventListener("click", applySearchFromUI);
-    $("reset").addEventListener("click", resetAll);
-    $("titleReset").addEventListener("click", resetAll);
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key !== "Backspace") return;
-      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
-      const inTyping = (tag === "input" || tag === "textarea" || e.target.isContentEditable);
-      if (inTyping) return;
-      e.preventDefault();
-      resetAll();
+    $("cartClear").addEventListener("click", () => {
+      cartKeys = [];
+      saveCart();
+      renderCartModal();
     });
 
-    $("dx").addEventListener("click", () => closeDetail(false));
-    $("dOverlay").addEventListener("click", (e) => { if (e.target.id === "dOverlay") closeDetail(false); });
+    $("recentNext").addEventListener("click", nextRecentPage);
+    $("recentClear").addEventListener("click", clearRecent);
 
     window.addEventListener("hashchange", () => {
       if (suppressHashHandler) return;
-      if (location.hash.startsWith("#item=")) openDetailByHash();
-      else closeDetail(true);
+      openDetailByHash();
     });
 
-    const base = getFilteredBase();
-    renderMarkersAndListFromBase(base);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape"){
+        if ($("dOverlay").style.display === "block") closeDetail(false);
+        if ($("cartModal").style.display === "block") closeCartModal();
+      }
+    });
+  }
+
+  async function loadData(){
+    hideErrorBanner();
+    try{
+      const res = await fetch(DATA_URL, { cache:"no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const json = await res.json();
+
+      const rawItems = Array.isArray(json) ? json : (json.items || json.data || []);
+      if (!Array.isArray(rawItems)) throw new Error("Invalid JSON format");
+
+      const keys = makeUniqueKeys(rawItems);
+
+      const items = rawItems.map((it, idx) => {
+        const x = Object.assign({}, it);
+        x._key = keys[idx];
+
+        x.lat = Number(x.lat);
+        x.lng = Number(x.lng);
+        if (!isFinite(x.lat) || !isFinite(x.lng)) return null;
+
+        const tax = assignTaxonomy(x);
+        x._high = tax.high || "";
+        x._low = tax.low || "";
+
+        normalizeBlob(x);
+        return x;
+      }).filter(Boolean);
+
+      applyOverlapJitter(items);
+
+      ALL = items;
+      itemByKey.clear();
+      ALL.forEach(it => itemByKey.set(it._key, it));
+
+      loadSessionArrays();
+      renderCartBadge();
+      renderRecentPanel();
+
+      buildSuggestPool();
+
+      setQuery("");
+      updateCountPill(ALL.length);
+
+    }catch(err){
+      console.error(err);
+      showErrorBanner(String(err?.message || err));
+    }
+  }
+
+  function boot(){
+    setupMap();
+    wireUI();
+    loadData();
     openDetailByHash();
   }
 
-  // DOM 준비 후 실행 (index.html에서 defer로 불러오는 것을 전제로 함)
-  document.addEventListener("DOMContentLoaded", () => {
-    init().catch(err => {
-      console.error("[INIT FAIL]", err);
-      showErrorBanner(err?.message || "초기화 실패");
-    });
-  });
+  document.addEventListener("DOMContentLoaded", boot);
 
 })();
