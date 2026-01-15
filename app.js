@@ -1340,7 +1340,7 @@ updateLoadMoreUI(items);
       const ln = (it._lngDisp ?? it.lng);
 
       const high = __getHighSafe(it);
-const m = L.marker([la, ln], { icon: __getPinIconByHigh(high, false) });
+const m = L.marker([la, ln], { icon: _getPinIconByHigh(high, false) });
 m._high = high;
 m._key = it._key;
 
