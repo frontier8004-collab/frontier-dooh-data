@@ -511,12 +511,47 @@
     iconSize:[30,42],
     iconAnchor:[15,41]
   });
-  const hoverIcon  = L.divIcon({
+  const hoverIcon = L.divIcon({
     className:"",
     html: pinSvgHover("rgba(162,222,204,0.98)", "rgba(0,0,0,0.35)"),
     iconSize:[36,50],
     iconAnchor:[18,49]
   });
+  // v1.1.27.2: category pin colors (SAFE: uses it._high only, no data parsing change)
+  const PIN_COLORS_BY_HIGH = {
+    "전광판 / 빌보드 / 외벽": ["rgba(255,170,200,0.95)", "rgba(0,0,0,0.35)"],       // 연핑크
+    "교통매체":              ["rgba(162,222,204,0.95)", "rgba(0,0,0,0.35)"],       // 민트
+    "복합 쇼핑몰 / 대형마트": ["rgba(255,240,160,0.95)", "rgba(0,0,0,0.35)"],       // 연노랑
+    "극장 / 레저 / 휴양 시설": ["rgba(255,200,150,0.95)", "rgba(0,0,0,0.35)"],      // 연주황
+    "생활 밀착형 매체":       ["rgba(220,190,255,0.95)", "rgba(0,0,0,0.35)"],       // 연보라
+  };
+
+  const __pinIconCache = new Map();
+
+  function __getHighSafe(it){
+    return (it && typeof it._high === "string") ? it._high : "";
+  }
+
+  function __getPinIconByHigh(high, isHover){
+    const colors = PIN_COLORS_BY_HIGH[high];
+    if (!colors) return isHover ? hoverIcon : normalIcon;
+
+    const key = high + "|" + (isHover ? "H" : "N");
+    const cached = __pinIconCache.get(key);
+    if (cached) return cached;
+
+    const [fill, stroke] = colors;
+
+    const icon = L.divIcon({
+      className: "",
+      html: isHover ? pinSvgHover(fill, stroke) : pinSvg(fill, stroke),
+      iconSize: isHover ? [36,50] : [30,42],
+      iconAnchor: isHover ? [18,49] : [15,41],
+    });
+
+    __pinIconCache.set(key, icon);
+    return icon;
+  }
 
   /* 유니크 키 생성 */
   function stableHash(seed, str){
@@ -585,7 +620,7 @@
     if (!m) return;
     const mint = (key === activeMiniKey) || (key === hoverKey);
     try{
-      m.setIcon(mint ? hoverIcon : normalIcon);
+      m.setIcon(__getPinIconByHigh(m._high || "", mint));
       m.setZIndexOffset(mint ? 9999 : 0);
     }catch(_){}
   }
@@ -637,7 +672,7 @@
     for (const k of markerByKey.keys()){
       try{
         const m = markerByKey.get(k);
-        m.setIcon(normalIcon);
+        m.setIcon(__getPinIconByHigh(m._high || "", false));
         m.setZIndexOffset(0);
       }catch(_){}
     }
@@ -1301,8 +1336,11 @@ updateLoadMoreUI(items);
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
-      const m = L.marker([la, ln], { icon: normalIcon });
-      m.__key = it._key;
+      const high = __getHighSafe(it);
+const m = L.marker([la, ln], { icon: __getPinIconByHigh(high, false) });
+m._high = high;
+m._key = it._key;
+
 
       m.bindPopup(miniPopupHtml(it), {
         closeButton:false,
