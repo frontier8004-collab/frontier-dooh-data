@@ -1242,8 +1242,11 @@ updateLoadMoreUI(items);
       zoomSnap: 1,
       zoomDelta: 1,
       wheelPxPerZoomLevel: 80
+       minZoom: HOME_ZOOM - 3,
+maxBounds: [[-90, -180], [90, 180]],
+maxBoundsViscosity: 1.0,
     }).setView(HOME_CENTER, HOME_ZOOM);
-
+noWrap: true,
     L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
   attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
