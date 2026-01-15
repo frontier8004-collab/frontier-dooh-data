@@ -1513,7 +1513,8 @@ updateLoadMoreUI(items);
 
       const sum = document.createElement("div");
       sum.className = "mSum";
-      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()}</div></div>
+      sum.innerHTML = `<div><div class="muted">총합</div><div style="margin-top:2px;color:var(--mint);">${cartTotalText()} (VAT 별도)</div></div>
+
                        <div style="color:rgba(255,255,255,.65);font-size:12px;font-weight:900;">총 ${valid.length}개</div>`;
       body.appendChild(sum);
     }
