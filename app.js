@@ -1242,6 +1242,9 @@ updateLoadMoreUI(items);
       zoomSnap: 1,
       zoomDelta: 1,
       wheelPxPerZoomLevel: 80
+       maxBounds: [[-50, -180], [85, 180]],
+maxBoundsViscosity: 1.0,
+
     }).setView(HOME_CENTER, HOME_ZOOM);
 
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
