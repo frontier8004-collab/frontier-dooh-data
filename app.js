@@ -1239,10 +1239,8 @@ updateLoadMoreUI(items);
   function buildMap(){
     map = L.map("map", {
       zoomControl:false,
-      crs: L.CRS.EPSG3857,
       zoomSnap: 1,
       zoomDelta: 1,
-      worldCopyJump: true,
       wheelPxPerZoomLevel: 80
     }).setView(HOME_CENTER, HOME_ZOOM);
 
