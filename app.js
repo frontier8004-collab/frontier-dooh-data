@@ -22,6 +22,7 @@
 
   const HOME_BOUNDS_FIXED = { north:39.5, south:33.0, west:123.5, east:130.5 };
   const HOME_CENTER_SHIFT = { upPct:-0.07, leftPct:-0.10 };
+const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west], [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]]);
 
   function computeHomeCenter(){
     const midLat = (HOME_BOUNDS_FIXED.north + HOME_BOUNDS_FIXED.south) / 2;
@@ -38,6 +39,7 @@
   let ALL = [];
   let map = null;
   let markers = null;
+let isClampingBounds = false;
 
   const markerByKey = new Map();
   const cardByKey = new Map();
@@ -1236,6 +1238,20 @@ $("zVal").textContent = zDisp;
     if (!hint) return;
     hint.style.display = "none";
   }
+function applyMovePolicy(){
+  if (!map) return;
+
+  const z = map.getZoom();
+  const isZoom1 = (z <= 7); // 내부 zoom 7 == 표시 1
+
+  if (isZoom1){
+    map.dragging && map.dragging.disable();
+    map.keyboard && map.keyboard.disable();
+  } else {
+    map.dragging && map.dragging.enable();
+    map.keyboard && map.keyboard.enable();
+  }
+}
 
   function buildMap(){
     map = L.map("map", {
@@ -1243,6 +1259,9 @@ $("zVal").textContent = zDisp;
       zoomSnap: 1,
       zoomDelta: 1,
       wheelPxPerZoomLevel: 80,
+       maxBounds: HOME_MAX_BOUNDS,
+maxBoundsViscosity: 1.0,
+
 minZoom: 7
 
     }).setView(HOME_CENTER, HOME_ZOOM);
@@ -1309,7 +1328,12 @@ minZoom: 7
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("zoomend",   ()=>{ isMapInteracting = false; forceIntegerZoom(); });
+    map.on("zoomend", () =>{
+  isMapInteracting = false;
+  forceIntegerZoom();
+  applyMovePolicy();
+});
+
 
     map.on("click", ()=>{ hideClusterHint(); closeMiniPopup(); });
 
@@ -1322,11 +1346,21 @@ minZoom: 7
       clearAllCardHighlights();
     }, { passive:true });
 
-    map.on("moveend", () => {
-      if (suspendViewportOnce) return;
-      viewportUpdate();
-      forceIntegerZoom();
-    });
+   map.on("moveend", () => {
+  if (suspendViewportOnce) return;
+  if (isClampingBounds) return;
+
+  isClampingBounds = true;
+  try{
+    map.panInsideBounds(HOME_MAX_BOUNDS, { animate:false });
+  } finally {
+    isClampingBounds = false;
+  }
+
+  viewportUpdate();
+  forceIntegerZoom();
+});
+ 
   }
 
   function renderMarkers(items){
