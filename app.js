@@ -20,7 +20,7 @@
    
   const HOME_ZOOM = 8;
   const HOME_BOUNDS_FIXED = { north:39.5, south:33.0, west:122.8, east:131.2 };
-  const HOME_CENTER_SHIFT = { upPct:-0.07, leftPct:-0.10 };
+  const HOME_CENTER_SHIFT = { upPct:-0.07, leftPct:-0 };
 const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west], [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]]);
 
   function computeHomeCenter(){
