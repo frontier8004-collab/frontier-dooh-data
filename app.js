@@ -1348,19 +1348,6 @@ c.focus();
       clearAllMarkerStates();
       clearAllCardHighlights();
     }, { passive:true });
-
-   map.on("moveend", () => {
-  if (suspendViewportOnce) return;
-  isClampingBounds = true;
-  try{
-    map.panInsideBounds(HOME_MAX_BOUNDS, { animate:false });
-  } finally {
-    isClampingBounds = false;
-  }
-
-  viewportUpdate();
-  forceIntegerZoom();
-});
  
   }
 
