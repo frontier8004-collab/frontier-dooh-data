@@ -1241,8 +1241,8 @@ $("zVal").textContent = zDisp;
 function applyMovePolicy(){
   if (!map) return;
 
-  const z = map.getZoom();
-  const isZoom1 = (z <= 7); // 내부 zoom 7 == 표시 1
+const zi = Math.round(map.getZoom());
+const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동일)
 
   if (isZoom1){
     map.dragging && map.dragging.disable();
@@ -1265,7 +1265,7 @@ maxBoundsViscosity: 1.0,
 minZoom: 7
 
     }).setView(HOME_CENTER, HOME_ZOOM);
-
+applyMovePolicy();
     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
