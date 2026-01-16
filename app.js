@@ -1266,7 +1266,10 @@ minZoom: 7
 
     }).setView(HOME_CENTER, HOME_ZOOM);
 applyMovePolicy();
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    const c = map.getContainer();
+c.setAttribute("tabindex", "0");
+c.focus();
+     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
@@ -1348,8 +1351,6 @@ applyMovePolicy();
 
    map.on("moveend", () => {
   if (suspendViewportOnce) return;
-  if (isClampingBounds) return;
-
   isClampingBounds = true;
   try{
     map.panInsideBounds(HOME_MAX_BOUNDS, { animate:false });
