@@ -1209,7 +1209,8 @@ updateLoadMoreUI(items);
   function updateZoomUI(){
     if (!map) return;
     const zi = Math.round(map.getZoom());
-    $("zVal").textContent = zi;
+const zDisp = Math.max(1, zi - 6);
+$("zVal").textContent = zDisp;
   }
 
   function forceIntegerZoom(){
@@ -1242,7 +1243,7 @@ updateLoadMoreUI(items);
       zoomSnap: 1,
       zoomDelta: 1,
       wheelPxPerZoomLevel: 80,
-minZoom: 1
+minZoom: 7
 
     }).setView(HOME_CENTER, HOME_ZOOM);
 
