@@ -33,7 +33,7 @@ const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FI
     const lngShift = lngSpan * HOME_CENTER_SHIFT.leftPct;
     return [ midLat + latShift, midLng - lngShift ];
   }
-  const HOME_CENTER = [35.9, 128];
+  const HOME_CENTER = [35.7, 128];
 
   let ALL = [];
   let map = null;
