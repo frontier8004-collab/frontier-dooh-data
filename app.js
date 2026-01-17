@@ -7,7 +7,7 @@
 
 (() => {
   "use strict";
-
+   
   const VERSION = "v1.1.27";
  const DATA_URL = "./data_public.json";
   const CATEGORY_TREE = [
