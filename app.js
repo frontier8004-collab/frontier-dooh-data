@@ -1241,8 +1241,6 @@ function applyMovePolicy(){
   if (!map) return;
 
 const zi = Math.round(map.getZoom());
-   const UI_ZOOM1_INTERNAL = 7;         // 표시(UI) 1 == 내부 7 (현재 기준)
-const UI_ZOOM_OFFSET = UI_ZOOM1_INTERNAL - 1; // 내부 = UI + OFFSET
 const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동일)
 
   if (isZoom1){
@@ -1316,32 +1314,12 @@ c.focus();
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
-if (bb && bb.isValid && bb.isValid()){
-  const internalNow = Math.round(map.getZoom());
-  const uiNow = internalNow - UI_ZOOM_OFFSET;                 // UI 기준 현재 줌
-  const uiMax = uiNow + 2;                                    // UI 기준 +2 제한
-  const internalMax = Math.min(uiMax + UI_ZOOM_OFFSET, 18);    // 내부 상한(현행 18 유지)
-const boundsZoom = map.getBoundsZoom(bb, false, [90, 90]);
-const internalTarget = Math.min((uiNow + 2) + UI_ZOOM_OFFSET, 18);
-
-   if (boundsZoom >= internalTarget){
-  map.setView(bb.getCenter(), internalTarget, { animate:false });
-} else {
-  map.fitBounds(bb, {
-    padding: [90, 90],
-    maxZoom: internalMax,
-    animate: false
-  });
-} else if (e.layer && e.layer.getLatLng){
-  const ll = e.layer.getLatLng();
-
-  const internalNow = Math.round(map.getZoom());
-  const uiNow = internalNow - UI_ZOOM_OFFSET;
-  const uiTarget = uiNow + 2;
-  const internalTarget = Math.min(uiTarget + UI_ZOOM_OFFSET, 18);
-
-  map.setView(ll, internalTarget, { animate:false });
-}
+      if (bb && bb.isValid && bb.isValid()){
+        map.fitBounds(bb, { padding:[90,90], maxZoom: 18, animate:false });
+      }else if (e.layer && e.layer.getLatLng){
+        const ll = e.layer.getLatLng();
+        map.setView(ll, Math.min(map.getZoom() + 2, 18), { animate:false });
+      }
     });
 
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
@@ -1959,3 +1937,4 @@ m._key = it._key;
   });
 
 })();
+
