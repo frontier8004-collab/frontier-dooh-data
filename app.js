@@ -1268,11 +1268,10 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-    L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+L.tileLayer("https://tiles.osm.kr/{z}/{x}/{y}.png", {
   maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
+  attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
-
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
