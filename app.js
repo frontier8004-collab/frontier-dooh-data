@@ -1321,7 +1321,12 @@ if (bb && bb.isValid && bb.isValid()){
   const uiNow = internalNow - UI_ZOOM_OFFSET;                 // UI 기준 현재 줌
   const uiMax = uiNow + 2;                                    // UI 기준 +2 제한
   const internalMax = Math.min(uiMax + UI_ZOOM_OFFSET, 18);    // 내부 상한(현행 18 유지)
+const boundsZoom = map.getBoundsZoom(bb, false, [90, 90]);
+const internalTarget = Math.min((uiNow + 2) + UI_ZOOM_OFFSET, 18);
 
+   if (boundsZoom >= internalTarget){
+  map.setView(bb.getCenter(), internalTarget, { animate:false });
+} else {
   map.fitBounds(bb, {
     padding: [90, 90],
     maxZoom: internalMax,
