@@ -1326,7 +1326,16 @@ L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
     markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
 
     map.addLayer(markers);
+// Legend toggle
+const legend = document.getElementById("mapLegend");
+const toggleBtn = document.getElementById("legendToggle");
 
+if (legend && toggleBtn) {
+  toggleBtn.addEventListener("click", () => {
+    legend.classList.toggle("collapsed");
+    toggleBtn.textContent = legend.classList.contains("collapsed") ? "+" : "−";
+  });
+}
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
