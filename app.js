@@ -1268,10 +1268,11 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
+    L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
+}).addTo(map);
+
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
