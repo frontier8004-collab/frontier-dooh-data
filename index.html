@@ -1005,6 +1005,64 @@
       font-weight:1000;
     }
     .mSum .muted{ color:rgba(255,255,255,.65); font-weight:900; font-size:12px; }
+    /* Map Legend */
+.mapLegend{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:1000;
+  background:var(--panel);
+  color:var(--text);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  font-size:12px;
+  width:220px;
+}
+
+.legendHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 10px;
+  font-weight:700;
+  border-bottom:1px solid var(--line);
+}
+
+.legendHeader button{
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-size:16px;
+  cursor:pointer;
+}
+
+.legendBody{
+  padding:8px 10px;
+}
+
+.mapLegend.collapsed .legendBody{
+  display:none;
+}
+
+.legendItem{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:6px;
+}
+
+.legendDot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.legendDot.cluster{ background:#4da3ff; }
+.legendDot.pink{ background:#ff6fae; }
+.legendDot.blue{ background:#4da3ff; }
+.legendDot.green{ background:#6fd3a3; }
+
   </style>
 </head>
 
@@ -1064,6 +1122,31 @@
     <div class="mapBox">
       <div class="mapInner">
         <div id="map"></div>
+<!-- Map Legend -->
+<div id="mapLegend" class="mapLegend expanded">
+  <div class="legendHeader">
+    <span>범례</span>
+    <button id="legendToggle" aria-label="범례 접기">−</button>
+  </div>
+  <div class="legendBody">
+    <div class="legendItem">
+      <span class="legendDot cluster"></span>
+      <span>클러스터(파랑): 클릭 시 확대</span>
+    </div>
+    <div class="legendItem">
+      <span class="legendDot pink"></span>
+      <span>전광판 핀: 전광판 / 빌보드 / 외벽</span>
+    </div>
+    <div class="legendItem">
+      <span class="legendDot blue"></span>
+      <span>교통 매체: 버스 / 지하철 / 공항 등</span>
+    </div>
+    <div class="legendItem">
+      <span class="legendDot green"></span>
+      <span>생활 밀착 매체</span>
+    </div>
+  </div>
+</div>
 
         <div class="clusterHint" id="clusterHint">클릭해서 확대</div>
 
