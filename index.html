@@ -1006,6 +1006,11 @@
     }
     .mSum .muted{ color:rgba(255,255,255,.65); font-weight:900; font-size:12px; }
     /* Map Legend */
+    /* Legend visibility fix */
+.mapInner { position: relative; }
+#map { position: relative; z-index: 1; }
+.mapLegend { z-index: 9999; }
+
 .mapLegend{
   position:absolute;
   top:12px;
