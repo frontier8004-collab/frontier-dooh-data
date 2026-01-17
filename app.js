@@ -1272,7 +1272,49 @@ L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
 }).addTo(map);
-
+// Legend (Leaflet control, always on top)
+const legendControl = L.control({ position: "topleft" });
+legendControl.onAdd = function () {
+  const div = L.DomUtil.create("div", "mapLegend expanded");
+  div.id = "mapLegend";
+  div.innerHTML = `
+    <div class="legendHeader">
+      <span>범례</span>
+      <button id="legendToggle" aria-label="범례 접기">−</button>
+    </div>
+    <div class="legendBody">
+      <div class="legendItem">
+        <span class="legendDot cluster"></span>
+        <span>클러스터(파랑): 클릭 시 확대</span>
+      </div>
+      <div class="legendItem">
+        <span class="legendDot pink"></span>
+        <span>전광판 핀: 전광판 / 빌보드 / 외벽</span>
+      </div>
+      <div class="legendItem">
+        <span class="legendDot blue"></span>
+        <span>교통 매체: 버스 / 지하철 / 공항 등</span>
+      </div>
+      <div class="legendItem">
+        <span class="legendDot green"></span>
+        <span>생활 밀착 매체</span>
+      </div>
+    </div>
+  `;
+  L.DomEvent.disableClickPropagation(div);
+  L.DomEvent.disableScrollPropagation(div);
+  return div;
+};
+legendControl.addTo(map);
+// Legend toggle
+const legend = document.getElementById("mapLegend");
+const toggleBtn = document.getElementById("legendToggle");
+if (legend && toggleBtn) {
+  toggleBtn.addEventListener("click", () => {
+    legend.classList.toggle("collapsed");
+    toggleBtn.textContent = legend.classList.contains("collapsed") ? "+" : "−";
+  });
+}
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:false,
