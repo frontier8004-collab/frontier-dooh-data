@@ -1258,7 +1258,7 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
       zoomSnap: 1,
       zoomDelta: 1,
       wheelPxPerZoomLevel: 80,
-       maxBounds: HOME_MAX_BOUNDS,
+       maxBounds: L.latLngBounds([[33.0, 123.8], [39.5, 132.2]]),
 maxBoundsViscosity: 1.0,
 
 minZoom: 7
@@ -1664,6 +1664,7 @@ m._key = it._key;
       suspendViewportOnce = false;
       forceIntegerZoom();
       viewportUpdate();
+      try{ map.panInsideBounds(L.latLngBounds([[33.0, 123.8], [39.5, 132.2]]), { animate:false }); }catch(_){}
     });
   }
 
