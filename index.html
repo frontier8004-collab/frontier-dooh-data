@@ -420,6 +420,71 @@
       min-height:0;
       position:relative;
     }
+    /* ===== MAP LEGEND ===== */
+.mapLegend{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:1200;
+  background:var(--panel);
+  color:var(--text);
+  border-radius:12px;
+  box-shadow:var(--shadow);
+  width:260px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.legendHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 12px;
+  font-weight:800;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+
+.legendHeader button{
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-size:18px;
+  cursor:pointer;
+  line-height:1;
+}
+
+.legendBody{ padding:10px 12px; }
+
+.mapLegend.collapsed .legendBody{ display:none; }
+
+.legendItem{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:6px 0;
+  font-size:12px;
+  color:rgba(255,255,255,.85);
+}
+
+.legendDot{
+  width:12px;
+  height:12px;
+  border-radius:999px;
+  display:inline-block;
+  border:1px solid rgba(0,0,0,.25);
+}
+
+/* cluster blue (matches marker-cluster color family) */
+.legendDot.cluster{ background: rgba(42,158,255,0.85); }
+
+/* PIN_COLORS_BY_HIGH (from app.js) */
+.legendDot.pink  { background: rgba(255,170,200,0.95); }
+.legendDot.mint  { background: rgba(162,222,204,0.95); }
+.legendDot.yellow{ background: rgba(255,240,160,0.95); }
+.legendDot.orange{ background: rgba(255,200,150,0.95); }
+.legendDot.purple{ background: rgba(220,190,255,0.95); }
+.legendDot.gray  { background: rgba(200,200,200,0.95); }
+
     #map{width:100%; height:100%; background:#0b0c0d;}
 
     .leaflet-tile-pane{
@@ -1063,6 +1128,51 @@
 
     <div class="mapBox">
       <div class="mapInner">
+        <!-- Map Legend -->
+<div id="mapLegend" class="mapLegend expanded">
+  <div class="legendHeader">
+    <span>범례</span>
+    <button id="legendToggle" aria-label="범례 접기">–</button>
+  </div>
+
+  <div class="legendBody">
+    <div class="legendItem">
+      <span class="legendDot cluster"></span>
+      <span>클러스터(파랑): 클릭 시 확대</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot pink"></span>
+      <span>전광판 핀: 전광판 / 빌보드 / 외벽</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot mint"></span>
+      <span>교통 매체: 버스 / 지하철 / 공항</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot yellow"></span>
+      <span>복합 상업시설: 쇼핑몰 / 대형마트</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot orange"></span>
+      <span>문화·레저: 극장 / 레저 / 휴양 시설</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot purple"></span>
+      <span>생활 밀착 매체</span>
+    </div>
+
+    <div class="legendItem">
+      <span class="legendDot gray"></span>
+      <span>기타</span>
+    </div>
+  </div>
+</div>
+        
         <div id="map"></div>
 
         <div class="clusterHint" id="clusterHint">클릭해서 확대</div>
