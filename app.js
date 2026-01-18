@@ -1937,4 +1937,19 @@ m._key = it._key;
   });
 
 })();
+// ===== MAP LEGEND TOGGLE =====
+(() => {
+  const legend = document.getElementById("mapLegend");
+  const toggle = document.getElementById("legendToggle");
+  if (!legend || !toggle) return;
+
+  toggle.addEventListener("click", () => {
+    const collapsed = legend.classList.toggle("collapsed");
+    toggle.textContent = collapsed ? "+" : "–";
+    toggle.setAttribute(
+      "aria-label",
+      collapsed ? "범례 펼치기" : "범례 접기"
+    );
+  });
+})();
 
