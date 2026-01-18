@@ -1,14 +1,15 @@
 /* =========================================================
    Frontier DOOH 전국 DB
-   JS 분리 버전 (v1.1.27 기반 안정화)
-   - index.html 안의 <script>...</script> 내용을 이 파일로 이동합니다.
-   - index.html에는 <script src="./app.js" defer></script> 한 줄만 남깁니다.
+   JS 분리 버전 (v1.2.2.2 기준선)
+   - index.html 안의 <script>...</script> 내용을 이 파일(app.js)로 분리해 운영합니다.
+   - index.html에는 <script src="./app.js" defer></script>만 유지합니다.
+   - 롤백은 GitHub History/Revert가 아니라 backups 폴더의 확정 백업 파일로만 교체합니다.
    ========================================================= */
 
 (() => {
   "use strict";
    
-  const VERSION = "v1.1.27";
+ const VERSION = "v1.2.2.2";
  const DATA_URL = "./data_public.json";
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
