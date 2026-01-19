@@ -1274,8 +1274,8 @@ c.focus();
 // ===============================
 const baseLayers = {
   "MapTiler Dark (Default)": L.tileLayer(
-    "https://api.maptiler.com/maps/darkmatter/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDIR
-",
+    "https://api.maptiler.com/maps/streets-v2-dark/256/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDIR"
+,
     {
       attribution:
         '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
@@ -1284,8 +1284,8 @@ const baseLayers = {
   ),
 
   "MapTiler Light": L.tileLayer(
-    "https://api.maptiler.com/maps/basic/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDIR
-",
+    "https://api.maptiler.com/maps/streets-v2-dark/256/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDIR"
+,
     {
       attribution:
         '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
