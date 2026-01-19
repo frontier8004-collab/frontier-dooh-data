@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Frontier DOOH Vector Test (MapLibre)</title>
+
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet"/>
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; background: #111414; }
+    #map { height: 100%; width: 100%; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+  const KEY = "YOUR_KEY"; // <-- 여기만 교체
+  const map = new maplibregl.Map({
+    container: "map",
+    style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
+    center: [127.0, 36.0],
+    zoom: 7,
+    attributionControl: true
+  });
+
+  map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+  // 로드 후: 모든 심볼 레이어 라벨을 name:ko 우선으로 강제
+  map.on("load", () => {
+    const style = map.getStyle();
+    const layers = (style.layers || []).filter(l => l.type === "symbol");
+
+    layers.forEach(l => {
+      try {
+        map.setLayoutProperty(
+          l.id,
+          "text-field",
+          ["coalesce", ["get", "name:ko"], ["get", "name"], ["get", "name_en"]]
+        );
+      } catch (e) {}
+    });
+  });
+</script>
+
+</body>
+</html>
