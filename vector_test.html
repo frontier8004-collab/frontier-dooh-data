@@ -16,6 +16,7 @@
 <body>
 
 <div id="map"></div>
+<div id="status" style="position:fixed;left:10px;bottom:10px;z-index:9999;background:rgba(0,0,0,0.75);color:#fff;padding:8px 10px;border-radius:8px;font:12px/1.4 system-ui;max-width:70vw;white-space:pre-wrap;">loading...</div>
 
 <script>
   const KEY = "YOUR_KEY"; // <-- 여기만 교체
@@ -28,6 +29,28 @@
   });
 
   map.addControl(new maplibregl.NavigationControl(), "top-right");
+  const statusEl = document.getElementById("status");
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+
+  setStatus("MapLibre init OK. Loading style.json...");
+
+  map.on("error", (e) => {
+    // 콘솔 없이 화면에 에러를 띄우기
+    try {
+      const msg = (e && e.error && e.error.message) ? e.error.message : JSON.stringify(e);
+      setStatus("Map error:\n" + msg);
+    } catch (_) {
+      setStatus("Map error (unparsed).");
+    }
+  });
+
+  map.on("styledata", () => {
+    setStatus("Style loaded. Loading tiles...");
+  });
+
+  map.once("idle", () => {
+    setStatus("Idle OK (style + tiles loaded).");
+  });
 
   // 로드 후: 모든 심볼 레이어 라벨을 name:ko 우선으로 강제
   map.on("load", () => {
