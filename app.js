@@ -1357,6 +1357,9 @@ c.focus();
     setHoverKey(null);
 
     markerByKey.clear();
+       if (!markers || typeof markers.clearLayers !== "function") {
+    return;
+  }
     markers.clearLayers();
 
     const ms = [];
