@@ -70,11 +70,24 @@ map.once("idle", () => {
   fetch("./data_public.json")
     .then(r => r.json())
     .then(data => {
-      const it = data[0];
-      if (!it) {
-        setStatus("No data in data_public.json");
-        return;
-      }
+if (!data) {
+  setStatus("data_public.json is null/undefined");
+  return;
+}
+
+const isArray = Array.isArray(data);
+const len = isArray ? data.length : (data.items ? data.items.length : -1);
+
+setStatus(
+  "data_public.json loaded\n" +
+  "type: " + (isArray ? "array" : typeof data) + "\n" +
+  "len: " + len + "\n" +
+  "keys: " + (isArray ? Object.keys(data[0] || {}).join(",") : Object.keys(data || {}).join(","))
+);
+
+const it = isArray ? data[0] : (data.items ? data.items[0] : null);
+if (!it) return;
+
 
       new maplibregl.Marker({ color: "#a2decc" })
         .setLngLat([it.lng, it.lat])
