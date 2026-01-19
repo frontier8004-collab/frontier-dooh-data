@@ -89,7 +89,7 @@ const it = isArray ? data[0] : (data.items ? data.items[0] : null);
 if (!it) return;
 
 // Render up to N markers for performance test
-const MAX = 300; // first expansion cap
+const MAX = 1000; // performance test cap
 const arr = isArray ? data : (data.items || []);
 const take = arr.slice(0, MAX);
 
