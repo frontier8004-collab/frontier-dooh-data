@@ -64,7 +64,26 @@
           "text-field",
           ["coalesce", ["get", "name:ko"], ["get", "name"], ["get", "name_en"]]
         );
-      } catch (e) {}
+     } catch (e) {}
+    });
+      // TEST: load data_public.json and render one marker
+  fetch("./data_public.json")
+    .then(r => r.json())
+    .then(data => {
+      const it = data[0];
+      if (!it) {
+        setStatus("No data in data_public.json");
+        return;
+      }
+
+      new maplibregl.Marker({ color: "#a2decc" })
+        .setLngLat([it.lng, it.lat])
+        .addTo(map);
+
+      setStatus("Data OK: first marker rendered");
+    })
+    .catch(err => {
+      setStatus("Data load error: " + err.message);
     });
   });
 </script>
