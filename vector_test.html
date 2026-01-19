@@ -66,53 +66,142 @@ map.once("idle", () => {
         );
      } catch (e) {}
     });
-      // TEST: load data_public.json and render one marker
-  fetch("./data_public_dummy_5000.json")
-    .then(r => r.json())
-    .then(data => {
-if (!data) {
-  setStatus("data_public.json is null/undefined");
-  return;
-}
+// TEST: load data_public_dummy_5000.json and render CLUSTER (MapLibre source cluster)
 
-const isArray = Array.isArray(data);
-const len = isArray ? data.length : (data.items ? data.items.length : -1);
+fetch("./data_public_dummy_5000.json")
+  .then(r => r.json())
+  .then(data => {
+    if (!data) {
+      setStatus("data_public_dummy_5000.json is null/undefined");
+      return;
+    }
 
-setStatus(
-  "data_public.json loaded\n" +
-  "type: " + (isArray ? "array" : typeof data) + "\n" +
-  "len: " + len + "\n" +
-  "keys: " + (isArray ? Object.keys(data[0] || {}).join(",") : Object.keys(data || {}).join(","))
-);
+    const isArray = Array.isArray(data);
+    const items = isArray ? data : (Array.isArray(data.items) ? data.items : []);
+    const total = items.length;
 
-const it = isArray ? data[0] : (data.items ? data.items[0] : null);
-if (!it) return;
+    if (!total) {
+      setStatus("No items in data_public_dummy_5000.json");
+      return;
+    }
 
-// Render up to N markers for performance test
-const MAX = 1000; // performance test cap
-const arr = isArray ? data : (data.items || []);
-const take = arr.slice(0, MAX);
+    // GeoJSON 변환
+    const features = items.map((it, idx) => {
+      const lng = Number(it.lng ?? it._lngDisp);
+      const lat = Number(it.lat ?? it._latDisp);
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
 
-let rendered = 0;
-for (const it2 of take) {
-  const lng = Number(it2.lng);
-  const lat = Number(it2.lat);
-  if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lng, lat] },
+        properties: {
+          idx,
+          key: it._key ?? "",
+          name: it.name ?? it.title ?? "",
+          high: it.high ?? it.category ?? ""
+        }
+      };
+    }).filter(Boolean);
 
-  new maplibregl.Marker({ color: "#a2decc" })
-    .setLngLat([lng, lat])
-    .addTo(map);
+    setStatus(
+      "data_public_dummy_5000 loaded\n" +
+      "items: " + total + "\n" +
+      "points(valid): " + features.length + "\n" +
+      "Cluster mode: ON"
+    );
 
-  rendered++;
-}
+    // 1) Source 추가 (cluster ON)
+    if (map.getSource("dooh")) {
+      map.removeLayer("dooh-unclustered");
+      map.removeLayer("dooh-clusters");
+      map.removeLayer("dooh-cluster-count");
+      map.removeSource("dooh");
+    }
 
-setStatus(`Data OK: rendered ${rendered}/${take.length} markers (max ${MAX})`);
-
-    })
-    .catch(err => {
-      setStatus("Data load error: " + err.message);
+    map.addSource("dooh", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features },
+      cluster: true,
+      clusterMaxZoom: 17,
+      clusterRadius: 50
     });
+
+    // 2) Cluster 원
+    map.addLayer({
+      id: "dooh-clusters",
+      type: "circle",
+      source: "dooh",
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": "#a2decc",
+        "circle-opacity": 0.35,
+        "circle-stroke-color": "#a2decc",
+        "circle-stroke-width": 1,
+        "circle-radius": [
+          "step",
+          ["get", "point_count"],
+          16,   50,
+          22,  200,
+          28,  1000,
+          34
+        ]
+      }
+    });
+
+    // 3) Cluster 숫자
+    map.addLayer({
+      id: "dooh-cluster-count",
+      type: "symbol",
+      source: "dooh",
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": "{point_count_abbreviated}",
+        "text-size": 12
+      },
+      paint: {
+        "text-color": "#0b0c0d"
+      }
+    });
+
+    // 4) 개별 포인트(클러스터 아닌 것)
+    map.addLayer({
+      id: "dooh-unclustered",
+      type: "circle",
+      source: "dooh",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": "#a2decc",
+        "circle-radius": 4,
+        "circle-opacity": 0.9
+      }
+    });
+
+    // 5) 클러스터 클릭 시 확대
+    map.on("click", "dooh-clusters", (e) => {
+      const f = e.features && e.features[0];
+      if (!f) return;
+
+      const clusterId = f.properties.cluster_id;
+      const source = map.getSource("dooh");
+      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+        if (err) return;
+        map.easeTo({
+          center: f.geometry.coordinates,
+          zoom
+        });
+      });
+    });
+
+    // 마우스 커서
+    map.on("mouseenter", "dooh-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+    map.on("mouseleave", "dooh-clusters", () => { map.getCanvas().style.cursor = ""; });
+
+    setStatus((statusEl ? statusEl.textContent + "\n" : "") + "Cluster layers added.");
+  })
+  .catch(err => {
+    setStatus("Data load error: " + err.message);
   });
+
 </script>
 
 </body>
