@@ -88,12 +88,26 @@ setStatus(
 const it = isArray ? data[0] : (data.items ? data.items[0] : null);
 if (!it) return;
 
+// Render up to N markers for performance test
+const MAX = 300; // first expansion cap
+const arr = isArray ? data : (data.items || []);
+const take = arr.slice(0, MAX);
 
-      new maplibregl.Marker({ color: "#a2decc" })
-        .setLngLat([it.lng, it.lat])
-        .addTo(map);
+let rendered = 0;
+for (const it2 of take) {
+  const lng = Number(it2.lng);
+  const lat = Number(it2.lat);
+  if (!Number.isFinite(lng) || !Number.isFinite(lat)) continue;
 
-      setStatus("Data OK: first marker rendered");
+  new maplibregl.Marker({ color: "#a2decc" })
+    .setLngLat([lng, lat])
+    .addTo(map);
+
+  rendered++;
+}
+
+setStatus(`Data OK: rendered ${rendered}/${take.length} markers (max ${MAX})`);
+
     })
     .catch(err => {
       setStatus("Data load error: " + err.message);
