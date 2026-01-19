@@ -1254,8 +1254,6 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-       // TEMP: disable Leaflet map init (MapLibre active)
-  return;
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
@@ -1271,47 +1269,10 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-   // ===============================
-// Base Layers (MapTiler Dark fixed as default)
-// ===============================
-const baseLayers = {
-  "MapTiler Dark (Default)": L.tileLayer(
-    "https://api.maptiler.com/maps/dataviz-v4-dark/256/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDlR&lang=name:ko",
-
-    {
-      attribution:
-        '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
-        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-    }
-  ),
-
-  "MapTiler Light": L.tileLayer(
-    "https://api.maptiler.com/maps/dataviz-v4/256/{z}/{x}/{y}.png?key=s3k9sg6vGwjKAfd4mDlR&lang=name:ko",
-
-    {
-      attribution:
-        '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
-        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-    }
-  ),
-
-  "CARTO Positron (Backup)": L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    {
+     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }
-  )
-};
-
-// 기본 베이스맵 적용 (MapTiler Dark)
-baseLayers["MapTiler Dark (Default)"].addTo(map);
-
-// 레이어 선택 컨트롤
-L.control.layers(baseLayers, null, {
-  position: "topright",
-  collapsed: true
-}).addTo(map);
-
+    }).addTo(map);
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
@@ -1992,4 +1953,5 @@ m._key = it._key;
     );
   });
 })();
+
 
