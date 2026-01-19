@@ -52,11 +52,12 @@ map.once("idle", () => {
   setStatus((statusEl ? statusEl.textContent + "\n" : "") + "Idle OK (style + tiles loaded).");
 });
 
-  // 로드 후: 모든 심볼 레이어 라벨을 name:ko 우선으로 강제
-  map.on("load", () => {
+// 로드 후: 모든 심볼 레이어 라벨을 name:ko 우선으로 강제 + (데이터 로드/클러스터 생성)
+map.on("load", async () => {
+  // 1) 한글 라벨 우선
+  try {
     const style = map.getStyle();
-    const layers = (style.layers || []).filter(l => l.type === "symbol");
-
+    const layers = (style && style.layers ? style.layers : []).filter(l => l.type === "symbol");
     layers.forEach(l => {
       try {
         map.setLayoutProperty(
@@ -64,17 +65,16 @@ map.once("idle", () => {
           "text-field",
           ["coalesce", ["get", "name:ko"], ["get", "name"], ["get", "name_en"]]
         );
-     } catch (e) {}
+      } catch (e) {}
     });
-// TEST: load data_public_dummy_5000.json and render CLUSTER (MapLibre source cluster)
-map.once("load", () => {
-fetch("./data_public_dummy_5000.json")
-  .then(r => r.json())
-  .then(data => {
-    if (!data) {
-      setStatus("data_public_dummy_5000.json is null/undefined");
-      return;
-    }
+  } catch (e) {}
+
+  // 2) 데이터 로드 + GeoJSON 변환 + Source/Layer 구성(클러스터 ON)
+  try {
+    setStatus("Loading data_public_dummy_5000.json...");
+
+    const res = await fetch("./data_public_dummy_5000.json");
+    const data = await res.json();
 
     const isArray = Array.isArray(data);
     const items = isArray ? data : (Array.isArray(data.items) ? data.items : []);
@@ -85,10 +85,9 @@ fetch("./data_public_dummy_5000.json")
       return;
     }
 
-    // GeoJSON 변환
     const features = items.map((it, idx) => {
-      const lng = Number(it.lng ?? it._lngDisp);
-      const lat = Number(it.lat ?? it._latDisp);
+      const lng = Number(it.lng ?? it.lngDisp);
+      const lat = Number(it.lat ?? it.latDisp);
       if (!Number.isFinite(lng) || !Number.isFinite(lat)) return null;
 
       return {
@@ -110,13 +109,14 @@ fetch("./data_public_dummy_5000.json")
       "Cluster mode: ON"
     );
 
-    // 1) Source 추가 (cluster ON)
-    if (map.getSource("dooh")) {
-      map.removeLayer("dooh-unclustered");
-      map.removeLayer("dooh-clusters");
-      map.removeLayer("dooh-cluster-count");
-      map.removeSource("dooh");
-    }
+    // 안전 제거(존재할 때만)
+    const safeRemoveLayer = (id) => { try { if (map.getLayer(id)) map.removeLayer(id); } catch(e) {} };
+    const safeRemoveSource = (id) => { try { if (map.getSource(id)) map.removeSource(id); } catch(e) {} };
+
+    safeRemoveLayer("dooh-unclustered");
+    safeRemoveLayer("dooh-clusters");
+    safeRemoveLayer("dooh-cluster-count");
+    safeRemoveSource("dooh");
 
     map.addSource("dooh", {
       type: "geojson",
@@ -140,9 +140,9 @@ fetch("./data_public_dummy_5000.json")
         "circle-radius": [
           "step",
           ["get", "point_count"],
-          16,   50,
-          22,  200,
-          28,  1000,
+          16, 50,
+          22, 200,
+          28, 1000,
           34
         ]
       }
@@ -158,9 +158,7 @@ fetch("./data_public_dummy_5000.json")
         "text-field": "{point_count_abbreviated}",
         "text-size": 12
       },
-      paint: {
-        "text-color": "#0b0c0d"
-      }
+      paint: { "text-color": "#0b0c0d" }
     });
 
     // 4) 개별 포인트(클러스터 아닌 것)
@@ -183,12 +181,11 @@ fetch("./data_public_dummy_5000.json")
 
       const clusterId = f.properties.cluster_id;
       const source = map.getSource("dooh");
+      if (!source || !source.getClusterExpansionZoom) return;
+
       source.getClusterExpansionZoom(clusterId, (err, zoom) => {
         if (err) return;
-        map.easeTo({
-          center: f.geometry.coordinates,
-          zoom
-        });
+        map.easeTo({ center: f.geometry.coordinates, zoom });
       });
     });
 
@@ -196,11 +193,10 @@ fetch("./data_public_dummy_5000.json")
     map.on("mouseenter", "dooh-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
     map.on("mouseleave", "dooh-clusters", () => { map.getCanvas().style.cursor = ""; });
 
-       setStatus((statusEl ? statusEl.textContent + "\n" : "") + "Cluster layers added.");
-  })
-  .catch(err => {
+    setStatus((statusEl ? statusEl.textContent + "\n" : "") + "Cluster layers added.");
+  } catch (err) {
     setStatus("Data load error: " + (err && err.message ? err.message : String(err)));
-  });
+  }
 });
 
 </script>
