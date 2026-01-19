@@ -48,9 +48,9 @@
     setStatus("Style loaded. Loading tiles...");
   });
 
-  map.once("idle", () => {
-    setStatus("Idle OK (style + tiles loaded).");
-  });
+map.once("idle", () => {
+  setStatus((statusEl ? statusEl.textContent + "\n" : "") + "Idle OK (style + tiles loaded).");
+});
 
   // 로드 후: 모든 심볼 레이어 라벨을 name:ko 우선으로 강제
   map.on("load", () => {
