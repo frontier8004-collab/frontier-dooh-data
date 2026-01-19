@@ -1269,10 +1269,45 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
+   // ===============================
+// Base Layers (MapTiler Dark fixed as default)
+// ===============================
+const baseLayers = {
+  "MapTiler Dark (Default)": L.tileLayer(
+    "https://api.maptiler.com/maps/darkmatter/{z}/{x}/{y}.png?key=YOUR_MAPTILER_KEY",
+    {
+      attribution:
+        '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
+        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }
+  ),
+
+  "MapTiler Light": L.tileLayer(
+    "https://api.maptiler.com/maps/basic/{z}/{x}/{y}.png?key=YOUR_MAPTILER_KEY",
+    {
+      attribution:
+        '&copy; <a href="https://www.maptiler.com/">MapTiler</a> ' +
+        '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+    }
+  ),
+
+  "CARTO Positron (Backup)": L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    {
       attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
+    }
+  )
+};
+
+// 기본 베이스맵 적용 (MapTiler Dark)
+baseLayers["MapTiler Dark (Default)"].addTo(map);
+
+// 레이어 선택 컨트롤
+L.control.layers(baseLayers, null, {
+  position: "topright",
+  collapsed: true
+}).addTo(map);
+
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
