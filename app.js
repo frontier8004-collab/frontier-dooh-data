@@ -1254,6 +1254,8 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
+       // TEMP: disable Leaflet map init (MapLibre active)
+  return;
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
