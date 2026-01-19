@@ -67,7 +67,7 @@ map.once("idle", () => {
      } catch (e) {}
     });
       // TEST: load data_public.json and render one marker
-  fetch("./data_public.json")
+  fetch("./data_public_dummy_5000.json")
     .then(r => r.json())
     .then(data => {
 if (!data) {
