@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Frontier DOOH 전국 DB v1.2.2.2-ml (beta)</title>
+
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; }
+    #map { height: 100%; width: 100%; background: #000; }
+    #badge {
+      position: fixed; top: 10px; left: 10px; z-index: 9999;
+      padding: 8px 10px; border-radius: 10px;
+      background: rgba(0,0,0,.65); color: #fff; font: 12px/1.2 system-ui;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="badge">MapLibre: waiting…</div>
+
+  <script src="./app_ml.js?v=1.2.2.2-ml" defer></script>
+</body>
+</html>
