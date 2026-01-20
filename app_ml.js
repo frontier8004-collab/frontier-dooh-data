@@ -61,16 +61,23 @@ map.on("style.load", () => {
     });
     // ===== dummy_5000 데이터 로드 + 클러스터 =====
 fetch("./data_public_dummy_5000.json")
-  .then(res => res.json())
-  .then(json => {
+  .then((res) => {
+    badge("Data fetch status: " + res.status);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    return res.json();
+  })
+  .then((json) => {
+    const count = json && Array.isArray(json.items) ? json.items.length : -1;
+    badge("Data items: " + count);
+
     if (!json || !Array.isArray(json.items)) {
       badge("Data error: items not found");
       return;
     }
 
     const features = json.items
-      .filter(it => typeof it.lat === "number" && typeof it.lng === "number")
-      .map(it => ({
+      .filter((it) => typeof it.lat === "number" && typeof it.lng === "number")
+      .map((it) => ({
         type: "Feature",
         properties: {
           id: it.id,
@@ -79,22 +86,31 @@ fetch("./data_public_dummy_5000.json")
           category_low: it.category_low,
           category_high: it.category_high
         },
-        geometry: {
-          type: "Point",
-          coordinates: [it.lng, it.lat]
-        }
+        geometry: { type: "Point", coordinates: [it.lng, it.lat] }
       }));
+
+    badge("GeoJSON features: " + features.length);
+
+    // 이미 존재하면 교체(새로고침/중복 실행 안전)
+    if (map.getSource("dooh")) {
+      map.getSource("dooh").setData({ type: "FeatureCollection", features });
+      badge("Updated source dooh: " + features.length);
+      return;
+    }
 
     map.addSource("dooh", {
       type: "geojson",
-      data: {
-        type: "FeatureCollection",
-        features
-      },
+      data: { type: "FeatureCollection", features },
       cluster: true,
       clusterMaxZoom: 14,
       clusterRadius: 50
     });
+
+    badge("Source added: dooh (" + features.length + ")");
+  })
+  .catch((err) => {
+    badge("Data load error: " + (err && err.message ? err.message : "unknown"));
+  });
 
     // 클러스터 원
     map.addLayer({
