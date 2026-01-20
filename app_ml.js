@@ -97,7 +97,7 @@
   function loadDummyAndCluster(map) {
     badge("Data: loading…");
 
-    fetch("./data_public_dummy_5000.json")
+    fetch("./data_public.json")
       .then((res) => {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
