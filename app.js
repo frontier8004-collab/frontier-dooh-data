@@ -1287,25 +1287,37 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
   });
 
   // 기존 코드 호환을 위한 최소 어댑터(단계1: 화면/줌/센터 정도만)
-  map = {
-    _ml: window.mlMap,
-    getContainer: () => container,
-    setView: (latlng, zoom) => {
-      try {
-        const lat = Array.isArray(latlng) ? latlng[0] : latlng?.lat;
-        const lng = Array.isArray(latlng) ? latlng[1] : latlng?.lng;
-        if (typeof lat === "number" && typeof lng === "number") {
-          map._ml.jumpTo({ center: [lng, lat], zoom: (typeof zoom === "number" ? zoom : map._ml.getZoom()) });
-        }
-      } catch (_) {}
-    },
-    getZoom: () => {
-      try { return map._ml.getZoom(); } catch (_) { return 7; }
-    },
-    on: (evt, fn) => {
-      try { map._ml.on(evt, fn); } catch (_) {}
-    }
-  };
+ map = {
+  _ml: window.mlMap,
+
+  getContainer: () => container,
+
+  setView: (latlng, zoom) => {
+    try {
+      const lat = Array.isArray(latlng) ? latlng[0] : latlng?.lat;
+      const lng = Array.isArray(latlng) ? latlng[1] : latlng?.lng;
+      if (typeof lat === "number" && typeof lng === "number") {
+        map._ml.jumpTo({
+          center: [lng, lat],
+          zoom: (typeof zoom === "number" ? zoom : map._ml.getZoom())
+        });
+      }
+    } catch (_) {}
+  },
+
+  getZoom: () => {
+    try { return map._ml.getZoom(); }
+    catch (_) { return 7; }
+  },
+
+  on: (evt, fn) => {
+    try { map._ml.on(evt, fn); }
+    catch (_) {}
+  },
+
+  addLayer: () => {},
+  removeLayer: () => {}
+};
 
   // 키보드 포커스(기존 흐름 유지)
   container.setAttribute("tabindex", "0");
