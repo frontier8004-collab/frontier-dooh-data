@@ -59,6 +59,96 @@ map.on("style.load", () => {
     map.on("idle", () => {
       badge("Idle OK (style + tiles loaded)");
     });
+    // ===== dummy_5000 데이터 로드 + 클러스터 =====
+fetch("./data_public_dummy_5000.json")
+  .then(res => res.json())
+  .then(json => {
+    if (!json || !Array.isArray(json.items)) {
+      badge("Data error: items not found");
+      return;
+    }
+
+    const features = json.items
+      .filter(it => typeof it.lat === "number" && typeof it.lng === "number")
+      .map(it => ({
+        type: "Feature",
+        properties: {
+          id: it.id,
+          title: it.title,
+          media_group: it.media_group,
+          category_low: it.category_low,
+          category_high: it.category_high
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [it.lng, it.lat]
+        }
+      }));
+
+    map.addSource("dooh", {
+      type: "geojson",
+      data: {
+        type: "FeatureCollection",
+        features
+      },
+      cluster: true,
+      clusterMaxZoom: 14,
+      clusterRadius: 50
+    });
+
+    // 클러스터 원
+    map.addLayer({
+      id: "dooh-clusters",
+      type: "circle",
+      source: "dooh",
+      filter: ["has", "point_count"],
+      paint: {
+        "circle-color": "#4fd1c5",
+        "circle-radius": [
+          "step",
+          ["get", "point_count"],
+          18, 100, 24, 500, 30
+        ],
+        "circle-opacity": 0.85
+      }
+    });
+
+    // 클러스터 숫자
+    map.addLayer({
+      id: "dooh-cluster-count",
+      type: "symbol",
+      source: "dooh",
+      filter: ["has", "point_count"],
+      layout: {
+        "text-field": "{point_count_abbreviated}",
+        "text-font": ["Noto Sans Regular"],
+        "text-size": 12
+      },
+      paint: {
+        "text-color": "#0b0c0d"
+      }
+    });
+
+    // 개별 핀
+    map.addLayer({
+      id: "dooh-point",
+      type: "circle",
+      source: "dooh",
+      filter: ["!", ["has", "point_count"]],
+      paint: {
+        "circle-color": "#9ae6b4",
+        "circle-radius": 5,
+        "circle-opacity": 0.9
+      }
+    });
+
+    badge(`Idle OK + Pins: ${features.length}`);
+  })
+  .catch(err => {
+    badge("Data load error");
+    console.error(err);
+  });
+
 
     map.on("error", (e) => {
       const msg = e && e.error && e.error.message ? e.error.message : "unknown";
