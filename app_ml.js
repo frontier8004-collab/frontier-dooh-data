@@ -76,6 +76,53 @@
         "circle-opacity": 0.9
       }
     });
+// 개별 핀 클릭 시 정보 표시(팝업)
+let doohPopup = null;
+
+map.on("click", "dooh-point", (e) => {
+  try {
+    const f = e.features && e.features[0];
+    if (!f) return;
+
+    const p = f.properties || {};
+    const title = p.title || "";
+    const media = p.media_group || "";
+    const high = p.category_high || "";
+    const low  = p.category_low || "";
+    const id   = p.id || "";
+
+    const html =
+      `<div style="min-width:220px;max-width:320px;font:12px/1.4 system-ui;color:#d8dee6;">` +
+      `<div style="font-weight:700;font-size:13px;margin-bottom:6px;color:#a2decc;">${escapeHtml(title)}</div>` +
+      `<div style="opacity:.9;margin-bottom:4px;">${escapeHtml(high)} ${low ? " / " + escapeHtml(low) : ""}</div>` +
+      `<div style="opacity:.9;margin-bottom:6px;">${escapeHtml(media)}</div>` +
+      `<div style="opacity:.65;">${escapeHtml(id)}</div>` +
+      `</div>`;
+
+    const coord = f.geometry && f.geometry.coordinates ? f.geometry.coordinates.slice() : null;
+    if (!coord) return;
+
+    if (doohPopup) doohPopup.remove();
+    doohPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 10 })
+      .setLngLat(coord)
+      .setHTML(html)
+      .addTo(map);
+  } catch (_) {}
+});
+
+// 마우스가 핀 위에 올라가면 커서 변경
+map.on("mouseenter", "dooh-point", () => { map.getCanvas().style.cursor = "pointer"; });
+map.on("mouseleave", "dooh-point", () => { map.getCanvas().style.cursor = ""; });
+
+// 간단한 HTML 이스케이프(깨짐/보안 방지)
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
     // 클릭 시 클러스터 확대(편의)
     map.on("click", "dooh-clusters", (e) => {
