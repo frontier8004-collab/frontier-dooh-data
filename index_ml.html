@@ -23,7 +23,13 @@
   <div id="map"></div>
   <div id="badge">MapLibre: waiting…</div>
 
-<script src="./app_ml.js?v=1.2.2.2-ml-2" onload="document.getElementById('badge').textContent='JS loaded'" onerror="document.getElementById('badge').textContent='JS load FAILED'" defer></script>
+<script src="./app_ml.js?v=1.2.2.2-ml-3" defer></script>
+<script>
+  setTimeout(() => {
+    const ok = window.__APP_ML_STARTED__;
+    document.getElementById('badge').textContent = ok ? ok : 'app_ml.js loaded, but NOT running';
+  }, 800);
+</script>
 
 </body>
 </html>
