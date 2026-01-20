@@ -1254,36 +1254,70 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-    map = L.map("map", {
-      zoomControl:false,
-      zoomSnap: 1,
-      zoomDelta: 1,
-      wheelPxPerZoomLevel: 80,
-       maxBounds: L.latLngBounds([[33.0, 123.8], [39.5, 132.2]]),
-maxBoundsViscosity: 1.0,
+     // v1) MapLibre 엔진으로 지도만 먼저 교체 (기존 Leaflet 의존 로직은 단계2에서 전환)
+  const container = document.getElementById("map");
+  if (!container) return;
 
-minZoom: 7
+  // 기존 내용 정리(안전)
+  container.innerHTML = "";
 
-    }).setView(HOME_CENTER, HOME_ZOOM);
-applyMovePolicy();
-    const c = map.getContainer();
-c.setAttribute("tabindex", "0");
-c.focus();
-     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
+  // MapLibre 실제 인스턴스
+  window.mlMap = new maplibregl.Map({
+    container: "map",
+    style: {
+      version: 8,
+      sources: {
+        "carto-raster": {
+          type: "raster",
+          tiles: ["https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"],
+          tileSize: 256,
+          attribution: "© OpenStreetMap contributors © CARTO"
+        }
+      },
+      layers: [
+        { id: "carto-raster", type: "raster", source: "carto-raster" }
+      ]
+    },
+    center: [123.8, 33.0], // HOME_CENTER (lng, lat) — 임시 기본값
+    zoom: 7,               // minZoom과 동일하게 시작
+    minZoom: 7,
+    maxZoom: 19,
+    pitchWithRotate: false,
+    dragRotate: false
+  });
 
-    markers = L.markerClusterGroup({
-      showCoverageOnHover:false,
-      spiderfyOnMaxZoom:false,
-      animate:false,
-      animateAddingMarkers:false,
-      removeOutsideVisibleBounds:false,
-      disableClusteringAtZoom: 18,
-      maxClusterRadius: 52,
-      zoomToBoundsOnClick:false
-    });
+  // 기존 코드 호환을 위한 최소 어댑터(단계1: 화면/줌/센터 정도만)
+  map = {
+    _ml: window.mlMap,
+    getContainer: () => container,
+    setView: (latlng, zoom) => {
+      try {
+        const lat = Array.isArray(latlng) ? latlng[0] : latlng?.lat;
+        const lng = Array.isArray(latlng) ? latlng[1] : latlng?.lng;
+        if (typeof lat === "number" && typeof lng === "number") {
+          map._ml.jumpTo({ center: [lng, lat], zoom: (typeof zoom === "number" ? zoom : map._ml.getZoom()) });
+        }
+      } catch (_) {}
+    },
+    getZoom: () => {
+      try { return map._ml.getZoom(); } catch (_) { return 7; }
+    },
+    on: (evt, fn) => {
+      try { map._ml.on(evt, fn); } catch (_) {}
+    }
+  };
+
+  // 키보드 포커스(기존 흐름 유지)
+  container.setAttribute("tabindex", "0");
+  try { container.focus(); } catch (_) {}
+
+  // 단계2(마커/클러스터 전환) 전까지는 markers 호출이 터지지 않도록 스텁 유지
+  markers = {
+    on: () => {},
+    addLayer: () => {},
+    clearLayers: () => {},
+    removeLayer: () => {}
+  };
 
     markers.on("clustermouseover", (e) => {
       try{
