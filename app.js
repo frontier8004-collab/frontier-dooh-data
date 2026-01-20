@@ -1266,13 +1266,18 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
     container: "map",
     style: {
       version: 8,
-      sources: {
-        "carto-raster": {
-          type: "raster",
-          tiles: ["https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"],
-          tileSize: 256,
-          attribution: "© OpenStreetMap contributors © CARTO"
-        }
+    "carto-raster": {
+      type: "raster",
+      tiles: [
+        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+      ],
+      tileSize: 256,
+      attribution: "© OpenStreetMap contributors © CARTO"
+    }
+
       },
       layers: [
         { id: "carto-raster", type: "raster", source: "carto-raster" }
