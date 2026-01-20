@@ -1,5 +1,6 @@
 (() => {
-  const badge = (msg) => {
+  const badge = (msg) => { const el = document.getElementById("badge"); if (el) el.textContent = msg; };
+  badge("app_ml.js: started");
     const el = document.getElementById("badge");
     if (el) el.textContent = msg;
   };
