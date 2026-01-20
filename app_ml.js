@@ -30,6 +30,23 @@
       pitchWithRotate: false,
       dragRotate: false
     });
+    // 한글 라벨 우선 적용 (name:ko → name)
+map.on("style.load", () => {
+  const style = map.getStyle();
+  if (!style || !style.layers) return;
+
+  style.layers.forEach((layer) => {
+    if (layer.type !== "symbol") return;
+    if (!layer.layout || !layer.layout["text-field"]) return;
+
+    map.setLayoutProperty(layer.id, "text-field", [
+      "coalesce",
+      ["get", "name:ko"],
+      ["get", "name"]
+    ]);
+  });
+});
+
 
     try {
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
