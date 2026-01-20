@@ -1,117 +1,39 @@
 (() => {
-  const badge = (msg) => { const el = document.getElementById("badge"); if (el) el.textContent = msg; };
-  badge("app_ml.js: started");
+  // 실행 체크(콘솔 없이도 확인용)
+  window.__APP_ML_STARTED__ = "app_ml.js: started";
+
+  function badge(msg) {
     const el = document.getElementById("badge");
     if (el) el.textContent = msg;
-  };
+  }
 
-  // 반드시 vector_test.html에서 사용 중인 style.json?key=... 를 그대로 붙여넣으세요.
-   const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR";
+  // vector_test.html에서 쓰는 style.json?key=... 그대로
+  const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR";
 
-  window.addEventListener("DOMContentLoaded", () => {
-    const container = document.getElementById("map");
-    if (!container) { badge("MapLibre: #map not found"); return; }
-
-    if (!window.maplibregl) { badge("MapLibre: library not loaded"); return; }
-
-    if (!STYLE_URL.includes("style.json")) {
-      badge("MapLibre: STYLE_URL not set");
-      return;
-    }
-
-    badge("MapLibre: creating map…");
-
-    const map = new maplibregl.Map({
-      container: "map",
-      style: STYLE_URL,
-      center: [127.0, 37.5],
-      zoom: 7,
-      minZoom: 2,
-      maxZoom: 19,
-      pitchWithRotate: false,
-      dragRotate: false
-    });
-    // 한글 라벨 우선 적용 (name:ko → name)
-map.on("style.load", () => {
-  const style = map.getStyle();
-  if (!style || !style.layers) return;
-
-  style.layers.forEach((layer) => {
-    if (layer.type !== "symbol") return;
-    if (!layer.layout || !layer.layout["text-field"]) return;
-
-    map.setLayoutProperty(layer.id, "text-field", [
-      "coalesce",
-      ["get", "name:ko"],
-      ["get", "name"]
-    ]);
-  });
-});
-
-
+  function applyKoreanLabels(map) {
     try {
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+      const style = map.getStyle();
+      if (!style || !style.layers) return;
+
+      style.layers.forEach((layer) => {
+        if (layer.type !== "symbol") return;
+        if (!layer.layout || !layer.layout["text-field"]) return;
+
+        map.setLayoutProperty(layer.id, "text-field", [
+          "coalesce",
+          ["get", "name:ko"],
+          ["get", "name"]
+        ]);
+      });
     } catch (_) {}
+  }
 
-    map.on("styledata", () => {
-      badge("Style loaded. Loading tiles…");
-    });
-
-    map.on("idle", () => {
-      badge("Idle OK (style + tiles loaded)");
-    });
-    // ===== dummy_5000 데이터 로드 + 클러스터 =====
-fetch("./data_public_dummy_5000.json")
-  .then((res) => {
-    badge("Data fetch status: " + res.status);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
-  })
-  .then((json) => {
-    const count = json && Array.isArray(json.items) ? json.items.length : -1;
-    badge("Data items: " + count);
-
-    if (!json || !Array.isArray(json.items)) {
-      badge("Data error: items not found");
+  function addDoohLayers(map, featureCount) {
+    // 이미 레이어가 있으면 건너뜀(새로고침/중복 안전)
+    if (map.getLayer("dooh-clusters")) {
+      badge("Idle OK + Pins: " + featureCount);
       return;
     }
-
-    const features = json.items
-      .filter((it) => typeof it.lat === "number" && typeof it.lng === "number")
-      .map((it) => ({
-        type: "Feature",
-        properties: {
-          id: it.id,
-          title: it.title,
-          media_group: it.media_group,
-          category_low: it.category_low,
-          category_high: it.category_high
-        },
-        geometry: { type: "Point", coordinates: [it.lng, it.lat] }
-      }));
-
-    badge("GeoJSON features: " + features.length);
-
-    // 이미 존재하면 교체(새로고침/중복 실행 안전)
-    if (map.getSource("dooh")) {
-      map.getSource("dooh").setData({ type: "FeatureCollection", features });
-      badge("Updated source dooh: " + features.length);
-      return;
-    }
-
-    map.addSource("dooh", {
-      type: "geojson",
-      data: { type: "FeatureCollection", features },
-      cluster: true,
-      clusterMaxZoom: 14,
-      clusterRadius: 50
-    });
-
-    badge("Source added: dooh (" + features.length + ")");
-  })
-  .catch((err) => {
-    badge("Data load error: " + (err && err.message ? err.message : "unknown"));
-  });
 
     // 클러스터 원
     map.addLayer({
@@ -121,11 +43,7 @@ fetch("./data_public_dummy_5000.json")
       filter: ["has", "point_count"],
       paint: {
         "circle-color": "#4fd1c5",
-        "circle-radius": [
-          "step",
-          ["get", "point_count"],
-          18, 100, 24, 500, 30
-        ],
+        "circle-radius": ["step", ["get", "point_count"], 18, 100, 24, 500, 30],
         "circle-opacity": 0.85
       }
     });
@@ -159,20 +77,135 @@ fetch("./data_public_dummy_5000.json")
       }
     });
 
-    badge(`Idle OK + Pins: ${features.length}`);
-  })
-  .catch(err => {
-    badge("Data load error");
-    console.error(err);
-  });
+    // 클릭 시 클러스터 확대(편의)
+    map.on("click", "dooh-clusters", (e) => {
+      try {
+        const f = e.features && e.features[0];
+        if (!f) return;
+        const clusterId = f.properties.cluster_id;
+        const source = map.getSource("dooh");
+        source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          map.easeTo({ center: f.geometry.coordinates, zoom: zoom });
+        });
+      } catch (_) {}
+    });
 
+    badge("Idle OK + Pins: " + featureCount);
+  }
+
+  function loadDummyAndCluster(map) {
+    badge("Data: loading…");
+
+    fetch("./data_public_dummy_5000.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then((json) => {
+        if (!json || !Array.isArray(json.items)) {
+          badge("Data error: items not found");
+          return;
+        }
+
+        const features = json.items
+          .filter((it) => typeof it.lat === "number" && typeof it.lng === "number")
+          .map((it) => ({
+            type: "Feature",
+            properties: {
+              id: it.id || "",
+              title: it.title || "",
+              category_high: it.category_high || "",
+              category_low: it.category_low || "",
+              media_group: it.media_group || ""
+            },
+            geometry: { type: "Point", coordinates: [it.lng, it.lat] }
+          }));
+
+        const fc = { type: "FeatureCollection", features: features };
+
+        // 소스가 이미 있으면 데이터만 교체
+        if (map.getSource("dooh")) {
+          map.getSource("dooh").setData(fc);
+          addDoohLayers(map, features.length);
+          return;
+        }
+
+        map.addSource("dooh", {
+          type: "geojson",
+          data: fc,
+          cluster: true,
+          clusterMaxZoom: 14,
+          clusterRadius: 50
+        });
+
+        addDoohLayers(map, features.length);
+      })
+      .catch((err) => {
+        badge("Data load error: " + (err && err.message ? err.message : "unknown"));
+      });
+  }
+
+  function init() {
+    const container = document.getElementById("map");
+    if (!container) {
+      badge("MapLibre: #map not found");
+      return;
+    }
+    if (!window.maplibregl) {
+      badge("MapLibre: library not loaded");
+      return;
+    }
+    if (!STYLE_URL || STYLE_URL.indexOf("style.json") === -1) {
+      badge("MapLibre: STYLE_URL not set");
+      return;
+    }
+
+    badge("MapLibre: creating map…");
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: STYLE_URL,
+      center: [127.0, 37.5],
+      zoom: 7,
+      minZoom: 2,
+      maxZoom: 19,
+      pitchWithRotate: false,
+      dragRotate: false
+    });
+
+    try {
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    } catch (_) {}
+
+    map.on("styledata", () => {
+      badge("Style loaded. Loading tiles…");
+    });
+
+    map.on("load", () => {
+      // 한글 라벨 우선
+      applyKoreanLabels(map);
+      // 데이터+클러스터
+      loadDummyAndCluster(map);
+    });
+
+    map.on("idle", () => {
+      // idle은 자주 오므로, 여기서는 상태만 유지
+      // (배지는 loadDummyAndCluster / addDoohLayers에서 최종 갱신)
+    });
 
     map.on("error", (e) => {
       const msg = e && e.error && e.error.message ? e.error.message : "unknown";
       badge("MapLibre error: " + msg);
     });
 
-    // 전역 노출(필요 시 확인용)
     window.ml_map = map;
-  });
+  }
+
+  // DOM 이미 로드됐으면 즉시, 아니면 로드 후 실행
+  if (document.readyState === "loading") {
+    window.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
