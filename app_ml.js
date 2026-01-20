@@ -5,7 +5,7 @@
   };
 
   // 반드시 vector_test.html에서 사용 중인 style.json?key=... 를 그대로 붙여넣으세요.
-  const STYLE_URL = "PASTE_STYLE_URL_HERE";
+   const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR";
 
   window.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("map");
