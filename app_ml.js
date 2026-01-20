@@ -103,7 +103,7 @@ map.on("click", "dooh-point", (e) => {
     if (!coord) return;
 
     if (doohPopup) doohPopup.remove();
-    doohPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 10 })
+    doohPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 10, className: "frontier-popup" })
       .setLngLat(coord)
       .setHTML(html)
       .addTo(map);
