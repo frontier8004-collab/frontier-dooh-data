@@ -71,7 +71,7 @@
       source: "dooh",
       filter: ["!", ["has", "point_count"]],
       paint: {
-        "circle-color": "#9ae6b4",
+        "circle-color": ["match", ["get", "category_high"], "지하철", "#60a5fa", "버스", "#f59e0b", "대형마트", "#34d399", "편의점", "#a78bfa", "교통매체", "#fb7185", "기타", "#9ae6b4", "#9ae6b4"],
         "circle-radius": 5,
         "circle-opacity": 0.9
       }
