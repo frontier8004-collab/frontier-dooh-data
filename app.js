@@ -1329,6 +1329,7 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
     addLayer: () => {},
     clearLayers: () => {},
     removeLayer: () => {}
+       once: () => {},
   };
 
     markers.on("clustermouseover", (e) => {
