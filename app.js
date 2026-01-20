@@ -1290,6 +1290,32 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
     pitchWithRotate: false,
     dragRotate: false
   });
+// DEBUG: MapLibre 로딩 상태 표시 (임시)
+const _mlBadge = document.createElement("div");
+_mlBadge.textContent = "MapLibre: loading...";
+_mlBadge.style.cssText =
+  "position:absolute;z-index:9999;top:10px;left:10px;padding:6px 10px;" +
+  "border-radius:8px;background:rgba(0,0,0,.65);color:#fff;font-size:12px;" +
+  "pointer-events:none;";
+if (!container.style.position) container.style.position = "relative";
+container.appendChild(_mlBadge);
+
+try {
+  window.mlMap.addControl(
+    new maplibregl.NavigationControl({ showCompass: false }),
+    "top-right"
+  );
+} catch (_) {}
+
+window.mlMap.on("load", () => {
+  _mlBadge.textContent = "MapLibre: loaded";
+});
+
+window.mlMap.on("error", (e) => {
+  const msg = e && e.error && e.error.message ? e.error.message : "unknown";
+  _mlBadge.textContent = "MapLibre error: " + msg;
+});
+
 
   // 기존 코드 호환을 위한 최소 어댑터(단계1: 화면/줌/센터 정도만)
  map = {
