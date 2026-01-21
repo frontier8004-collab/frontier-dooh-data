@@ -1814,24 +1814,31 @@ else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false })
     }
 
     const pts = (raw || [])
-      .map(x => {
-      let la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
-let ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
+  .map(x => {
+    let la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
+    let ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
 
-// 좌표가 뒤집힌 경우 자동 교정 (lat에 120~130대가 들어오면 뒤집힌 것)
-if (Number.isFinite(la) && Number.isFinite(ln) && (Math.abs(la) > 90) && (Math.abs(ln) <= 90)) {
-  const tmp = la; la = ln; ln = tmp;
-}
+    // 좌표가 뒤집힌 경우 자동 교정 (lat에 90 초과가 들어오면 뒤집힌 케이스가 많음)
+    if (Number.isFinite(la) && Number.isFinite(ln) && (Math.abs(la) > 90) && (Math.abs(ln) <= 90)) {
+      const tmp = la; la = ln; ln = tmp;
+    }
 
-return { ...x, lat: la, lng: ln };
+    return { ...x, lat: la, lng: ln };
+  })
+  .filter(x => {
+    // 1) 숫자 아닌 값 제거
+    if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
 
-      })
-      .filter(x => {
-        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
-        if (x.lat < 32.0 || x.lat > 39.8) return false;
-        if (x.lng < 123.0 || x.lng > 132.5) return false;
-        return true;
-      });
+    // 2) 지구 좌표 범위 밖 제거 (이 줄이 핵심: MapLibre 에러 원인 제거)
+    if (Math.abs(x.lat) > 90 || Math.abs(x.lng) > 180) return false;
+
+    // 3) 국내 범위 밖 제거 (기존 정책 유지)
+    if (x.lat < 32.0 || x.lat > 39.8) return false;
+    if (x.lng < 123.0 || x.lng > 132.5) return false;
+
+    return true;
+  });
+
 
     const uniqueKeys = makeUniqueKeys(pts);
 
