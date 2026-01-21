@@ -1254,27 +1254,28 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-    map = L.map("map", {
-      zoomControl:false,
-      zoomSnap: 1,
-      zoomDelta: 1,
-      wheelPxPerZoomLevel: 80,
-       maxBounds: L.latLngBounds([[33.0, 123.8], [39.5, 132.2]]),
-maxBoundsViscosity: 1.0,
+    // === MapLibre 지도 엔진 (Stage A-1: 지도만 교체) ===
+map = new maplibregl.Map({
+  container: "map",
+  style: "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR",
+  center: HOME_CENTER,
+  zoom: HOME_ZOOM,
+  minZoom: 7,
+  maxZoom: 19,
+  pitchWithRotate: false,
+  dragRotate: false
+});
 
-minZoom: 7
+map.addControl(
+  new maplibregl.NavigationControl({ showCompass: false }),
+  "top-right"
+);
 
-    }).setView(HOME_CENTER, HOME_ZOOM);
-applyMovePolicy();
-    const c = map.getContainer();
-c.setAttribute("tabindex", "0");
-c.focus();
-     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
+map.on("idle", () => {
+  // Leaflet 호환용 최소 인터페이스 유지
+});
 
-    markers = L.markerClusterGroup({
+     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:false,
       animate:false,
