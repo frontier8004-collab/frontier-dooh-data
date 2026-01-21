@@ -1270,6 +1270,30 @@ map.addControl(
   new maplibregl.NavigationControl({ showCompass: false }),
   "top-right"
 );
+// === MapLibre 스타일 준비 상태 플래그 ===
+window.__ML_STYLE_READY__ = false;
+
+// 스타일 완전 로드 시점
+map.on("load", () => {
+  window.__ML_STYLE_READY__ = true;
+
+  // ---- 한글 라벨 우선 적용 (name:ko → name) ----
+  try {
+    const style = map.getStyle();
+    if (!style || !style.layers) return;
+
+    style.layers.forEach(layer => {
+      if (layer.type !== "symbol") return;
+      if (!layer.layout || !layer.layout["text-field"]) return;
+
+      map.setLayoutProperty(layer.id, "text-field", [
+        "coalesce",
+        ["get", "name:ko"],
+        ["get", "name"]
+      ]);
+    });
+  } catch (_) {}
+});
 
 map.on("idle", () => {
   // Leaflet 호환용 최소 인터페이스 유지
@@ -1770,6 +1794,9 @@ m._key = it._key;
     // ===== 데이터 로드 1회 =====
     let raw = [];
     try{
+       while (!window.__ML_STYLE_READY__) {
+  await new Promise(r => setTimeout(r, 100));
+}
       const json = await fetchJsonRobust(DATA_URL);
       raw = Array.isArray(json) ? json
           : (Array.isArray(json.items)   ? json.items
