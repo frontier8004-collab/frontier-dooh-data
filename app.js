@@ -10,62 +10,6 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
-   // ===== GLOBAL ERROR CATCH (DevTools 없이 화면에 에러 표시) =====
-(function attachGlobalErrorOverlay(){
-  function ensureBanner(){
-    let b = document.getElementById("fatalErrBanner");
-    if (!b) {
-      b = document.createElement("div");
-      b.id = "fatalErrBanner";
-      b.style.position = "fixed";
-      b.style.left = "10px";
-      b.style.bottom = "10px";
-      b.style.zIndex = "999999";
-      b.style.maxWidth = "70vw";
-      b.style.whiteSpace = "pre-wrap";
-      b.style.padding = "10px 12px";
-      b.style.borderRadius = "12px";
-      b.style.background = "rgba(160, 0, 0, .85)";
-      b.style.color = "#fff";
-      b.style.font = "12px/1.35 system-ui";
-      b.style.display = "none";
-      document.body.appendChild(b);
-    }
-    return b;
-  }
-
-  function showFatal(msg){
-    const b = ensureBanner();
-    b.textContent = msg;
-    b.style.display = "block";
-    try { if (window.__mlBadge) window.__mlBadge("FATAL: " + String(msg).slice(0, 90)); } catch(_) {}
-  }
-
-  window.addEventListener("error", (ev) => {
-    const msg = ev && ev.message ? ev.message : "Unknown window error";
-    const src = ev && ev.filename ? ev.filename : "";
-    const line = ev && ev.lineno ? ev.lineno : "";
-    showFatal(`[WINDOW ERROR]\n${msg}\n${src}:${line}`);
-  });
-
-  window.addEventListener("unhandledrejection", (ev) => {
-    const r = ev && ev.reason ? ev.reason : "Unknown rejection";
-    showFatal(`[UNHANDLED PROMISE]\n${String(r)}`);
-  });
-
-  // showErrorBanner가 있으면 같이 활용
-  try {
-    const _old = window.showErrorBanner;
-    if (typeof _old === "function") {
-      window.showErrorBanner = function(msg){
-        try { showFatal(`[showErrorBanner]\n${msg}`); } catch(_) {}
-        return _old.apply(this, arguments);
-      };
-    }
-  } catch (_) {}
-})();
-// ===== /GLOBAL ERROR CATCH =====
-
  const DATA_URL = "./data_public.json";
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
@@ -1310,102 +1254,27 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-    // === MapLibre 지도 엔진 (Stage A-1: 지도만 교체) ===
-map = new maplibregl.Map({
-  container: "map",
-  style: "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR",
-  center: [HOME_CENTER[1], HOME_CENTER[0]],
-  zoom: HOME_ZOOM,
-  minZoom: 7,
-  maxZoom: 19,
-  pitchWithRotate: false,
-  dragRotate: false
-});
-// ===== MapLibre 상태 배지(임시 디버그) =====
-(function ensureMlBadge(){
-  let b = document.getElementById("mlBadge");
-  if (!b) {
-    b = document.createElement("div");
-    b.id = "mlBadge";
-    b.style.position = "fixed";
-    b.style.left = "10px";
-    b.style.top = "10px";
-    b.style.zIndex = "99999";
-    b.style.padding = "8px 10px";
-    b.style.borderRadius = "10px";
-    b.style.background = "rgba(0,0,0,.65)";
-    b.style.color = "#fff";
-    b.style.font = "12px/1.2 system-ui";
-    b.style.pointerEvents = "none";
-    document.body.appendChild(b);
-  }
-  window.__mlBadge = (msg) => { b.textContent = msg; };
-})();
+    map = L.map("map", {
+      zoomControl:false,
+      zoomSnap: 1,
+      zoomDelta: 1,
+      wheelPxPerZoomLevel: 80,
+       maxBounds: L.latLngBounds([[33.0, 123.8], [39.5, 132.2]]),
+maxBoundsViscosity: 1.0,
 
-window.__mlBadge("ML: map created, waiting style...");
+minZoom: 7
 
-// 스타일/타일 로딩 상태를 배지로 표시
-window.__ML_STYLE_READY__ = false;
+    }).setView(HOME_CENTER, HOME_ZOOM);
+applyMovePolicy();
+    const c = map.getContainer();
+c.setAttribute("tabindex", "0");
+c.focus();
+     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
 
-map.on("load", () => {
-  window.__ML_STYLE_READY__ = true;
-  window.__mlBadge("ML: load OK (style ready)");
-});
-
-map.on("idle", () => {
-  if (window.__ML_STYLE_READY__) window.__mlBadge("ML: idle OK (style+tiles loaded)");
-});
-
-// 에러를 화면 배너로도 띄우기 (기존 showErrorBanner 사용)
-map.on("error", (e) => {
-  const msg = (e && e.error && e.error.message) ? e.error.message : "unknown";
-  window.__mlBadge("ML ERROR: " + msg);
-  try { showErrorBanner("MapLibre: " + msg); } catch (_) {}
-});
-
-// 4초 안에 load가 안 되면, 차단/키/네트워크 가능성 안내
-setTimeout(() => {
-  if (!window.__ML_STYLE_READY__) {
-    window.__mlBadge("ML: style NOT loaded (check key/adblock/network)");
-    try { showErrorBanner("MapLibre style not loaded (키/차단/네트워크 확인)"); } catch (_) {}
-  }
-}, 4000);
-// ===== /MapLibre 상태 배지(임시 디버그) =====
-
-map.addControl(
-  new maplibregl.NavigationControl({ showCompass: false }),
-  "top-right"
-);
-// === MapLibre 스타일 준비 상태 플래그 ===
-window.__ML_STYLE_READY__ = false;
-
-// 스타일 완전 로드 시점
-map.on("load", () => {
-  window.__ML_STYLE_READY__ = true;
-
-  // ---- 한글 라벨 우선 적용 (name:ko → name) ----
-  try {
-    const style = map.getStyle();
-    if (!style || !style.layers) return;
-
-    style.layers.forEach(layer => {
-      if (layer.type !== "symbol") return;
-      if (!layer.layout || !layer.layout["text-field"]) return;
-
-      map.setLayoutProperty(layer.id, "text-field", [
-        "coalesce",
-        ["get", "name:ko"],
-        ["get", "name"]
-      ]);
-    });
-  } catch (_) {}
-});
-
-map.on("idle", () => {
-  // Leaflet 호환용 최소 인터페이스 유지
-});
-
-     markers = L.markerClusterGroup({
+    markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:false,
       animate:false,
@@ -1457,7 +1326,7 @@ map.on("idle", () => {
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
     markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
 
-    // map.addLayer(markers);
+    map.addLayer(markers);
 
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
@@ -1737,32 +1606,35 @@ m._key = it._key;
   function moveMapToSearch(base){
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
-     
-// === MapLibre 단일 결과 이동 (Leaflet 제거) ===
-if (base.length === 1){
-  const it = base[0];
 
-  // 표시용 좌표 우선(_latDisp/_lngDisp가 있으면 그걸 사용)
-  let la = (it._latDisp ?? it.lat);
-  let ln = (it._lngDisp ?? it.lng);
+    if (base.length === 1){
+      const it = base[0];
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      try{ map.setView([la, ln], 15, { animate:false }); }catch(_){}
+      forceIntegerZoom();
+      return;
+    }
 
-  la = (typeof la === "number") ? la : parseFloat(String(la ?? "").trim());
-  ln = (typeof ln === "number") ? ln : parseFloat(String(ln ?? "").trim());
+    let bounds = null;
+    for (const it of base){
+      const la = (it._latDisp ?? it.lat);
+      const ln = (it._lngDisp ?? it.lng);
+      if (typeof la !== "number" || typeof ln !== "number") continue;
+      const ll = L.latLng(la, ln);
+      if (!bounds) bounds = L.latLngBounds(ll, ll);
+      else bounds.extend(ll);
+    }
+    if (!bounds || !bounds.isValid()) return;
 
-  // 좌표가 뒤집힌 케이스 자동 교정 (lat에 120~130대가 들어오는 경우가 흔함)
-  if (Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) > 90 && Math.abs(ln) <= 90) {
-    const tmp = la; la = ln; ln = tmp;
+    try{ map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false }); }catch(_){}
+
+    try{
+      const z = Math.round(map.getZoom());
+      if (z < 8) map.setZoom(8, { animate:false });
+    }catch(_){}
+    forceIntegerZoom();
   }
-
-  // MapLibre 기본 유효범위 체크 (이거 통과 못하면 아예 이동하지 않음)
-  if (!Number.isFinite(la) || !Number.isFinite(ln)) { forceIntegerZoom(); return; }
-  if (Math.abs(la) > 90 || Math.abs(ln) > 180) { forceIntegerZoom(); return; }
-
-  map.easeTo({ center: [ln, la], zoom: 15, duration: 0 });
-  forceIntegerZoom();
-  return;
-}
-
 
   function applySearchFromUI(){
     const qVal = $("q").value.trim();
@@ -1785,9 +1657,8 @@ if (base.length === 1){
     suspendViewportOnce = true;
 
     try{
-      if (animate) map.flyTo([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { duration: 0.85 });
-else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false });
-
+      if (animate) map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
+      else map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
     }catch(_){}
 
     map.once("moveend", () => {
@@ -1898,9 +1769,6 @@ else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false })
     // ===== 데이터 로드 1회 =====
     let raw = [];
     try{
-       while (!window.__ML_STYLE_READY__) {
-  await new Promise(r => setTimeout(r, 100));
-}
       const json = await fetchJsonRobust(DATA_URL);
       raw = Array.isArray(json) ? json
           : (Array.isArray(json.items)   ? json.items
@@ -1917,31 +1785,17 @@ else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false })
     }
 
     const pts = (raw || [])
-  .map(x => {
-    let la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
-    let ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
-
-    // 좌표가 뒤집힌 경우 자동 교정 (lat에 90 초과가 들어오면 뒤집힌 케이스가 많음)
-    if (Number.isFinite(la) && Number.isFinite(ln) && (Math.abs(la) > 90) && (Math.abs(ln) <= 90)) {
-      const tmp = la; la = ln; ln = tmp;
-    }
-
-    return { ...x, lat: la, lng: ln };
-  })
-  .filter(x => {
-    // 1) 숫자 아닌 값 제거
-    if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
-
-    // 2) 지구 좌표 범위 밖 제거 (이 줄이 핵심: MapLibre 에러 원인 제거)
-    if (Math.abs(x.lat) > 90 || Math.abs(x.lng) > 180) return false;
-
-    // 3) 국내 범위 밖 제거 (기존 정책 유지)
-    if (x.lat < 32.0 || x.lat > 39.8) return false;
-    if (x.lng < 123.0 || x.lng > 132.5) return false;
-
-    return true;
-  });
-
+      .map(x => {
+        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
+        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
+        return { ...x, lat: la, lng: ln };
+      })
+      .filter(x => {
+        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
+        if (x.lat < 32.0 || x.lat > 39.8) return false;
+        if (x.lng < 123.0 || x.lng > 132.5) return false;
+        return true;
+      });
 
     const uniqueKeys = makeUniqueKeys(pts);
 
@@ -2099,3 +1953,5 @@ else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false })
     );
   });
 })();
+
+
