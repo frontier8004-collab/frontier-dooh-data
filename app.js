@@ -10,6 +10,62 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
+   // ===== GLOBAL ERROR CATCH (DevTools 없이 화면에 에러 표시) =====
+(function attachGlobalErrorOverlay(){
+  function ensureBanner(){
+    let b = document.getElementById("fatalErrBanner");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "fatalErrBanner";
+      b.style.position = "fixed";
+      b.style.left = "10px";
+      b.style.bottom = "10px";
+      b.style.zIndex = "999999";
+      b.style.maxWidth = "70vw";
+      b.style.whiteSpace = "pre-wrap";
+      b.style.padding = "10px 12px";
+      b.style.borderRadius = "12px";
+      b.style.background = "rgba(160, 0, 0, .85)";
+      b.style.color = "#fff";
+      b.style.font = "12px/1.35 system-ui";
+      b.style.display = "none";
+      document.body.appendChild(b);
+    }
+    return b;
+  }
+
+  function showFatal(msg){
+    const b = ensureBanner();
+    b.textContent = msg;
+    b.style.display = "block";
+    try { if (window.__mlBadge) window.__mlBadge("FATAL: " + String(msg).slice(0, 90)); } catch(_) {}
+  }
+
+  window.addEventListener("error", (ev) => {
+    const msg = ev && ev.message ? ev.message : "Unknown window error";
+    const src = ev && ev.filename ? ev.filename : "";
+    const line = ev && ev.lineno ? ev.lineno : "";
+    showFatal(`[WINDOW ERROR]\n${msg}\n${src}:${line}`);
+  });
+
+  window.addEventListener("unhandledrejection", (ev) => {
+    const r = ev && ev.reason ? ev.reason : "Unknown rejection";
+    showFatal(`[UNHANDLED PROMISE]\n${String(r)}`);
+  });
+
+  // showErrorBanner가 있으면 같이 활용
+  try {
+    const _old = window.showErrorBanner;
+    if (typeof _old === "function") {
+      window.showErrorBanner = function(msg){
+        try { showFatal(`[showErrorBanner]\n${msg}`); } catch(_) {}
+        return _old.apply(this, arguments);
+      };
+    }
+  } catch (_) {}
+})();
+// ===== /GLOBAL ERROR CATCH =====
+
  const DATA_URL = "./data_public.json";
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
