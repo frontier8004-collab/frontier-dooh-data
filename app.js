@@ -1631,35 +1631,32 @@ m._key = it._key;
   function moveMapToSearch(base){
     if (!map) return;
     if (!Array.isArray(base) || !base.length) return;
+     
+// === MapLibre 단일 결과 이동 (Leaflet 제거) ===
+if (base.length === 1){
+  const it = base[0];
 
-    if (base.length === 1){
-      const it = base[0];
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-      try{ map.setView([la, ln], 15, { animate:false }); }catch(_){}
-      forceIntegerZoom();
-      return;
-    }
+  // 표시용 좌표 우선(_latDisp/_lngDisp가 있으면 그걸 사용)
+  let la = (it._latDisp ?? it.lat);
+  let ln = (it._lngDisp ?? it.lng);
 
-    let bounds = null;
-    for (const it of base){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
-      if (typeof la !== "number" || typeof ln !== "number") continue;
-      const ll = L.latLng(la, ln);
-      if (!bounds) bounds = L.latLngBounds(ll, ll);
-      else bounds.extend(ll);
-    }
-    if (!bounds || !bounds.isValid()) return;
+  la = (typeof la === "number") ? la : parseFloat(String(la ?? "").trim());
+  ln = (typeof ln === "number") ? ln : parseFloat(String(ln ?? "").trim());
 
-    try{ map.fitBounds(bounds, { padding:[110,110], maxZoom: 15, animate:false }); }catch(_){}
-
-    try{
-      const z = Math.round(map.getZoom());
-      if (z < 8) map.setZoom(8, { animate:false });
-    }catch(_){}
-    forceIntegerZoom();
+  // 좌표가 뒤집힌 케이스 자동 교정 (lat에 120~130대가 들어오는 경우가 흔함)
+  if (Number.isFinite(la) && Number.isFinite(ln) && Math.abs(la) > 90 && Math.abs(ln) <= 90) {
+    const tmp = la; la = ln; ln = tmp;
   }
+
+  // MapLibre 기본 유효범위 체크 (이거 통과 못하면 아예 이동하지 않음)
+  if (!Number.isFinite(la) || !Number.isFinite(ln)) { forceIntegerZoom(); return; }
+  if (Math.abs(la) > 90 || Math.abs(ln) > 180) { forceIntegerZoom(); return; }
+
+  map.easeTo({ center: [ln, la], zoom: 15, duration: 0 });
+  forceIntegerZoom();
+  return;
+}
+
 
   function applySearchFromUI(){
     const qVal = $("q").value.trim();
