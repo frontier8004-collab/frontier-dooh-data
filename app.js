@@ -1351,7 +1351,7 @@ map.on("idle", () => {
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
     markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
 
-    map.addLayer(markers);
+    // map.addLayer(markers);
 
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("dragend",   ()=>{ isMapInteracting = false; });
