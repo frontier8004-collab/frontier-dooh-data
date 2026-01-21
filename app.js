@@ -1258,7 +1258,7 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 map = new maplibregl.Map({
   container: "map",
   style: "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR",
-  center: HOME_CENTER,
+  center: [HOME_CENTER[1], HOME_CENTER[0]],
   zoom: HOME_ZOOM,
   minZoom: 7,
   maxZoom: 19,
