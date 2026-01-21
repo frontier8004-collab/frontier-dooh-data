@@ -1265,6 +1265,56 @@ map = new maplibregl.Map({
   pitchWithRotate: false,
   dragRotate: false
 });
+// ===== MapLibre 상태 배지(임시 디버그) =====
+(function ensureMlBadge(){
+  let b = document.getElementById("mlBadge");
+  if (!b) {
+    b = document.createElement("div");
+    b.id = "mlBadge";
+    b.style.position = "fixed";
+    b.style.left = "10px";
+    b.style.top = "10px";
+    b.style.zIndex = "99999";
+    b.style.padding = "8px 10px";
+    b.style.borderRadius = "10px";
+    b.style.background = "rgba(0,0,0,.65)";
+    b.style.color = "#fff";
+    b.style.font = "12px/1.2 system-ui";
+    b.style.pointerEvents = "none";
+    document.body.appendChild(b);
+  }
+  window.__mlBadge = (msg) => { b.textContent = msg; };
+})();
+
+window.__mlBadge("ML: map created, waiting style...");
+
+// 스타일/타일 로딩 상태를 배지로 표시
+window.__ML_STYLE_READY__ = false;
+
+map.on("load", () => {
+  window.__ML_STYLE_READY__ = true;
+  window.__mlBadge("ML: load OK (style ready)");
+});
+
+map.on("idle", () => {
+  if (window.__ML_STYLE_READY__) window.__mlBadge("ML: idle OK (style+tiles loaded)");
+});
+
+// 에러를 화면 배너로도 띄우기 (기존 showErrorBanner 사용)
+map.on("error", (e) => {
+  const msg = (e && e.error && e.error.message) ? e.error.message : "unknown";
+  window.__mlBadge("ML ERROR: " + msg);
+  try { showErrorBanner("MapLibre: " + msg); } catch (_) {}
+});
+
+// 4초 안에 load가 안 되면, 차단/키/네트워크 가능성 안내
+setTimeout(() => {
+  if (!window.__ML_STYLE_READY__) {
+    window.__mlBadge("ML: style NOT loaded (check key/adblock/network)");
+    try { showErrorBanner("MapLibre style not loaded (키/차단/네트워크 확인)"); } catch (_) {}
+  }
+}, 4000);
+// ===== /MapLibre 상태 배지(임시 디버그) =====
 
 map.addControl(
   new maplibregl.NavigationControl({ showCompass: false }),
