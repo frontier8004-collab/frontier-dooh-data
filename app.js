@@ -1682,8 +1682,9 @@ m._key = it._key;
     suspendViewportOnce = true;
 
     try{
-      if (animate) map.flyTo(HOME_CENTER, HOME_ZOOM, { duration: 0.85 });
-      else map.setView(HOME_CENTER, HOME_ZOOM, { animate:false });
+      if (animate) map.flyTo([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { duration: 0.85 });
+else map.setView([HOME_CENTER[1], HOME_CENTER[0]], HOME_ZOOM, { animate:false });
+
     }catch(_){}
 
     map.once("moveend", () => {
