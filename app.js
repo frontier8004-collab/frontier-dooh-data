@@ -1814,9 +1814,16 @@ m._key = it._key;
 
     const pts = (raw || [])
       .map(x => {
-        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
-        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
-        return { ...x, lat: la, lng: ln };
+      let la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
+let ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
+
+// 좌표가 뒤집힌 경우 자동 교정 (lat에 120~130대가 들어오면 뒤집힌 것)
+if (Number.isFinite(la) && Number.isFinite(ln) && (Math.abs(la) > 90) && (Math.abs(ln) <= 90)) {
+  const tmp = la; la = ln; ln = tmp;
+}
+
+return { ...x, lat: la, lng: ln };
+
       })
       .filter(x => {
         if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
