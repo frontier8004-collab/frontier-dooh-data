@@ -1282,42 +1282,6 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-     // --- MapLibre basemap container 준비 (Leaflet 아래 깔기) ---
-  try {
-    const host = document.getElementById("map");
-    if (host) {
-      host.style.position = "relative";
-
-      if (!mlBaseEl) {
-        mlBaseEl = document.createElement("div");
-        mlBaseEl.id = "ml-base";
-        mlBaseEl.style.position = "absolute";
-        mlBaseEl.style.left = "0";
-        mlBaseEl.style.top = "0";
-        mlBaseEl.style.right = "0";
-        mlBaseEl.style.bottom = "0";
-        mlBaseEl.style.zIndex = "0";
-        host.insertBefore(mlBaseEl, host.firstChild);
-      }
-
-      if (window.maplibregl && !mlMap) {
-        mlMap = new maplibregl.Map({
-          container: mlBaseEl,
-          style: STYLE_URL,
-          center: [HOME_CENTER[1], HOME_CENTER[0]],
-          zoom: HOME_ZOOM,
-          interactive: false,
-          attributionControl: true,
-          pitchWithRotate: false,
-          dragRotate: false,
-        });
-
-        mlMap.on("load", () => {
-          applyKoreanLabelsMapLibre(mlMap);
-        });
-      }
-    }
-  } catch (_) {}
 
     map = L.map("map", {
       zoomControl:false,
