@@ -11,6 +11,28 @@
    
  const VERSION = "v1.2.2.2";
  const DATA_URL = "./data_public.json";
+   // ===== MapLibre Vector Basemap (Korean labels) =====
+const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
+
+// MapLibre 한글 라벨 강제 적용 (name:ko 우선)
+function applyKoreanLabelsMapLibre(mlMap) {
+  try {
+    const style = mlMap.getStyle && mlMap.getStyle();
+    if (!style || !style.layers) return;
+
+    style.layers.forEach((layer) => {
+      if (layer.type !== "symbol") return;
+      if (!layer.layout || !layer.layout["text-field"]) return;
+
+      mlMap.setLayoutProperty(layer.id, "text-field", [
+        "coalesce",
+        ["get", "name:ko"],
+        ["get", "name"],
+      ]);
+    });
+  } catch (_) {}
+}
+
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -40,6 +62,8 @@ const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FI
   let map = null;
   let markers = null;
 let isClampingBounds = false;
+let mlMap = null;
+let mlBaseEl = null;
 
   const markerByKey = new Map();
   const cardByKey = new Map();
@@ -1254,6 +1278,43 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
+     // --- MapLibre basemap container 준비 (Leaflet 아래 깔기) ---
+  try {
+    const host = document.getElementById("map");
+    if (host) {
+      host.style.position = "relative";
+
+      if (!mlBaseEl) {
+        mlBaseEl = document.createElement("div");
+        mlBaseEl.id = "ml-base";
+        mlBaseEl.style.position = "absolute";
+        mlBaseEl.style.left = "0";
+        mlBaseEl.style.top = "0";
+        mlBaseEl.style.right = "0";
+        mlBaseEl.style.bottom = "0";
+        mlBaseEl.style.zIndex = "0";
+        host.insertBefore(mlBaseEl, host.firstChild);
+      }
+
+      if (window.maplibregl && !mlMap) {
+        mlMap = new maplibregl.Map({
+          container: mlBaseEl,
+          style: STYLE_URL,
+          center: [HOME_CENTER[1], HOME_CENTER[0]],
+          zoom: HOME_ZOOM,
+          interactive: false,
+          attributionControl: true,
+          pitchWithRotate: false,
+          dragRotate: false,
+        });
+
+        mlMap.on("load", () => {
+          applyKoreanLabelsMapLibre(mlMap);
+        });
+      }
+    }
+  } catch (_) {}
+
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
@@ -1269,10 +1330,26 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-    }).addTo(map);
+         // MapLibre(한글 라벨) 바닥지도가 보이도록 Leaflet 타일 패널 숨김
+    try {
+      const tp = map.getPane && map.getPane("tilePane");
+      if (tp) tp.style.opacity = "0";
+    } catch (_) {}
+     // === Vector basemap (MapLibre via Leaflet) ===
+// ※ STYLE_URL 상수는 파일 상단에 추가 필요(아래 2번에서 처리)
+try{
+  const glLayer = L.maplibreGL({
+    style: STYLE_URL,
+    interactive: false,   // 이벤트는 Leaflet이 받도록(마커/클러스터 유지)
+    attribution: "&copy; OpenStreetMap contributors &copy; MapTiler"
+  }).addTo(map);
+
+  const ml = glLayer.getMaplibreMap();
+  ml.once("load", () => {
+    try { applyKoreanLabelsMapLibre(ml); } catch(_) {}
+  });
+}catch(_){}
+
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
