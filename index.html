@@ -44,7 +44,9 @@
       flex-direction:column;
       min-height:0;
     }
-
+  /* MapLibre(배경) 보이게: Leaflet 컨테이너 배경 투명 */
+  #map { background: transparent !important; }
+  .leaflet-container { background: transparent !important; }
     .leaflet-container{cursor:grab;}
     .leaflet-dragging .leaflet-container{cursor:grabbing;}
 
