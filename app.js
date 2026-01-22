@@ -10,7 +10,7 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
-const DATA_URL = "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?v=" + VERSION;
+const DATA_URL = "./data_public.json?ts=" + Date.now();
    // ===== MapLibre Vector Basemap (Korean labels) =====
 const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
 
