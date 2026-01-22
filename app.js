@@ -11,8 +11,9 @@
    
  const VERSION = "v1.2.2.2";
 const DATA_URLS = [
-  "./data_public.json?v=" + VERSION,
-  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?v=" + VERSION
+  "./data_public.json?ts=" + Date.now(),
+  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?ts=" + Date.now(),
+  "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data_public.json?ts=" + Date.now()
 ];
    // ===== MapLibre Vector Basemap (Korean labels) =====
 const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
@@ -122,7 +123,7 @@ let mlBaseEl = null;
     const b = $("errBanner");
     if (!b) return;
     $("errMsg").textContent = msg || "알 수 없는 오류";
-    $("errUrl").textContent = DATA_URLS.map(u => new URL(u, location.href).href).join(" | ");
+    $("errUrl").textContent = DATA_URLS.join(" | ");
     b.style.display = "block";
   }
   function hideErrorBanner(){
