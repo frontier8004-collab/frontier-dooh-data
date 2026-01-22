@@ -8,7 +8,7 @@
   }
 
   // vector_test.html에서 쓰는 style.json?key=... 그대로
-  const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=s3k9sg6vGwjKAfd4mDlR";
+  const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
 
   function applyKoreanLabels(map) {
     try {
