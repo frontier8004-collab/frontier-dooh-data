@@ -232,6 +232,7 @@ function escapeHtml(s) {
     map.on("load", () => {
       // 한글 라벨 우선
       applyKoreanLabels(map);
+      try { map.once("styledata", () => applyKoreanLabels(map)); } catch (_) {}
       // 데이터+클러스터
       loadDummyAndCluster(map);
     });
