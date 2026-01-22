@@ -1297,11 +1297,20 @@ applyMovePolicy();
 c.setAttribute("tabindex", "0");
 c.focus();
        
-// === Raster basemap (Leaflet) ===
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-  maxZoom: 19,
-  attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
-}).addTo(map);
+// === Vector basemap (MapLibre via Leaflet) ===
+try {
+  const gl = L.maplibreGL({
+    style: STYLE_URL,
+    interactive: false,
+    attribution: "&copy; OpenStreetMap contributors &copy; MapTiler"
+  }).addTo(map);
+
+  const ml = gl.getMaplibreMap && gl.getMaplibreMap();
+  if (ml && ml.once) {
+    ml.once("load", () => { try { applyKoreanLabelsMapLibre(ml); } catch (_) {} });
+  }
+} catch (_) {}
+
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
