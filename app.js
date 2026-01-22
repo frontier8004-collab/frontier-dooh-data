@@ -10,7 +10,10 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
-const DATA_URL = "./data_public.json?v=" + VERSION;
+const DATA_URLS = [
+  "./data_public.json?v=" + VERSION,
+  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?v=" + VERSION
+];
    // ===== MapLibre Vector Basemap (Korean labels) =====
 const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
 
@@ -119,7 +122,7 @@ let mlBaseEl = null;
     const b = $("errBanner");
     if (!b) return;
     $("errMsg").textContent = msg || "알 수 없는 오류";
-    $("errUrl").textContent = DATA_URL;
+    $("errUrl").textContent = DATA_URLS.map(u => new URL(u, location.href).href).join(" | ");
     b.style.display = "block";
   }
   function hideErrorBanner(){
@@ -1777,6 +1780,14 @@ m._key = it._key;
       throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
     }
   }
+async function fetchJsonWithFallback(urls){
+  let lastErr = null;
+  for (const u of urls){
+    try { return await fetchJsonRobust(u); }
+    catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("Data fetch failed");
+}
 
   function loadRecentAndCart(){
     try{
@@ -1846,7 +1857,7 @@ m._key = it._key;
     // ===== 데이터 로드 1회 =====
     let raw = [];
     try{
-      const json = await fetchJsonRobust(DATA_URL);
+      const json = await fetchJsonWithFallback(DATA_URLS);
       raw = Array.isArray(json) ? json
           : (Array.isArray(json.items)   ? json.items
           :  Array.isArray(json.data)    ? json.data
