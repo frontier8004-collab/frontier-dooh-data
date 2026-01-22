@@ -1784,18 +1784,49 @@ m._key = it._key;
       raw = [];
     }
 
-    const pts = (raw || [])
-      .map(x => {
-        const la = (typeof x.lat === "number") ? x.lat : parseFloat(String(x.lat ?? "").trim());
-        const ln = (typeof x.lng === "number") ? x.lng : parseFloat(String(x.lng ?? "").trim());
-        return { ...x, lat: la, lng: ln };
-      })
-      .filter(x => {
-        if (!Number.isFinite(x.lat) || !Number.isFinite(x.lng)) return false;
-        if (x.lat < 32.0 || x.lat > 39.8) return false;
-        if (x.lng < 123.0 || x.lng > 132.5) return false;
-        return true;
-      });
+    function sanitizePoints(list){
+  const stats = {
+    total: Array.isArray(list) ? list.length : 0,
+    nan: 0,
+    outLat: 0,
+    outLng: 0,
+    korOut: 0,
+    kept: 0
+  };
+
+  const pts = [];
+  const arr = Array.isArray(list) ? list : [];
+
+  for (let i = 0; i < arr.length; i++){
+    const x = arr[i] || {};
+
+    const lat = (typeof x.lat === "number")
+      ? x.lat
+      : parseFloat(String(x.lat ?? "").trim());
+
+    const lng = (typeof x.lng === "number")
+      ? x.lng
+      : parseFloat(String(x.lng ?? "").trim());
+
+    // 1) 숫자 변환 실패
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) { stats.nan++; continue; }
+
+    // 2) 지구 좌표 범위 이탈(이게 MapLibre/Mapbox에서 크래시 유발의 대표 원인)
+    if (lat < -90 || lat > 90) { stats.outLat++; continue; }
+    if (lng < -180 || lng > 180) { stats.outLng++; continue; }
+
+    // 3) 국내 범위 필터(현 정책 유지)
+    if (lat < 32.0 || lat > 39.8 || lng < 123.0 || lng > 132.5) { stats.korOut++; continue; }
+
+    stats.kept++;
+    pts.push({ ...x, lat, lng });
+  }
+
+  return { pts, stats };
+}
+
+const { pts, stats } = sanitizePoints(raw || []);
+console.log("[DATA_SANITIZE]", stats);
 
     const uniqueKeys = makeUniqueKeys(pts);
 
