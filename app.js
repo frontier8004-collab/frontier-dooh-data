@@ -1339,21 +1339,11 @@ c.focus();
       const tp = map.getPane && map.getPane("tilePane");
       if (tp) tp.style.opacity = "0";
     } catch (_) {}
-     // === Vector basemap (MapLibre via Leaflet) ===
-// ※ STYLE_URL 상수는 파일 상단에 추가 필요(아래 2번에서 처리)
-try{
-  const glLayer = L.maplibreGL({
-    style: STYLE_URL,
-    interactive: false,   // 이벤트는 Leaflet이 받도록(마커/클러스터 유지)
-    attribution: "&copy; OpenStreetMap contributors &copy; MapTiler"
-  }).addTo(map);
-
-  const ml = glLayer.getMaplibreMap();
-  ml.once("load", () => {
-    try { applyKoreanLabelsMapLibre(ml); } catch(_) {}
-  });
-}catch(_){}
-
+// === Raster basemap (Leaflet) ===
+L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+  maxZoom: 19,
+  attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
+}).addTo(map);
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
