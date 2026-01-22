@@ -66,8 +66,6 @@ const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FI
   let map = null;
   let markers = null;
 let isClampingBounds = false;
-let mlMap = null;
-let mlBaseEl = null;
 
   const markerByKey = new Map();
   const cardByKey = new Map();
@@ -1298,11 +1296,7 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-         // MapLibre(한글 라벨) 바닥지도가 보이도록 Leaflet 타일 패널 숨김
-    try {
-      const tp = map.getPane && map.getPane("tilePane");
-      if (tp) tp.style.opacity = "0";
-    } catch (_) {}
+       
 // === Raster basemap (Leaflet) ===
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
