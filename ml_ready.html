@@ -234,7 +234,7 @@
       const statusEl = document.getElementById("status");
       const sanitizeEl = document.getElementById("sanitize");
 
-      statusEl.textContent = "JS loaded";
+      statusEl.textContent = "Style loading…";
 
       let raw;
       try {
@@ -258,6 +258,19 @@
         zoom: 6,
         attributionControl: true
       });
+// ★ 스타일/타일 로딩 에러를 화면에 표시 (DevTools 없이 원인 확정용)
+map.on("error", (e) => {
+  try {
+    const msg =
+      (e && e.error && (e.error.message || e.error.status || e.error.code)) ?
+        (e.error.message || ("status=" + e.error.status) || ("code=" + e.error.code)) :
+      (e && e.sourceId) ? ("source=" + e.sourceId) :
+      "unknown error";
+    statusEl.textContent = "ERROR: " + msg;
+  } catch (_) {
+    statusEl.textContent = "ERROR: map error";
+  }
+});
 
       map.addControl(new maplibregl.NavigationControl({ showZoom: true, showCompass: false }), "top-right");
 
