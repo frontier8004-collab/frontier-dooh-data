@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Frontier DOOH - data_public.json 좌표 계측</title>
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; background:#0b0c0d; color:#e8eaed; }
+    h1 { margin: 0 0 12px; font-size: 18px; }
+    .box { background:#0f1011; border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:12px; margin: 12px 0; }
+    .k { color:#a2decc; }
+    pre { white-space: pre-wrap; word-break: break-word; margin: 0; }
+    .muted { color: rgba(232,234,237,.7); }
+  </style>
+</head>
+<body>
+  <h1>data_public.json 좌표 품질 계측</h1>
+
+  <div class="box">
+    <div class="muted">읽기 전용 테스트 페이지입니다. 운영 로직(app.js/index.html)은 변경하지 않습니다.</div>
+  </div>
+
+  <div class="box">
+    <div><span class="k">DATA_URL</span>: <span id="dataUrl"></span></div>
+    <div><span class="k">Status</span>: <span id="status">Loading…</span></div>
+  </div>
+
+  <div class="box">
+    <pre id="result"></pre>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const DATA_URL = "./data_public.json";
+      document.getElementById("dataUrl").textContent = DATA_URL;
+
+      const KOR_BOUNDS = { minLat: 32.0, maxLat: 39.8, minLng: 123.0, maxLng: 132.5 }; // 참고용
+      const MAX_SAMPLES = 30;
+
+      function toNum(v) {
+        if (v === null || v === undefined) return NaN;
+        if (typeof v === "number") return v;
+        if (typeof v === "string") {
+          const t = v.trim().replace(/,/g, "");
+          if (!t) return NaN;
+          return Number(t);
+        }
+        return NaN;
+      }
+
+      function pickLatLng(obj) {
+        // 가능한 케이스를 최대한 흡수
+        const lat = toNum(obj.lat ?? obj.latitude ?? obj.y ?? obj.Lat ?? obj.LAT);
+        const lng = toNum(obj.lng ?? obj.lon ?? obj.long ?? obj.longitude ?? obj.x ?? obj.Lng ?? obj.LNG);
+        return { lat, lng };
+      }
+
+      function fmt(n) {
+        return Number.isFinite(n) ? String(n) : "NaN";
+      }
+
+      function summarize(items) {
+        const total = items.length;
+
+        let nanCount = 0;
+        let latRangeBad = 0;
+        let lngRangeBad = 0;
+        let korOut = 0;
+
+        const samplesNan = [];
+        const samplesRange = [];
+        const samplesKorOut = [];
+
+        for (let i = 0; i < items.length; i++) {
+          const it = items[i];
+          const { lat, lng } = pickLatLng(it);
+
+          const isNan = !(Number.isFinite(lat) && Number.isFinite(lng));
+          const isLatBad = Number.isFinite(lat) && (lat < -90 || lat > 90);
+          const isLngBad = Number.isFinite(lng) && (lng < -180 || lng > 180);
+          const isKorOut = (Number.isFinite(lat) && Number.isFinite(lng)) &&
+            (lat < KOR_BOUNDS.minLat || lat > KOR_BOUNDS.maxLat || lng < KOR_BOUNDS.minLng || lng > KOR_BOUNDS.maxLng);
+
+          if (isNan) {
+            nanCount++;
+            if (samplesNan.length < MAX_SAMPLES) samplesNan.push({ i, lat: fmt(lat), lng: fmt(lng), name: it.name ?? it.title ?? it.site ?? "" });
+            continue; // NaN이면 아래 범위 체크 의미가 약하므로 skip
+          }
+
+          if (isLatBad || isLngBad) {
+            if (isLatBad) latRangeBad++;
+            if (isLngBad) lngRangeBad++;
+            if (samplesRange.length < MAX_SAMPLES) samplesRange.push({ i, lat: fmt(lat), lng: fmt(lng), name: it.name ?? it.title ?? it.site ?? "" });
+          } else if (isKorOut) {
+            korOut++;
+            if (samplesKorOut.length < MAX_SAMPLES) samplesKorOut.push({ i, lat: fmt(lat), lng: fmt(lng), name: it.name ?? it.title ?? it.site ?? "" });
+          }
+        }
+
+        return {
+          total,
+          nanCount,
+          latRangeBad,
+          lngRangeBad,
+          korOut,
+          samplesNan,
+          samplesRange,
+          samplesKorOut
+        };
+      }
+
+      function render(s) {
+        const lines = [];
+        lines.push(`총 아이템 수: ${s.total}`);
+        lines.push(`lat/lng 숫자 변환 실패(NaN): ${s.nanCount}`);
+        lines.push(`lat 범위 이탈(|lat|>90): ${s.latRangeBad}`);
+        lines.push(`lng 범위 이탈(|lng|>180): ${s.lngRangeBad}`);
+        lines.push(`국내 참고 범위 밖(32~39.8 / 123~132.5): ${s.korOut}`);
+        lines.push("");
+        lines.push("[샘플] NaN (최대 " + MAX_SAMPLES + "개)");
+        lines.push(JSON.stringify(s.samplesNan, null, 2));
+        lines.push("");
+        lines.push("[샘플] 범위 이탈(|lat|>90 or |lng|>180) (최대 " + MAX_SAMPLES + "개)");
+        lines.push(JSON.stringify(s.samplesRange, null, 2));
+        lines.push("");
+        lines.push("[샘플] 국내 참고 범위 밖 (최대 " + MAX_SAMPLES + "개)");
+        lines.push(JSON.stringify(s.samplesKorOut, null, 2));
+
+        document.getElementById("result").textContent = lines.join("\n");
+      }
+
+      const statusEl = document.getElementById("status");
+
+      fetch(DATA_URL, { cache: "no-store" })
+        .then(r => {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(json => {
+          const items = Array.isArray(json) ? json : (Array.isArray(json.items) ? json.items : []);
+          statusEl.textContent = "Loaded OK";
+          const s = summarize(items);
+          render(s);
+          console.log("[data_probe] summary:", s);
+        })
+        .catch(err => {
+          statusEl.textContent = "ERROR: " + (err && err.message ? err.message : String(err));
+          console.error(err);
+        });
+    })();
+  </script>
+</body>
+</html>
