@@ -1829,7 +1829,7 @@ async function fetchJsonWithFallback(urls){
       hideErrorBanner();
     }catch(err){
       console.error("[DATA LOAD FAIL]", err);
-      showErrorBanner(err?.message || "data 로드 실패");
+      showErrorBanner(String(err?.stack || err?.message || "data 로드 실패"));
       raw = [];
     }
 
