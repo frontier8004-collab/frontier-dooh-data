@@ -10,11 +10,8 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
- const DATA_URLS = [
-  "./data_public.json?ts=" + Date.now(),
-  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?ts=" + Date.now(),
-  "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data_public.json?ts=" + Date.now(),
-  "https://raw.githubusercontent.com/frontier8004-collab/frontier-dooh-data/main/data_public.json?ts=" + Date.now(),
+const DATA_URLS = [
+  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?v=v1.2.2.2",
 ];
 
    // ===== MapLibre Vector Basemap (Korean labels) =====
