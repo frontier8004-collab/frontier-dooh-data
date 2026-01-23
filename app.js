@@ -11,8 +11,9 @@
    
  const VERSION = "v1.2.2.2";
 const DATA_URLS = [
-  "https://frontier8004-collab.github.io/frontier-dooh-data/data_public.json?v=v1.2.2.2",
+  "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data_public.json?ts=" + Date.now()
 ];
+
 
    // ===== MapLibre Vector Basemap (Korean labels) =====
 const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
