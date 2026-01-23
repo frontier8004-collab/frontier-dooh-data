@@ -10,34 +10,7 @@
   "use strict";
    
  const VERSION = "v1.2.2.2";
-const DATA_URLS = [
-  new URL("data_public.json", location.href).href + "?v=" + VERSION
-];
-
-
-
-   // ===== MapLibre Vector Basemap (Korean labels) =====
-const STYLE_URL = "https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=WotAoBRFnYvSNdp5ox05";
-
-// MapLibre 한글 라벨 강제 적용 (name:ko 우선)
-function applyKoreanLabelsMapLibre(mlMap) {
-  try {
-    const style = mlMap.getStyle && mlMap.getStyle();
-    if (!style || !style.layers) return;
-
-    style.layers.forEach((layer) => {
-      if (layer.type !== "symbol") return;
-      if (!layer.layout || !layer.layout["text-field"]) return;
-
-      mlMap.setLayoutProperty(layer.id, "text-field", [
-        "coalesce",
-        ["get", "name:ko"],
-        ["get", "name"],
-      ]);
-    });
-  } catch (_) {}
-}
-
+ const DATA_URL = "./data_public.json";
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
     { high:"교통매체", lows:["버스광고","지하철 광고","택시 광고","차량 광고","주요 도로 야립 광고","공항 / 기내, 항공기 광고","버스 쉘터 광고","KTX 광고","터미널 광고"] },
@@ -122,7 +95,7 @@ let isClampingBounds = false;
     const b = $("errBanner");
     if (!b) return;
     $("errMsg").textContent = msg || "알 수 없는 오류";
-    $("errUrl").textContent = DATA_URLS.join(" | ");
+    $("errUrl").textContent = DATA_URL;
     b.style.display = "block";
   }
   function hideErrorBanner(){
@@ -1281,7 +1254,6 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 }
 
   function buildMap(){
-
     map = L.map("map", {
       zoomControl:false,
       zoomSnap: 1,
@@ -1297,21 +1269,10 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-       
-// === Vector basemap (MapLibre via Leaflet) ===
-try {
-  const gl = L.maplibreGL({
-    style: STYLE_URL,
-    interactive: false,
-    attribution: "&copy; OpenStreetMap contributors &copy; MapTiler"
-  }).addTo(map);
-
-  const ml = gl.getMaplibreMap && gl.getMaplibreMap();
-  if (ml && ml.once) {
-    ml.once("load", () => { try { applyKoreanLabelsMapLibre(ml); } catch (_) {} });
-  }
-} catch (_) {}
-
+     L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+    }).addTo(map);
 
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
@@ -1733,22 +1694,12 @@ m._key = it._key;
     }
     const raw = await res.text();
     try{
-      const cleaned = raw.replace(/^\uFEFF/, "").trimStart();
-return JSON.parse(cleaned);
-
+      return JSON.parse(raw);
     }catch(e){
       const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
       throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
     }
   }
-async function fetchJsonWithFallback(urls){
-  let lastErr = null;
-  for (const u of urls){
-    try { return await fetchJsonRobust(u); }
-    catch(e){ lastErr = e; }
-  }
-  throw lastErr || new Error("Data fetch failed");
-}
 
   function loadRecentAndCart(){
     try{
@@ -1818,7 +1769,7 @@ async function fetchJsonWithFallback(urls){
     // ===== 데이터 로드 1회 =====
     let raw = [];
     try{
-      const json = await fetchJsonWithFallback(DATA_URLS);
+      const json = await fetchJsonRobust(DATA_URL);
       raw = Array.isArray(json) ? json
           : (Array.isArray(json.items)   ? json.items
           :  Array.isArray(json.data)    ? json.data
@@ -1829,7 +1780,7 @@ async function fetchJsonWithFallback(urls){
       hideErrorBanner();
     }catch(err){
       console.error("[DATA LOAD FAIL]", err);
-      showErrorBanner(String(err?.stack || err?.message || "data 로드 실패"));
+      showErrorBanner(err?.message || "data 로드 실패");
       raw = [];
     }
 
@@ -2013,7 +1964,7 @@ console.log("[DATA_SANITIZE]", stats);
   document.addEventListener("DOMContentLoaded", () => {
     init().catch(err => {
       console.error("[INIT FAIL]", err);
-      showErrorBanner((err && (err.stack || err.message)) ? String(err.stack || err.message) : "초기화 실패");
+      showErrorBanner(err?.message || "초기화 실패");
     });
   });
 
