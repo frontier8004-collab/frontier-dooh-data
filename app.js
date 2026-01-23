@@ -11,8 +11,9 @@
    
  const VERSION = "v1.2.2.2";
 const DATA_URLS = [
-  "https://cdn.jsdelivr.net/gh/frontier8004-collab/frontier-dooh-data@main/data_public.json?ts=" + Date.now()
+  new URL("data_public.json", location.href).href + "?v=" + VERSION
 ];
+
 
 
    // ===== MapLibre Vector Basemap (Korean labels) =====
