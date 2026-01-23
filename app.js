@@ -2013,7 +2013,7 @@ console.log("[DATA_SANITIZE]", stats);
   document.addEventListener("DOMContentLoaded", () => {
     init().catch(err => {
       console.error("[INIT FAIL]", err);
-      showErrorBanner(err?.message || "초기화 실패");
+      showErrorBanner((err && (err.stack || err.message)) ? String(err.stack || err.message) : "초기화 실패");
     });
   });
 
