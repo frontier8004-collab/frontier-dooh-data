@@ -1732,7 +1732,9 @@ m._key = it._key;
     }
     const raw = await res.text();
     try{
-      return JSON.parse(raw);
+      const cleaned = raw.replace(/^\uFEFF/, "").trimStart();
+return JSON.parse(cleaned);
+
     }catch(e){
       const head = raw.slice(0, 120).replace(/\s+/g," ").trim();
       throw new Error(`JSON 파싱 실패 (응답 시작: ${head})`);
