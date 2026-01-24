@@ -1275,6 +1275,13 @@ const ml = L.maplibreGL({
   style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
   attribution: ""
 }).addTo(map);
+     // MapLibre 한글 라벨 패치(ml = leaflet-maplibre 레이어)
+const mlMap =
+  (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
+  : (ml && ml._map) ? ml._map
+  : null;
+
+applyKoreanLabelsToMapLibre(mlMap);
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
