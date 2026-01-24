@@ -1263,7 +1263,7 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 maxBoundsViscosity: 1.0,
 
 minZoom: 7
-
+maxZoom: 19
     }).setView(HOME_CENTER, HOME_ZOOM);
 applyMovePolicy();
     const c = map.getContainer();
