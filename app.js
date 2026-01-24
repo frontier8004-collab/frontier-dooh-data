@@ -1289,8 +1289,8 @@ function applyKoreanLabelsToMapLibre(mlMap){
   };
 
   // 로딩 타이밍 대응(1회만 적용)
-  _mlMap.on("styledata", run);
-  _mlMap.on("load", run);
+  mlMap.on("styledata", run);
+  mlMap.on("load", run);
 }
   function buildMap(){
     map = L.map("map", {
@@ -1308,192 +1308,19 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-  // === MapLibre 벡터 바닥지도(MapTiler) + 한글라벨 + 스타일 패널(범례 아래/폭 맞춤/접기) ===
-  const KEY = "WotAoBRFnYvSNdp5ox05";
-  const maptilerStyleUrl = (slug) =>
-    `https://api.maptiler.com/maps/${slug}/style.json?key=${KEY}`;
+    // MapLibre 벡터 바닥지도(검고/회색) + 한글라벨 준비
+const KEY = "WotAoBRFnYvSNdp5ox05";
+const ml = L.maplibreGL({
+  style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
+  attribution: ""
+}).addTo(map);
+     // MapLibre 한글 라벨 패치(ml = leaflet-maplibre 레이어)
+const mlMap =
+  (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
+  : (ml && ml._map) ? ml._map
+  : null;
 
-  // 기본: 다크
-  const DEFAULT_STYLE = "dataviz-v4-dark";
-
-  // MapLibre 레이어 추가
-  const ml = L.maplibreGL({
-    style: maptilerStyleUrl(DEFAULT_STYLE),
-    attribution: ""
-  }).addTo(map);
-
-  // MapLibre map 객체 추출(leaflet-maplibre 플러그인)
-  const mlMap =
-    (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
-    : (ml && ml._map) ? ml._map
-    : (ml && ml._maplibreMap) ? ml._maplibreMap
-    : null;
-
-  // 한글 라벨 패치 함수 이름 혼선 대비
-  const patchKo =
-    (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
-    (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
-    null;
-
-  // === 스타일 패널(범례 아래, 범례 폭에 맞춤, 접기/펼치기) ===
-  (function (){
-if (!_mlMap) return;
-if (patchKo) patchKo(_mlMap);;
-
-    const styles = [
-      { slug: "dataviz-v4-dark",  label: "다크(기본)" },
-      { slug: "dataviz-v4-light", label: "화이트" },
-      { slug: "streets-v4",       label: "구글(스트리트)" },
-      { slug: "hybrid-v4",        label: "위성(하이브리드)" },
-    ];
-
-    let currentSlug = DEFAULT_STYLE;
-
-    const ctrl = L.control({ position: "topleft" });
-    ctrl.onAdd = function(){
-      const root = L.DomUtil.create("div", "leaflet-control mt-style-panel");
-      root.style.cssText =
-        "box-sizing:border-box;" +
-        "background:rgba(32,34,36,.86);backdrop-filter:blur(10px);" +
-        "border:1px solid rgba(255,255,255,.14);" +
-        "border-radius:14px;overflow:hidden;" +
-        "box-shadow:0 10px 22px rgba(0,0,0,.45);" +
-        "color:#e9eef7;font-size:12px;";
-
-      root.innerHTML = `
-        <div class="mt-style-hd"
-             style="display:flex;align-items:center;justify-content:space-between;
-                    padding:10px 12px;gap:10px;">
-          <div style="font-weight:800;letter-spacing:-.2px;">지도 스타일</div>
-          <button type="button" class="mt-style-toggle"
-                  style="width:28px;height:28px;border-radius:10px;
-                         border:1px solid rgba(255,255,255,.16);
-                         background:rgba(0,0,0,.25);color:#e9eef7;
-                         cursor:pointer;line-height:1;">—</button>
-        </div>
-
-        <div class="mt-style-body"
-             style="display:grid;grid-template-columns:1fr 1fr;gap:8px;
-                    padding:0 12px 12px;">
-          ${styles.map(s => `
-            <button type="button" data-slug="${s.slug}"
-              style="height:38px;border-radius:10px;
-                     border:1px solid rgba(255,255,255,.16);
-                     background:rgba(0,0,0,.28);color:#e9eef7;
-                     cursor:pointer;font-weight:700;">
-              ${s.label}
-            </button>
-          `).join("")}
-        </div>
-      `;
-
-      L.DomEvent.disableClickPropagation(root);
-      L.DomEvent.disableScrollPropagation(root);
-
-      const body = root.querySelector(".mt-style-body");
-      const toggleBtn = root.querySelector(".mt-style-toggle");
-
-      const setActive = () => {
-        root.querySelectorAll("button[data-slug]").forEach(b => {
-          const on = b.getAttribute("data-slug") === currentSlug;
-          b.style.border = on ? "1px solid rgba(162,222,204,.95)" : "1px solid rgba(255,255,255,.16)";
-          b.style.background = on ? "rgba(162,222,204,.18)" : "rgba(0,0,0,.28)";
-          b.style.color = on ? "#e9fff7" : "#e9eef7";
-        });
-      };
-
-      const switchStyle = (slug) => {
-        if (!slug || slug === currentSlug) return;
-        currentSlug = slug;
-        setActive();
-
-        try{
-          _mlMap.setStyle(maptilerStyleUrl(slug));
-
-          // 스타일 변경 후 한글 라벨 재적용
-          if (patchKo && typeof mlMap.once === "function"){
-            _mlMap.once("idle", () => patchKo(mlMap));
-          } else if (patchKo) {
-            setTimeout(() => patchKo(mlMap), 1200);
-          }
-        }catch(e){
-          console.warn("[ML] style switch failed", e);
-        }
-      };
-
-      root.querySelectorAll("button[data-slug]").forEach(btn => {
-        btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
-      });
-
-      // 접기/펼치기
-      let collapsed = false;
-      const applyCollapse = () => {
-        body.style.display = collapsed ? "none" : "grid";
-        toggleBtn.textContent = collapsed ? "+" : "—";
-      };
-      toggleBtn.addEventListener("click", () => {
-        collapsed = !collapsed;
-        applyCollapse();
-        // 접히고 펼칠 때도 폭/위치 재동기화
-        setTimeout(syncUnderLegend, 0);
-      });
-
-      // --- 범례 아래로 붙이고, 폭을 범례에 맞춤 ---
-      const syncUnderLegend = () => {
-        try{
-          const corner = map.getContainer().querySelector(".leaflet-top.leaflet-left");
-          if (!corner) return;
-
-        // ✅ Leaflet 컨트롤은 corner의 "직계 자식"으로 쌓입니다(후손까지 잡으면 안됨)
-const topLeftControls = Array.from(corner.children)
-  .filter(el => el.classList && el.classList.contains("leaflet-control"));
-
-// ✅ '범례'가 포함된 "직계 컨트롤"을 범례로 간주
-const legend = topLeftControls.find(el => (el.textContent || "").includes("범례"));
-if (!legend) return;
-
-          const w = legend.getBoundingClientRect().width;
-          if (w && w > 0) root.style.width = Math.round(w) + "px";
-
-        // ✅ 반드시 '범례 다음 형제' 위치로 이동 → 범례 "바로 아래"
-if (legend.nextElementSibling !== root){
-  corner.insertBefore(root, legend.nextElementSibling);
-}
-
-// 혹시 float 규칙이 깨진 경우 대비(스택 강제)
-root.style.clear = "both";  
-        }catch(e){}
-      };
-
-      // 초기 상태
-      applyCollapse();
-      setActive();
-
-      // 초기/리사이즈/범례 크기변화 대응
-      setTimeout(syncUnderLegend, 0);
-      setTimeout(syncUnderLegend, 250);
-      window.addEventListener("resize", syncUnderLegend);
-
-      if (typeof ResizeObserver === "function"){
-        try{
-          const corner = map.getContainer().querySelector(".leaflet-top.leaflet-left");
-          if (corner){
-       const legendEl = Array.from(corner.children)
-  .filter(el => el.classList && el.classList.contains("leaflet-control"))
-  .find(el => (el.textContent || "").includes("범례"));
-            if (legendEl){
-              const ro = new ResizeObserver(() => syncUnderLegend());
-              ro.observe(legendEl);
-            }
-          }
-        }catch(e){}
-      }
-
-      return root;
-    };
-
-    ctrl.addTo(map);
-  })();
+applyKoreanLabelsToMapLibre(mlMap);
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
