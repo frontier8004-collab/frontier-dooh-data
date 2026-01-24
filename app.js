@@ -1308,15 +1308,40 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-   // === 스타일 선택 UI(좌하단 버튼 4개) ===
+  // === MapLibre 벡터 바닥지도(MapTiler) + 한글라벨 + 스타일 버튼(4개) ===
+  const KEY = "WotAoBRFnYvSNdp5ox05";
+
+  const maptilerStyleUrl = (slug) =>
+    `https://api.maptiler.com/maps/${slug}/style.json?key=${KEY}`;
+
+  // 기본: 다크
+  const DEFAULT_STYLE = "dataviz-v4-dark";
+
+  // Leaflet 위에 MapLibre 레이어 생성
+  const ml = L.maplibreGL({
+    style: maptilerStyleUrl(DEFAULT_STYLE),
+    attribution: ""
+  }).addTo(map);
+
+  // MapLibre map 객체 추출(leaflet-maplibre 플러그인 구현 차이 대응)
+  const mlMap =
+    (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
+    : (ml && ml._map) ? ml._map
+    : (ml && ml._maplibreMap) ? ml._maplibreMap
+    : null;
+
+  // 함수명 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
+  const patchKo =
+    (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
+    (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
+    null;
+
+  // 초기(다크) 한글 라벨 적용
+  if (patchKo) patchKo(mlMap);
+
+  // === 스타일 선택 UI(좌하단 버튼 4개) ===
   (function addMapStyleButtons(){
     if (!mlMap || typeof mlMap.setStyle !== "function") return;
-
-    // 함수 이름 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
-    const patchKo =
-      (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
-      (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
-      null;
 
     const styles = [
       { slug: "dataviz-v4-dark", label: "다크(기본)" },
@@ -1325,7 +1350,7 @@ c.focus();
       { slug: "hybrid-v4",       label: "위성(하이브리드)" },
     ];
 
-    let currentSlug = (typeof DEFAULT_STYLE === "string" && DEFAULT_STYLE) ? DEFAULT_STYLE : "dataviz-v4-dark";
+    let currentSlug = DEFAULT_STYLE;
 
     const ctrl = L.control({ position: "bottomleft" });
     ctrl.onAdd = function(){
@@ -1335,7 +1360,7 @@ c.focus();
         "border-radius:12px;border:1px solid rgba(255,255,255,.12);" +
         "color:#d8dde6;font-size:12px;line-height:1.2;";
 
-      const btnStyleBase =
+      const btnBase =
         "display:inline-flex;align-items:center;justify-content:center;" +
         "padding:6px 8px;border-radius:10px;cursor:pointer;user-select:none;" +
         "border:1px solid rgba(255,255,255,.18);background:#0f1011;color:#d8dde6;";
@@ -1344,7 +1369,7 @@ c.focus();
         <div style="font-weight:700;margin-bottom:6px;">지도 스타일</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:210px;">
           ${styles.map(s => `
-            <button type="button" data-slug="${s.slug}" style="${btnStyleBase}">
+            <button type="button" data-slug="${s.slug}" style="${btnBase}">
               ${s.label}
             </button>
           `).join("")}
@@ -1355,11 +1380,10 @@ c.focus();
       L.DomEvent.disableScrollPropagation(div);
 
       const setActive = () => {
-        const buttons = div.querySelectorAll("button[data-slug]");
-        buttons.forEach(b => {
-          const isActive = b.getAttribute("data-slug") === currentSlug;
-          b.style.border = isActive ? "1px solid rgba(162,222,204,.9)" : "1px solid rgba(255,255,255,.18)";
-          b.style.background = isActive ? "rgba(162,222,204,.18)" : "#0f1011";
+        div.querySelectorAll("button[data-slug]").forEach(b => {
+          const on = b.getAttribute("data-slug") === currentSlug;
+          b.style.border = on ? "1px solid rgba(162,222,204,.9)" : "1px solid rgba(255,255,255,.18)";
+          b.style.background = on ? "rgba(162,222,204,.18)" : "#0f1011";
         });
       };
 
@@ -1371,12 +1395,8 @@ c.focus();
         try{
           mlMap.setStyle(maptilerStyleUrl(slug));
 
-          // 스타일 변경 후 한글 라벨 재적용
-          if (patchKo && typeof mlMap.once === "function"){
-            mlMap.once("idle", () => patchKo(mlMap));
-          } else if (patchKo) {
-            setTimeout(() => patchKo(mlMap), 1200);
-          }
+          // 스타일 변경 후 한글 라벨 재적용(스타일 로딩 타이밍 대응)
+          if (patchKo) patchKo(mlMap);
         }catch(e){
           console.warn("[ML] style switch failed", e);
         }
@@ -1386,7 +1406,6 @@ c.focus();
         btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
       });
 
-      // 초기 활성 표시
       setActive();
       return div;
     };
