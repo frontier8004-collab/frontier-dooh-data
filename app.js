@@ -1445,17 +1445,24 @@ c.focus();
           const corner = map.getContainer().querySelector(".leaflet-top.leaflet-left");
           if (!corner) return;
 
-          const controls = Array.from(corner.querySelectorAll(".leaflet-control"));
-          const legend = controls.find(el => (el.innerText || "").includes("범례"));
-          if (!legend) return;
+        // ✅ Leaflet 컨트롤은 corner의 "직계 자식"으로 쌓입니다(후손까지 잡으면 안됨)
+const topLeftControls = Array.from(corner.children)
+  .filter(el => el.classList && el.classList.contains("leaflet-control"));
+
+// ✅ '범례'가 포함된 "직계 컨트롤"을 범례로 간주
+const legend = topLeftControls.find(el => (el.textContent || "").includes("범례"));
+if (!legend) return;
 
           const w = legend.getBoundingClientRect().width;
           if (w && w > 0) root.style.width = Math.round(w) + "px";
 
-          // legend 다음으로 이동(항상 범례 아래)
-          if (legend.nextSibling !== root){
-            corner.insertBefore(root, legend.nextSibling);
-          }
+        // ✅ 반드시 '범례 다음 형제' 위치로 이동 → 범례 "바로 아래"
+if (legend.nextElementSibling !== root){
+  corner.insertBefore(root, legend.nextElementSibling);
+}
+
+// 혹시 float 규칙이 깨진 경우 대비(스택 강제)
+root.style.clear = "both";  
         }catch(e){}
       };
 
@@ -1472,8 +1479,9 @@ c.focus();
         try{
           const corner = map.getContainer().querySelector(".leaflet-top.leaflet-left");
           if (corner){
-            const legendEl = Array.from(corner.querySelectorAll(".leaflet-control"))
-              .find(el => (el.innerText || "").includes("범례"));
+       const legendEl = Array.from(corner.children)
+  .filter(el => el.classList && el.classList.contains("leaflet-control"))
+  .find(el => (el.textContent || "").includes("범례"));
             if (legendEl){
               const ro = new ResizeObserver(() => syncUnderLegend());
               ro.observe(legendEl);
