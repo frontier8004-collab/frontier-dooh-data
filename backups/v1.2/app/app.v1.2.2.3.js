@@ -1252,7 +1252,46 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
     map.keyboard && map.keyboard.enable();
   }
 }
+// === MapLibre 한글 라벨 패치(전역/동일 스코프) ===
+function applyKoreanLabelsToMapLibre(mlMap){
+  if (!mlMap || typeof mlMap.getStyle !== "function") return;
 
+  let done = false;
+
+  const run = () => {
+    if (done) return;
+    try{
+      const style = mlMap.getStyle();
+      if (!style || !Array.isArray(style.layers)) return;
+
+      for (const layer of style.layers){
+        if (!layer || layer.type !== "symbol") continue;
+
+        const hasTextField =
+          layer.layout && (layer.layout["text-field"] !== undefined);
+
+        if (!hasTextField) continue;
+
+        mlMap.setLayoutProperty(layer.id, "text-field", [
+          "coalesce",
+          ["get", "name:ko"],
+          ["get", "name_ko"],
+          ["get", "name"],
+          ["get", "label"]
+        ]);
+      }
+
+      done = true;
+      console.log("[ML] Korean label patch applied");
+    }catch(e){
+      console.warn("[ML] Korean label patch failed", e);
+    }
+  };
+
+  // 로딩 타이밍 대응(1회만 적용)
+  mlMap.on("styledata", run);
+  mlMap.on("load", run);
+}
   function buildMap(){
     map = L.map("map", {
       zoomControl:false,
@@ -1275,6 +1314,13 @@ const ml = L.maplibreGL({
   style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
   attribution: ""
 }).addTo(map);
+     // MapLibre 한글 라벨 패치(ml = leaflet-maplibre 레이어)
+const mlMap =
+  (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
+  : (ml && ml._map) ? ml._map
+  : null;
+
+applyKoreanLabelsToMapLibre(mlMap);
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
@@ -1996,6 +2042,5 @@ console.log("[DATA_SANITIZE]", stats);
     );
   });
 })();
-
 
 
