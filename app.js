@@ -1289,8 +1289,8 @@ function applyKoreanLabelsToMapLibre(mlMap){
   };
 
   // 로딩 타이밍 대응(1회만 적용)
-  mlMap.on("styledata", run);
-  mlMap.on("load", run);
+  _mlMap.on("styledata", run);
+  _mlMap.on("load", run);
 }
   function buildMap(){
     map = L.map("map", {
@@ -1335,11 +1335,10 @@ c.focus();
     (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
     null;
 
-  if (patchKo) patchKo(mlMap);
-
   // === 스타일 패널(범례 아래, 범례 폭에 맞춤, 접기/펼치기) ===
-  (function addMapStylePanelUnderLegend(){
-    if (!mlMap || typeof mlMap.setStyle !== "function") return;
+  (function (){
+if (!_mlMap) return;
+if (patchKo) patchKo(_mlMap);;
 
     const styles = [
       { slug: "dataviz-v4-dark",  label: "다크(기본)" },
@@ -1409,11 +1408,11 @@ c.focus();
         setActive();
 
         try{
-          mlMap.setStyle(maptilerStyleUrl(slug));
+          _mlMap.setStyle(maptilerStyleUrl(slug));
 
           // 스타일 변경 후 한글 라벨 재적용
           if (patchKo && typeof mlMap.once === "function"){
-            mlMap.once("idle", () => patchKo(mlMap));
+            _mlMap.once("idle", () => patchKo(mlMap));
           } else if (patchKo) {
             setTimeout(() => patchKo(mlMap), 1200);
           }
