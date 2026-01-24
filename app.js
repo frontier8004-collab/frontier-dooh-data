@@ -1329,7 +1329,11 @@ c.focus();
     map.addLayer(markers);
 
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
-    map.on("dragend",   ()=>{ isMapInteracting = false; });
+   map.on("dragend", () => {
+  isMapInteracting = false;
+  const base = getFilteredBase();
+  renderMarkersAndListFromBase(base);
+});
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
     map.on("zoomend", () =>{
   isMapInteracting = false;
