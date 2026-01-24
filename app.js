@@ -1345,7 +1345,7 @@ c.focus();
 
     const styles = [
       { slug: "dataviz-v4-dark", label: "다크(기본)" },
-      { slug: "base-v4", label: "화이트" },
+      { slug: "dataviz-v4-light", label: "화이트" },
       { slug: "streets-v4",      label: "구글(스트리트)" },
       { slug: "hybrid-v4",       label: "위성(하이브리드)" },
     ];
