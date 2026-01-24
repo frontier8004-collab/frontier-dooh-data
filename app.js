@@ -1275,10 +1275,10 @@ const ml = L.maplibreGL({
   style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
   attribution: ""
 }).addTo(map);
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-  maxZoom: 19,
-  attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
-}).addTo(map);
+// L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+// maxZoom: 19,
+// attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+// }).addTo(map);
     markers = L.markerClusterGroup({
       showCoverageOnHover:false,
       spiderfyOnMaxZoom:false,
