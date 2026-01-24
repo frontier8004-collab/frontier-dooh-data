@@ -1308,110 +1308,170 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-  // === MapLibre 벡터 바닥지도(MapTiler) + 한글라벨 + 스타일 버튼(4개) ===
-  const KEY = "WotAoBRFnYvSNdp5ox05";
+// === 지도 스타일 UI(범례 아래 / MapTiler 느낌 / 접기-펼치기) ===
+(function addMapStyleButtons(){
+  if (!mlMap || typeof mlMap.setStyle !== "function") return;
 
-  const maptilerStyleUrl = (slug) =>
-    `https://api.maptiler.com/maps/${slug}/style.json?key=${KEY}`;
-
-  // 기본: 다크
-  const DEFAULT_STYLE = "dataviz-v4-dark";
-
-  // Leaflet 위에 MapLibre 레이어 생성
-  const ml = L.maplibreGL({
-    style: maptilerStyleUrl(DEFAULT_STYLE),
-    attribution: ""
-  }).addTo(map);
-
-  // MapLibre map 객체 추출(leaflet-maplibre 플러그인 구현 차이 대응)
-  const mlMap =
-    (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
-    : (ml && ml._map) ? ml._map
-    : (ml && ml._maplibreMap) ? ml._maplibreMap
-    : null;
-
-  // 함수명 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
+  // 함수 이름 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
   const patchKo =
     (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
     (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
     null;
 
-  // 초기(다크) 한글 라벨 적용
-  if (patchKo) patchKo(mlMap);
+  // ✅ 버튼 순서: 다크(기본) → 화이트(라이트) → 구글(스트리트) → 위성(하이브리드)
+  const styles = [
+    { slug: "dataviz-v4-dark",  label: "다크(기본)" },
+    { slug: "dataviz-v4-light", label: "화이트" },
+    { slug: "streets-v4",       label: "구글(스트리트)" },
+    { slug: "hybrid-v4",        label: "위성(하이브리드)" },
+  ];
 
-  // === 스타일 선택 UI(좌하단 버튼 4개) ===
-  (function addMapStyleButtons(){
-    if (!mlMap || typeof mlMap.setStyle !== "function") return;
+  let currentSlug =
+    (typeof DEFAULT_STYLE === "string" && DEFAULT_STYLE) ? DEFAULT_STYLE : "dataviz-v4-dark";
 
-    const styles = [
-      { slug: "dataviz-v4-dark", label: "다크(기본)" },
-      { slug: "dataviz-v4-light", label: "화이트" },
-      { slug: "streets-v4",      label: "구글(스트리트)" },
-      { slug: "hybrid-v4",       label: "위성(하이브리드)" },
-    ];
+  // ✅ 범례 아래로 붙이기 위해 topleft 사용 (범례가 접히면 자동으로 위로 올라감)
+  const ctrl = L.control({ position: "topleft" });
 
-    let currentSlug = DEFAULT_STYLE;
+  ctrl.onAdd = function(){
+    const div = L.DomUtil.create("div", "ml-style-switcher");
 
-    const ctrl = L.control({ position: "bottomleft" });
-    ctrl.onAdd = function(){
-      const div = L.DomUtil.create("div", "ml-style-switcher");
-      div.style.cssText =
-        "background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:8px 10px;" +
-        "border-radius:12px;border:1px solid rgba(255,255,255,.12);" +
-        "color:#d8dde6;font-size:12px;line-height:1.2;";
+    // 전체 컨테이너(범례 톤과 유사)
+    div.style.cssText =
+      "background:#2b2f2f;" +
+      "padding:10px 12px;" +
+      "border-radius:14px;" +
+      "border:1px solid rgba(255,255,255,.10);" +
+      "box-shadow:0 10px 26px rgba(0,0,0,.45);" +
+      "color:#e9edf3;" +
+      "font-size:12px;" +
+      "line-height:1.2;";
 
-      const btnBase =
-        "display:inline-flex;align-items:center;justify-content:center;" +
-        "padding:6px 8px;border-radius:10px;cursor:pointer;user-select:none;" +
-        "border:1px solid rgba(255,255,255,.18);background:#0f1011;color:#d8dde6;";
+    // 버튼(사각형) 기본 스타일
+    const btnBase =
+      "width:100%;" +
+      "padding:10px 10px;" +
+      "border-radius:6px;" +              // ✅ 사각형 느낌
+      "text-align:left;" +
+      "border:1px solid rgba(255,255,255,.16);" +
+      "background:rgba(0,0,0,.18);" +
+      "color:#e9edf3;" +
+      "cursor:pointer;" +
+      "user-select:none;";
 
-      div.innerHTML = `
-        <div style="font-weight:700;margin-bottom:6px;">지도 스타일</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:210px;">
-          ${styles.map(s => `
-            <button type="button" data-slug="${s.slug}" style="${btnBase}">
-              ${s.label}
-            </button>
-          `).join("")}
-        </div>
-      `;
+    div.innerHTML = `
+      <div class="ml-style-head"
+           style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-weight:800;">지도 스타일</div>
+        <button type="button" class="ml-style-toggle"
+          style="width:28px;height:22px;border-radius:6px;
+                 border:1px solid rgba(255,255,255,.18);
+                 background:rgba(255,255,255,.06);
+                 color:#e9edf3;cursor:pointer;">−</button>
+      </div>
 
-      L.DomEvent.disableClickPropagation(div);
-      L.DomEvent.disableScrollPropagation(div);
+      <div class="ml-style-body"
+           style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        ${styles.map(s => `
+          <button type="button" data-slug="${s.slug}" style="${btnBase}">
+            <div style="font-weight:700;">${s.label}</div>
+          </button>
+        `).join("")}
+      </div>
+    `;
 
-      const setActive = () => {
-        div.querySelectorAll("button[data-slug]").forEach(b => {
-          const on = b.getAttribute("data-slug") === currentSlug;
-          b.style.border = on ? "1px solid rgba(162,222,204,.9)" : "1px solid rgba(255,255,255,.18)";
-          b.style.background = on ? "rgba(162,222,204,.18)" : "#0f1011";
-        });
-      };
+    // 지도 드래그/줌 방해 방지
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
 
-      const switchStyle = (slug) => {
-        if (!slug || slug === currentSlug) return;
-        currentSlug = slug;
-        setActive();
+    const body = div.querySelector(".ml-style-body");
+    const toggle = div.querySelector(".ml-style-toggle");
 
-        try{
-          mlMap.setStyle(maptilerStyleUrl(slug));
-
-          // 스타일 변경 후 한글 라벨 재적용(스타일 로딩 타이밍 대응)
-          if (patchKo) patchKo(mlMap);
-        }catch(e){
-          console.warn("[ML] style switch failed", e);
-        }
-      };
-
-      div.querySelectorAll("button[data-slug]").forEach(btn => {
-        btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
+    // 활성 표시(선택된 버튼 강조)
+    const setActive = () => {
+      const buttons = div.querySelectorAll("button[data-slug]");
+      buttons.forEach(b => {
+        const isActive = b.getAttribute("data-slug") === currentSlug;
+        b.style.border = isActive
+          ? "1px solid rgba(162,222,204,.95)"
+          : "1px solid rgba(255,255,255,.16)";
+        b.style.background = isActive
+          ? "rgba(162,222,204,.18)"
+          : "rgba(0,0,0,.18)";
       });
-
-      setActive();
-      return div;
     };
 
-    ctrl.addTo(map);
-  })();
+    const switchStyle = (slug) => {
+      if (!slug || slug === currentSlug) return;
+      currentSlug = slug;
+      setActive();
+
+      try{
+        mlMap.setStyle(maptilerStyleUrl(slug));
+
+        // 스타일 변경 후 한글 라벨 재적용
+        if (patchKo && typeof mlMap.once === "function"){
+          mlMap.once("idle", () => patchKo(mlMap));
+        } else if (patchKo) {
+          setTimeout(() => patchKo(mlMap), 1200);
+        }
+      }catch(e){
+        console.warn("[ML] style switch failed", e);
+      }
+    };
+
+    // 버튼 클릭 연결
+    div.querySelectorAll("button[data-slug]").forEach(btn => {
+      btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
+    });
+
+    // 접기/펼치기
+    let collapsed = false;
+    const setCollapsed = (v) => {
+      collapsed = !!v;
+      if (body) body.style.display = collapsed ? "none" : "grid";
+      if (toggle) toggle.textContent = collapsed ? "+" : "−";
+    };
+    if (toggle){
+      toggle.addEventListener("click", () => setCollapsed(!collapsed));
+    }
+
+    // 범례 폭을 읽어서 동일 폭으로 맞추기 + DOM 순서를 “범례 바로 아래”로 강제
+    const findLegendControl = () => {
+      const nodes = document.querySelectorAll(".leaflet-top.leaflet-left .leaflet-control");
+      for (const el of nodes){
+        const t = (el.innerText || "").trim();
+        if (t.startsWith("범례")) return el;
+      }
+      return null;
+    };
+
+    const syncWidthAndOrder = () => {
+      const legend = findLegendControl();
+      if (legend){
+        const w = Math.round(legend.getBoundingClientRect().width);
+        if (w > 0) div.style.width = w + "px";
+
+        // 같은 코너 안에서 “범례 다음”에 오도록 위치 고정
+        const corner = div.parentElement;
+        if (corner && legend.parentElement === corner){
+          corner.insertBefore(div, legend.nextSibling);
+        }
+      } else {
+        // 범례를 못 찾았을 때의 안전 폭
+        div.style.width = "240px";
+      }
+    };
+
+    setTimeout(syncWidthAndOrder, 0);
+    window.addEventListener("resize", syncWidthAndOrder);
+
+    // 초기 상태
+    setActive();
+    return div;
+  };
+
+  ctrl.addTo(map);
+})();
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
