@@ -1269,6 +1269,12 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
+    // MapLibre 벡터 바닥지도(검고/회색) + 한글라벨 준비
+const KEY = "WotAoBRFnYvSNdp5ox05";
+const ml = L.maplibreGL({
+  style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
+  attribution: ""
+}).addTo(map);
 L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
   attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
