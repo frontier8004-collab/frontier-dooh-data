@@ -1335,6 +1335,8 @@ c.focus();
   isMapInteracting = false;
   forceIntegerZoom();
   applyMovePolicy();
+       const base = getFilteredBase();
+renderMarkersAndListFromBase(base);
 });
 
 
