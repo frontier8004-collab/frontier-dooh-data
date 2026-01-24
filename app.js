@@ -1308,17 +1308,16 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-// === 지도 스타일 UI(범례 아래 / MapTiler 느낌 / 접기-펼치기) ===
+// === 지도 스타일 UI: 범례 아래(좌상단), 접기/펼치기, 범례 폭 동기화 ===
 (function addMapStyleButtons(){
   if (!mlMap || typeof mlMap.setStyle !== "function") return;
 
-  // 함수 이름 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
+  // 한글 라벨 패치 함수(없으면 그냥 스킵)
   const patchKo =
     (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
-    (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
     null;
 
-  // ✅ 버튼 순서: 다크(기본) → 화이트(라이트) → 구글(스트리트) → 위성(하이브리드)
+  // ✅ 4개 순서: 다크(기본) → 화이트(dataviz-v4-light) → 구글(스트리트) → 위성(하이브리드)
   const styles = [
     { slug: "dataviz-v4-dark",  label: "다크(기본)" },
     { slug: "dataviz-v4-light", label: "화이트" },
@@ -1327,76 +1326,60 @@ c.focus();
   ];
 
   let currentSlug =
-    (typeof DEFAULT_STYLE === "string" && DEFAULT_STYLE) ? DEFAULT_STYLE : "dataviz-v4-dark";
+    (typeof DEFAULT_STYLE === "string" && DEFAULT_STYLE) ? DEFAULT_STYLE : styles[0].slug;
 
-  // ✅ 범례 아래로 붙이기 위해 topleft 사용 (범례가 접히면 자동으로 위로 올라감)
   const ctrl = L.control({ position: "topleft" });
 
   ctrl.onAdd = function(){
     const div = L.DomUtil.create("div", "ml-style-switcher");
 
-    // 전체 컨테이너(범례 톤과 유사)
+    // MapTiler 느낌(밝은 카드 + 사각 버튼)
     div.style.cssText =
-      "background:#2b2f2f;" +
-      "padding:10px 12px;" +
-      "border-radius:14px;" +
-      "border:1px solid rgba(255,255,255,.10);" +
-      "box-shadow:0 10px 26px rgba(0,0,0,.45);" +
-      "color:#e9edf3;" +
-      "font-size:12px;" +
-      "line-height:1.2;";
+      "background:rgba(255,255,255,.92);backdrop-filter:blur(6px);" +
+      "border-radius:14px;border:1px solid rgba(0,0,0,.10);" +
+      "box-shadow:0 10px 30px rgba(0,0,0,.18);" +
+      "padding:10px 10px;color:#111;font-size:12px;line-height:1.2;";
 
-    // 버튼(사각형) 기본 스타일
     const btnBase =
-      "width:100%;" +
-      "padding:10px 10px;" +
-      "border-radius:6px;" +              // ✅ 사각형 느낌
-      "text-align:left;" +
-      "border:1px solid rgba(255,255,255,.16);" +
-      "background:rgba(0,0,0,.18);" +
-      "color:#e9edf3;" +
-      "cursor:pointer;" +
-      "user-select:none;";
+      "width:100%;height:34px;border-radius:10px;" +
+      "border:1px solid rgba(0,0,0,.14);" +
+      "background:#fff;color:#111;font-weight:700;" +
+      "cursor:pointer;user-select:none;";
 
     div.innerHTML = `
-      <div class="ml-style-head"
-           style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="mls-head"
+           style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <div style="font-weight:800;">지도 스타일</div>
-        <button type="button" class="ml-style-toggle"
-          style="width:28px;height:22px;border-radius:6px;
-                 border:1px solid rgba(255,255,255,.18);
-                 background:rgba(255,255,255,.06);
-                 color:#e9edf3;cursor:pointer;">−</button>
+        <button type="button" class="mls-toggle"
+          style="width:30px;height:24px;border-radius:8px;
+                 border:1px solid rgba(0,0,0,.14);background:#fff;
+                 color:#111;cursor:pointer;font-weight:900;line-height:1;">
+          –
+        </button>
       </div>
 
-      <div class="ml-style-body"
-           style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        ${styles.map(s => `
-          <button type="button" data-slug="${s.slug}" style="${btnBase}">
-            <div style="font-weight:700;">${s.label}</div>
-          </button>
-        `).join("")}
+      <div class="mls-body" style="margin-top:10px;">
+        <div class="mls-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          ${styles.map(s => `
+            <button type="button" data-slug="${s.slug}" style="${btnBase}">
+              ${s.label}
+            </button>
+          `).join("")}
+        </div>
       </div>
     `;
 
-    // 지도 드래그/줌 방해 방지
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
 
-    const body = div.querySelector(".ml-style-body");
-    const toggle = div.querySelector(".ml-style-toggle");
+    const body = div.querySelector(".mls-body");
+    const toggle = div.querySelector(".mls-toggle");
 
-    // 활성 표시(선택된 버튼 강조)
     const setActive = () => {
-      const buttons = div.querySelectorAll("button[data-slug]");
-      buttons.forEach(b => {
-        const isActive = b.getAttribute("data-slug") === currentSlug;
-        b.style.border = isActive
-          ? "1px solid rgba(162,222,204,.95)"
-          : "1px solid rgba(255,255,255,.16)";
-        b.style.background = isActive
-          ? "rgba(162,222,204,.18)"
-          : "rgba(0,0,0,.18)";
+      div.querySelectorAll("button[data-slug]").forEach(b => {
+        const on = b.getAttribute("data-slug") === currentSlug;
+        b.style.background = on ? "rgba(162,222,204,.45)" : "#fff";
+        b.style.border = on ? "1px solid rgba(0,0,0,.22)" : "1px solid rgba(0,0,0,.14)";
       });
     };
 
@@ -1411,7 +1394,7 @@ c.focus();
         // 스타일 변경 후 한글 라벨 재적용
         if (patchKo && typeof mlMap.once === "function"){
           mlMap.once("idle", () => patchKo(mlMap));
-        } else if (patchKo) {
+        } else if (patchKo){
           setTimeout(() => patchKo(mlMap), 1200);
         }
       }catch(e){
@@ -1419,54 +1402,57 @@ c.focus();
       }
     };
 
-    // 버튼 클릭 연결
     div.querySelectorAll("button[data-slug]").forEach(btn => {
       btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
     });
 
-    // 접기/펼치기
+    // 접기/펼치기(범례처럼)
     let collapsed = false;
-    const setCollapsed = (v) => {
-      collapsed = !!v;
-      if (body) body.style.display = collapsed ? "none" : "grid";
-      if (toggle) toggle.textContent = collapsed ? "+" : "−";
+    const applyCollapse = () => {
+      if (!body) return;
+      body.style.display = collapsed ? "none" : "block";
+      toggle.textContent = collapsed ? "+" : "–";
     };
-    if (toggle){
-      toggle.addEventListener("click", () => setCollapsed(!collapsed));
-    }
+    toggle.addEventListener("click", () => {
+      collapsed = !collapsed;
+      applyCollapse();
+    });
 
-    // 범례 폭을 읽어서 동일 폭으로 맞추기 + DOM 순서를 “범례 바로 아래”로 강제
-    const findLegendControl = () => {
-      const nodes = document.querySelectorAll(".leaflet-top.leaflet-left .leaflet-control");
-      for (const el of nodes){
-        const t = (el.innerText || "").trim();
-        if (t.startsWith("범례")) return el;
+    // ✅ 범례 아래로 내려가게 + 범례 폭과 동일하게 맞추기
+    const moveAndSync = () => {
+      const corner = div.closest(".leaflet-top.leaflet-left");
+      if (!corner) return;
+
+      // 항상 “마지막”으로 보내서 범례 밑에 위치하도록(범례가 접히면 자동으로 위로 당겨짐)
+      if (corner.lastElementChild !== div){
+        corner.appendChild(div);
       }
-      return null;
-    };
 
-    const syncWidthAndOrder = () => {
-      const legend = findLegendControl();
+      // 범례 폭 읽어오기(‘범례’ 글자가 포함된 컨트롤 우선)
+      const controls = Array.from(corner.querySelectorAll(".leaflet-control"))
+        .filter(el => el !== div);
+
+      const legend = controls.find(el => (el.textContent || "").includes("범례")) || controls[0] || null;
       if (legend){
         const w = Math.round(legend.getBoundingClientRect().width);
         if (w > 0) div.style.width = w + "px";
-
-        // 같은 코너 안에서 “범례 다음”에 오도록 위치 고정
-        const corner = div.parentElement;
-        if (corner && legend.parentElement === corner){
-          corner.insertBefore(div, legend.nextSibling);
-        }
-      } else {
-        // 범례를 못 찾았을 때의 안전 폭
-        div.style.width = "240px";
       }
     };
 
-    setTimeout(syncWidthAndOrder, 0);
-    window.addEventListener("resize", syncWidthAndOrder);
+    setTimeout(moveAndSync, 0);
+    window.addEventListener("resize", moveAndSync);
 
-    // 초기 상태
+    try{
+      const corner = div.closest(".leaflet-top.leaflet-left");
+      if (corner && typeof ResizeObserver === "function"){
+        const ro = new ResizeObserver(() => moveAndSync());
+        ro.observe(corner);
+      }
+    }catch(e){}
+
+    applyCollapse();
     setActive();
+
     return div;
   };
 
