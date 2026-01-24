@@ -1308,19 +1308,91 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-    // MapLibre 벡터 바닥지도(검고/회색) + 한글라벨 준비
-const KEY = "WotAoBRFnYvSNdp5ox05";
-const ml = L.maplibreGL({
-  style: `https://api.maptiler.com/maps/dataviz-v4-dark/style.json?key=${KEY}`,
-  attribution: ""
-}).addTo(map);
-     // MapLibre 한글 라벨 패치(ml = leaflet-maplibre 레이어)
-const mlMap =
-  (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
-  : (ml && ml._map) ? ml._map
-  : null;
+   // === 스타일 선택 UI(좌하단 버튼 4개) ===
+  (function addMapStyleButtons(){
+    if (!mlMap || typeof mlMap.setStyle !== "function") return;
 
-applyKoreanLabelsToMapLibre(mlMap);
+    // 함수 이름 대/소문자 혼선 대비(둘 중 존재하는 것을 사용)
+    const patchKo =
+      (typeof applyKoreanLabelsToMapLibre === "function") ? applyKoreanLabelsToMapLibre :
+      (typeof applyKoreanLabelsToMaplibre === "function") ? applyKoreanLabelsToMaplibre :
+      null;
+
+    const styles = [
+      { slug: "dataviz-v4-dark", label: "다크(기본)" },
+      { slug: "basic-v4",        label: "화이트" },
+      { slug: "streets-v4",      label: "구글(스트리트)" },
+      { slug: "hybrid-v4",       label: "위성(하이브리드)" },
+    ];
+
+    let currentSlug = (typeof DEFAULT_STYLE === "string" && DEFAULT_STYLE) ? DEFAULT_STYLE : "dataviz-v4-dark";
+
+    const ctrl = L.control({ position: "bottomleft" });
+    ctrl.onAdd = function(){
+      const div = L.DomUtil.create("div", "ml-style-switcher");
+      div.style.cssText =
+        "background:rgba(0,0,0,.55);backdrop-filter:blur(6px);padding:8px 10px;" +
+        "border-radius:12px;border:1px solid rgba(255,255,255,.12);" +
+        "color:#d8dde6;font-size:12px;line-height:1.2;";
+
+      const btnStyleBase =
+        "display:inline-flex;align-items:center;justify-content:center;" +
+        "padding:6px 8px;border-radius:10px;cursor:pointer;user-select:none;" +
+        "border:1px solid rgba(255,255,255,.18);background:#0f1011;color:#d8dde6;";
+
+      div.innerHTML = `
+        <div style="font-weight:700;margin-bottom:6px;">지도 스타일</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:210px;">
+          ${styles.map(s => `
+            <button type="button" data-slug="${s.slug}" style="${btnStyleBase}">
+              ${s.label}
+            </button>
+          `).join("")}
+        </div>
+      `;
+
+      L.DomEvent.disableClickPropagation(div);
+      L.DomEvent.disableScrollPropagation(div);
+
+      const setActive = () => {
+        const buttons = div.querySelectorAll("button[data-slug]");
+        buttons.forEach(b => {
+          const isActive = b.getAttribute("data-slug") === currentSlug;
+          b.style.border = isActive ? "1px solid rgba(162,222,204,.9)" : "1px solid rgba(255,255,255,.18)";
+          b.style.background = isActive ? "rgba(162,222,204,.18)" : "#0f1011";
+        });
+      };
+
+      const switchStyle = (slug) => {
+        if (!slug || slug === currentSlug) return;
+        currentSlug = slug;
+        setActive();
+
+        try{
+          mlMap.setStyle(maptilerStyleUrl(slug));
+
+          // 스타일 변경 후 한글 라벨 재적용
+          if (patchKo && typeof mlMap.once === "function"){
+            mlMap.once("idle", () => patchKo(mlMap));
+          } else if (patchKo) {
+            setTimeout(() => patchKo(mlMap), 1200);
+          }
+        }catch(e){
+          console.warn("[ML] style switch failed", e);
+        }
+      };
+
+      div.querySelectorAll("button[data-slug]").forEach(btn => {
+        btn.addEventListener("click", () => switchStyle(btn.getAttribute("data-slug")));
+      });
+
+      // 초기 활성 표시
+      setActive();
+      return div;
+    };
+
+    ctrl.addTo(map);
+  })();
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
