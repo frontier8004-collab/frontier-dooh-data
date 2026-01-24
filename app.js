@@ -1698,6 +1698,7 @@ m._key = it._key;
   }
 
   async function fetchJsonRobust(url){
+    console.log("[DATA FETCH URL]", url);
     const res = await fetch(url, { cache:"no-store" });
     if (!res.ok){
       const text = await res.text().catch(()=> "");
