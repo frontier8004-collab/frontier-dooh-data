@@ -2041,6 +2041,90 @@ console.log("[DATA_SANITIZE]", stats);
       collapsed ? "범례 펼치기" : "범례 접기"
     );
   });
+     // ===== MAP STYLE BUTTONS (inside legend) =====
+  // NOTE: 운영에 즉시 반영(테스트 없이). mlMap 없으면 아무 것도 하지 않음.
+  if (!document.getElementById("mapStylePanel")) {
+    const MAPTILER_KEY = "WotAoBRFnYvSNdp5ox05";
+    const STYLES = [
+      { id: "dataviz-v4-dark", label: "다크(기본)" },
+      { id: "base-v4",         label: "화이트" },
+      { id: "streets-v4",      label: "스트리트" },
+      { id: "hybrid-v4",       label: "위성(하이브리드)" },
+    ];
+
+    // 최소 스타일(1파일 원칙: JS에서 주입)
+    const styleEl = document.createElement("style");
+    styleEl.textContent = `
+#mapStylePanel{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); }
+#mapStylePanel .msTitle{ font-size:12px; color:rgba(255,255,255,.88); margin-bottom:8px; }
+#mapStylePanel .msRow{ display:flex; gap:6px; flex-wrap:wrap; }
+#mapStylePanel .msBtn{ padding:6px 8px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18); color:#fff; cursor:pointer; font-size:12px; }
+#mapStylePanel .msBtn.isActive{ background:rgba(255,255,255,.18); }
+`;
+    document.head.appendChild(styleEl);
+
+    const panel = document.createElement("div");
+    panel.id = "mapStylePanel";
+
+    const title = document.createElement("div");
+    title.className = "msTitle";
+    title.textContent = "지도 스타일";
+    panel.appendChild(title);
+
+    const row = document.createElement("div");
+    row.className = "msRow";
+    panel.appendChild(row);
+
+    function setActive(styleId) {
+      const btns = row.querySelectorAll("button.msBtn");
+      btns.forEach((b) => b.classList.toggle("isActive", b.getAttribute("data-style-id") === styleId));
+    }
+
+    function switchStyle(styleId) {
+      const _mlMap = (typeof mlMap !== "undefined") ? mlMap : null;
+      if (!_mlMap || typeof _mlMap.setStyle !== "function") {
+        console.warn("[STYLE] mlMap not ready; skip setStyle");
+        return;
+      }
+
+      const url = "https://api.maptiler.com/maps/" + styleId + "/style.json?key=" + MAPTILER_KEY;
+
+      try {
+        _mlMap.setStyle(url);
+
+        // 스타일 변경 후 한글 라벨 패치 재적용(함수 내부에 가드 존재)
+        if (typeof applyKoreanLabelsToMapLibre === "function") {
+          applyKoreanLabelsToMapLibre(_mlMap);
+        }
+
+        try { localStorage.setItem("frontier_style_id", styleId); } catch (e) {}
+        setActive(styleId);
+      } catch (e) {
+        console.error("[STYLE] setStyle failed", e);
+      }
+    }
+
+    STYLES.forEach((s) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "msBtn";
+      btn.textContent = s.label;
+      btn.setAttribute("data-style-id", s.id);
+      btn.addEventListener("click", () => switchStyle(s.id));
+      row.appendChild(btn);
+    });
+
+    legend.appendChild(panel);
+
+    // 마지막 선택 자동 반영(옵션)
+    let last = null;
+    try { last = localStorage.getItem("frontier_style_id"); } catch (e) {}
+    if (last && STYLES.some((x) => x.id === last)) {
+      switchStyle(last);
+    } else {
+      setActive("dataviz-v4-dark");
+    }
+  }
 })();
 
 
