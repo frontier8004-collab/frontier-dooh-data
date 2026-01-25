@@ -1274,6 +1274,8 @@ function applyKoreanLabelsToMapLibre(mlMap){
       "coalesce",
       ["get","name:ko"],
       ["get","name_ko"],
+      ["get","name:kr"],
+["get","name_kr"],
       ["get","name:local"],
       ["get","name_local"],
       base,               // 원래 라벨 유지(라벨 소실 방지)
