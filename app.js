@@ -1259,7 +1259,6 @@ function applyKoreanLabelsToMapLibre(mlMap){
   let done = false;
 
   const run = () => {
-    if (done) return;
     try{
       const style = mlMap.getStyle();
       if (!style || !Array.isArray(style.layers)) return;
@@ -1281,7 +1280,6 @@ function applyKoreanLabelsToMapLibre(mlMap){
         ]);
       }
 
-      done = true;
       console.log("[ML] Korean label patch applied");
     }catch(e){
       console.warn("[ML] Korean label patch failed", e);
@@ -1289,8 +1287,8 @@ function applyKoreanLabelsToMapLibre(mlMap){
   };
 
   // 로딩 타이밍 대응(1회만 적용)
-  mlMap.on("styledata", run);
-  mlMap.on("load", run);
+mlMap.on("idle", run);
+mlMap.on("styledata", run);
 }
   function buildMap(){
     map = L.map("map", {
