@@ -1510,12 +1510,20 @@ applyKoreanLabelsToMapLibre(mlMap);
       if (legend.nextElementSibling !== root){
         corner.insertBefore(root, legend.nextElementSibling);
       }
-    // 겹침 방지: 어떤 CSS여도 "항상 범례 아래"로 보이도록 위치 보정
-    const lb = legend.getBoundingClientRect();
-    const rb = root.getBoundingClientRect();
-    const needOffset = (rb.top < (lb.bottom - 2));
-    root.style.position = "relative";
-    root.style.marginTop = needOffset ? (Math.round(lb.height) + 10) + "px" : "";
+      // ✅ 레이아웃 확정 다음 프레임에서 겹침이면 "범례 높이만큼" 아래로 밀기
+    requestAnimationFrame(() => {
+      try{
+        const lb = legend.getBoundingClientRect();
+        const rb = root.getBoundingClientRect();
+
+        const overlap = rb.top < (lb.bottom - 2);
+        root.style.position = "relative";
+        root.style.marginTop = overlap ? (Math.round(lb.height) + 10) + "px" : "";
+
+        // z-index 보강(겹쳐 보이는 현상 방지)
+        root.style.zIndex = "1200";
+      }catch(e){}
+    });
       // 스택 안정화
       root.style.clear = "both";
     }catch(e){}
