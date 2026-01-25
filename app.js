@@ -1267,18 +1267,38 @@ try { window.mlMap = mlMap; } catch (e) {}
       for (const layer of style.layers){
         if (!layer || layer.type !== "symbol") continue;
 
-        const hasTextField =
-          layer.layout && (layer.layout["text-field"] !== undefined);
+ const hasTextField = layer.layout && ("text-field" in layer.layout);
 
         if (!hasTextField) continue;
 
         mlMap.setLayoutProperty(layer.id, "text-field", [
-          "coalesce",
-          ["get", "name:ko"],
-          ["get", "name_ko"],
-          ["get", "name"],
-          ["get", "label"]
-        ]);
+   const tf = layer.layout["text-field"];
+
+// 기존 text-field가 "{name}" 같은 단일 토큰이면 그 필드를 fallback으로 사용
+let fallbackExpr = null;
+if (Array.isArray(tf)) {
+  fallbackExpr = tf;
+} else if (typeof tf === "string") {
+  const m = tf.match(/^\{(.+)\}$/);
+  if (m && m[1]) fallbackExpr = ["get", m[1]];
+}
+
+// 한국어 우선 + 안전 fallback(라벨 소실 방지)
+const expr = [
+  "coalesce",
+  ["get", "name:ko"],
+  ["get", "name_ko"],
+  ["get", "name:kr"],
+  ["get", "name_kr"],
+  ["get", "name:local"],
+  ["get", "name_local"],
+  ["get", "name"],
+  ["get", "label"],
+];
+
+if (fallbackExpr) expr.push(fallbackExpr);
+
+mlMap.setLayoutProperty(layer.id, "text-field", expr);
       }
 
       done = true;
