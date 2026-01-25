@@ -1501,7 +1501,11 @@ applyKoreanLabelsToMapLibre(mlMap);
       // '범례'가 포함된 직계 컨트롤을 범례로 간주
       const legend = topLeftControls.find(el => (el.textContent || "").includes("범례"));
       if (!legend) return;
-
+// ✅ 범례 접기/펼치기(높이 변화)에도 패널이 따라오도록 1회 연결
+if (!root._legendRO && typeof ResizeObserver === "function"){
+  root._legendRO = new ResizeObserver(() => syncUnderLegend());
+  root._legendRO.observe(legend);
+}
       // 폭 동기화(범례와 동일)
       const w = legend.getBoundingClientRect().width;
       if (w && w > 0) root.style.width = Math.round(w) + "px";
@@ -1510,22 +1514,32 @@ applyKoreanLabelsToMapLibre(mlMap);
       if (legend.nextElementSibling !== root){
         corner.insertBefore(root, legend.nextElementSibling);
       }
-      // ✅ 레이아웃 확정 다음 프레임에서 겹침이면 "범례 높이만큼" 아래로 밀기
-    requestAnimationFrame(() => {
-      try{
-        const lb = legend.getBoundingClientRect();
-        const rb = root.getBoundingClientRect();
+     // ✅ (핵심) 범례 "바로 아래"에 절대좌표로 강제 고정 (겹침/뒤로 숨음 완전 차단)
+    const gap = 10;
 
-        const overlap = rb.top < (lb.bottom - 2);
-        root.style.position = "relative";
-        root.style.marginTop = overlap ? (Math.round(lb.height) + 10) + "px" : "";
+    // corner(leaflet-top-left) 기준으로 legend의 실제 화면 좌표를 계산
+    const cb = corner.getBoundingClientRect();
+    const lb = legend.getBoundingClientRect();
 
-        // z-index 보강(겹쳐 보이는 현상 방지)
-        root.style.zIndex = "1200";
+    const left = Math.round(lb.left - cb.left);
+    const top  = Math.round(lb.bottom - cb.top + gap);
+
+    root.style.position = "absolute";
+    root.style.left = left + "px";
+    root.style.top  = top  + "px";
+
+    // Leaflet 기본 margin/float/clear가 남아 있으면 "변화 없음"처럼 보일 수 있음 → 전부 무력화
+    root.style.margin = "0";
+    root.style.float = "none";
+    root.style.clear = "none";
+    root.style.marginTop = "0px";
+    root.style.transform = "";
+
+    // 뒤로 숨는 현상 방지
+    root.style.zIndex = "4000";
       }catch(e){}
     });
       // 스택 안정화
-      root.style.clear = "both";
     }catch(e){}
   }
 
