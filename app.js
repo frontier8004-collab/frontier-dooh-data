@@ -1319,7 +1319,8 @@ const mlMap =
   (ml && typeof ml.getMaplibreMap === "function") ? ml.getMaplibreMap()
   : (ml && ml._map) ? ml._map
   : null;
-
+try { window.KEY = KEY; } catch (e) {}
+try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
@@ -2042,5 +2043,134 @@ console.log("[DATA_SANITIZE]", stats);
     );
   });
 })();
+// ===== MAP STYLE PANEL (inside legend) =====
+(() => {
+  const legend = document.getElementById("mapLegend");
+  if (!legend) return;
 
+  // 중복 생성 방지
+  if (document.getElementById("mapStylePanel")) return;
+
+  // 스타일(세로 1열로 고정, 가로폭 확장 방지)
+  const styleEl = document.createElement("style");
+  styleEl.textContent = `
+    #mapStylePanel{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); width:122px; }
+    #mapStylePanel .msTitle{ font-size:11px; color:rgba(255,255,255,.85); margin-bottom:8px; }
+    #mapStylePanel .msCol{ display:flex; flex-direction:column; gap:6px; }
+    #mapStylePanel .msBtn{
+      display:block; width:100%;
+      padding:6px 8px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.18);
+      background:rgba(0,0,0,.18);
+      color:#fff;
+      cursor:pointer;
+      font-size:12px;
+      text-align:left;
+    }
+    #mapStylePanel .msBtn.isActive{ background:rgba(255,255,255,.18); }
+    #mapStylePanel .msBtn:disabled{ opacity:.55; cursor:not-allowed; }
+  `;
+  document.head.appendChild(styleEl);
+
+  const panel = document.createElement("div");
+  panel.id = "mapStylePanel";
+
+  const title = document.createElement("div");
+  title.className = "msTitle";
+  title.textContent = "지도 스타일";
+  panel.appendChild(title);
+
+  const col = document.createElement("div");
+  col.className = "msCol";
+  panel.appendChild(col);
+
+  const STYLES = [
+    { id: "dataviz-v4-dark",  label: "다크(기본)" },
+    { id: "dataviz-v4-light", label: "화이트" },
+    { id: "streets-v4",       label: "스트리트" },
+    { id: "hybrid-v4",        label: "위성(하이브리드)" },
+  ];
+
+  const getKey = () => (typeof window.KEY !== "undefined" && window.KEY) ? window.KEY : null;
+  const styleUrl = (slug) => {
+    const k = getKey();
+    if (!k) return null;
+    return `https://api.maptiler.com/maps/${slug}/style.json?key=${k}`;
+  };
+
+  const setActive = (styleId) => {
+    const btns = col.querySelectorAll("button.msBtn");
+    btns.forEach((b) => b.classList.toggle("isActive", b.getAttribute("data-style-id") === styleId));
+  };
+
+  const setDisabled = (v) => {
+    const btns = col.querySelectorAll("button.msBtn");
+    btns.forEach((b) => (b.disabled = !!v));
+  };
+
+  const reapplyKoAfterSetStyle = (_mlMap) => {
+    if (!_mlMap || typeof _mlMap.once !== "function") return;
+    _mlMap.once("idle", () => {
+      try {
+        if (typeof applyKoreanLabelsToMapLibre === "function") applyKoreanLabelsToMapLibre(_mlMap);
+      } catch (e) {}
+    });
+  };
+
+  const switchStyle = (styleId) => {
+    const _mlMap = (typeof window.mlMap !== "undefined" && window.mlMap) ? window.mlMap : null;
+    if (!_mlMap || typeof _mlMap.setStyle !== "function") {
+      console.warn("[STYLE] mlMap not ready; skip setStyle");
+      return;
+    }
+
+    const url = styleUrl(styleId);
+    if (!url) {
+      console.warn("[STYLE] KEY missing; cannot build style URL");
+      return;
+    }
+
+    console.log(`[STYLE] setStyle -> ${styleId}`);
+    setDisabled(true);
+
+    try {
+      _mlMap.setStyle(url);
+      reapplyKoAfterSetStyle(_mlMap);
+
+      // 선택 유지(옵션)
+      try { localStorage.setItem("frontier_style_id", styleId); } catch (e) {}
+
+      setActive(styleId);
+    } catch (e) {
+      console.error("[STYLE] setStyle failed", e);
+    } finally {
+      // idle가 안 오는 경우 대비(잠금 해제)
+      setTimeout(() => setDisabled(false), 2500);
+    }
+  };
+
+  // 버튼 생성
+  STYLES.forEach((s) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "msBtn";
+    btn.textContent = s.label;
+    btn.setAttribute("data-style-id", s.id);
+    btn.addEventListener("click", () => switchStyle(s.id));
+    col.appendChild(btn);
+  });
+
+  // 초기 active만 세팅(자동 setStyle은 안 함: 기준선 보존)
+  try {
+    const last = localStorage.getItem("frontier_style_id");
+    if (last && STYLES.some((x) => x.id === last)) setActive(last);
+    else setActive("dataviz-v4-dark");
+  } catch (e) {
+    setActive("dataviz-v4-dark");
+  }
+
+  // 범례 내부에 삽입(겹침/z-index 싸움 제거)
+  legend.appendChild(panel);
+})();
 
