@@ -1255,7 +1255,7 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 // === MapLibre 한글 라벨 패치(전역/동일 스코프) ===
 function applyKoreanLabelsToMapLibre(mlMap){
   if (!mlMap || typeof mlMap.getStyle !== "function") return;
-
+try { window.mlMap = mlMap; } catch (e) {}
   let done = false;
 
   const run = () => {
@@ -1289,8 +1289,13 @@ function applyKoreanLabelsToMapLibre(mlMap){
   };
 
   // 로딩 타이밍 대응(1회만 적용)
+if (typeof mlMap.once === "function") {
+  mlMap.once("styledata", run);
+  mlMap.once("load", run);
+} else {
   mlMap.on("styledata", run);
   mlMap.on("load", run);
+}
 }
   function buildMap(){
     map = L.map("map", {
@@ -2057,8 +2062,8 @@ console.log("[DATA_SANITIZE]", stats);
     styleEl.textContent = `
 #mapStylePanel{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); }
 #mapStylePanel .msTitle{ font-size:12px; color:rgba(255,255,255,.88); margin-bottom:8px; }
-#mapStylePanel .msRow{ display:flex; gap:6px; flex-wrap:wrap; }
-#mapStylePanel .msBtn{ padding:6px 8px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18); color:#fff; cursor:pointer; font-size:12px; }
+#mapStylePanel .msRow{ display:flex; flex-direction:column; gap:6px; }
+#mapStylePanel .msBtn{ width:100%; padding:7px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18); color:#fff; cursor:pointer; font-size:12px; text-align:left; }
 #mapStylePanel .msBtn.isActive{ background:rgba(255,255,255,.18); }
 `;
     document.head.appendChild(styleEl);
@@ -2080,29 +2085,42 @@ console.log("[DATA_SANITIZE]", stats);
       btns.forEach((b) => b.classList.toggle("isActive", b.getAttribute("data-style-id") === styleId));
     }
 
-    function switchStyle(styleId) {
-      const _mlMap = (typeof mlMap !== "undefined") ? mlMap : null;
-      if (!_mlMap || typeof _mlMap.setStyle !== "function") {
-        console.warn("[STYLE] mlMap not ready; skip setStyle");
-        return;
-      }
+  function switchStyle(styleId) {
+  const _mlMap =
+    (window.mlMap && typeof window.mlMap.setStyle === "function")
+      ? window.mlMap
+      : ((typeof mlMap !== "undefined") ? mlMap : null);
 
-      const url = "https://api.maptiler.com/maps/" + styleId + "/style.json?key=" + MAPTILER_KEY;
+  if (!_mlMap || typeof _mlMap.setStyle !== "function") {
+    console.warn("[STYLE] mlMap not ready; skip setStyle", _mlMap);
+    return;
+  }
 
-      try {
-        _mlMap.setStyle(url);
+  const url = "https://api.maptiler.com/maps/" + styleId + "/style.json?key=" + MAPTILER_KEY;
+  console.log("[STYLE] setStyle ->", styleId);
 
-        // 스타일 변경 후 한글 라벨 패치 재적용(함수 내부에 가드 존재)
+  try {
+    _mlMap.setStyle(url);
+
+    // 스타일 적용 후 한글 라벨 패치 재적용(가능하면 idle 1회)
+    if (typeof _mlMap.once === "function") {
+      _mlMap.once("idle", () => {
         if (typeof applyKoreanLabelsToMapLibre === "function") {
           applyKoreanLabelsToMapLibre(_mlMap);
         }
-
-        try { localStorage.setItem("frontier_style_id", styleId); } catch (e) {}
-        setActive(styleId);
-      } catch (e) {
-        console.error("[STYLE] setStyle failed", e);
+      });
+    } else {
+      if (typeof applyKoreanLabelsToMapLibre === "function") {
+        applyKoreanLabelsToMapLibre(_mlMap);
       }
     }
+
+    try { localStorage.setItem("frontier_style_id", styleId); } catch (e) {}
+    setActive(styleId);
+  } catch (e) {
+    console.error("[STYLE] setStyle failed", e);
+  }
+}
 
     STYLES.forEach((s) => {
       const btn = document.createElement("button");
