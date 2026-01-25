@@ -1487,7 +1487,7 @@ applyKoreanLabelsToMapLibre(mlMap);
   ctrl.addTo(map);
 
   // --- 범례 아래로 붙이고, 폭을 범례에 맞춤 ---
-  const syncUnderLegend = () => {
+  function syncUnderLegend(){
     try{
       if (!root) return;
 
@@ -1510,11 +1510,16 @@ applyKoreanLabelsToMapLibre(mlMap);
       if (legend.nextElementSibling !== root){
         corner.insertBefore(root, legend.nextElementSibling);
       }
-
+    // 겹침 방지: 어떤 CSS여도 "항상 범례 아래"로 보이도록 위치 보정
+    const lb = legend.getBoundingClientRect();
+    const rb = root.getBoundingClientRect();
+    const needOffset = (rb.top < (lb.bottom - 2));
+    root.style.position = "relative";
+    root.style.marginTop = needOffset ? (Math.round(lb.height) + 10) + "px" : "";
       // 스택 안정화
       root.style.clear = "both";
     }catch(e){}
-  };
+  }
 
   // 초기/리사이즈/DOM 변화 대응
   setTimeout(syncUnderLegend, 0);
