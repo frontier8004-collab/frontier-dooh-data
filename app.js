@@ -1287,7 +1287,7 @@ try { window.mlMap = mlMap; } catch (e) {}
       console.warn("[ML] Korean label patch failed", e);
     }
   };
-
+run();
   // 로딩 타이밍 대응(1회만 적용)
 if (typeof mlMap.once === "function") {
   mlMap.once("styledata", run);
@@ -2052,7 +2052,7 @@ console.log("[DATA_SANITIZE]", stats);
     const MAPTILER_KEY = "WotAoBRFnYvSNdp5ox05";
     const STYLES = [
       { id: "dataviz-v4-dark", label: "다크(기본)" },
-      { id: "base-v4",         label: "화이트" },
+      { id: "dataviz-v4-light", label: "화이트" },
       { id: "streets-v4",      label: "스트리트" },
       { id: "hybrid-v4",       label: "위성(하이브리드)" },
     ];
