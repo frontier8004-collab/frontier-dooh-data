@@ -1256,63 +1256,29 @@ const isZoom1 = (zi === 7); // 내부 zoom 7 == 표시 1 (표시 로직과 동�
 function applyKoreanLabelsToMapLibre(mlMap){
   if (!mlMap || typeof mlMap.getStyle !== "function") return;
 
-  // 전역 노출(스타일 패널/콘솔 스크립트 등에서 사용)
-  try { window.mlMap = mlMap; } catch (e) {}
-
-  // "{name}" 같은 단일 토큰을 ["get","name"]으로 변환(원래 라벨 유지용)
-  function __fr_tokenToGetExpr(tf){
-    if (typeof tf !== "string") return tf;
-    const m = tf.match(/^\{([a-zA-Z0-9_:\-]+)\}$/);
-    if (m && m[1]) return ["get", m[1]];
-    return tf; // 상수 문자열이면 그대로(표시용)
-  }
-
-  // 한국어 우선 + 없으면 원래 라벨 유지(가장 중요)
-  function __fr_makeSafeKoTextField(oldTextField){
-    const base = __fr_tokenToGetExpr(oldTextField);
-    return [
-      "coalesce",
-      ["get","name:ko"],
-      ["get","name_ko"],
-      ["get","name:kr"],
-["get","name_kr"],
-      ["get","name:local"],
-      ["get","name_local"],
-      base,               // 원래 라벨 유지(라벨 소실 방지)
-      ["get","name"],
-      ["get","label"]
-    ];
-  }
-
   let done = false;
 
   const run = () => {
     if (done) return;
-
     try{
       const style = mlMap.getStyle();
       if (!style || !Array.isArray(style.layers)) return;
 
-      // 레이어별 원본 text-field 저장(동일 layer.id 재사용)
-      mlMap.__fr_origTextField = mlMap.__fr_origTextField || {};
-
       for (const layer of style.layers){
         if (!layer || layer.type !== "symbol") continue;
 
-        const layout = layer.layout || {};
-        if (!("text-field" in layout)) continue;
+        const hasTextField =
+          layer.layout && (layer.layout["text-field"] !== undefined);
 
-        const tf = layout["text-field"];
+        if (!hasTextField) continue;
 
-        if (typeof mlMap.__fr_origTextField[layer.id] === "undefined") {
-          mlMap.__fr_origTextField[layer.id] = tf;
-        }
-
-        const safeExpr = __fr_makeSafeKoTextField(mlMap.__fr_origTextField[layer.id]);
-
-        try{
-          mlMap.setLayoutProperty(layer.id, "text-field", safeExpr);
-        }catch(e){}
+        mlMap.setLayoutProperty(layer.id, "text-field", [
+          "coalesce",
+          ["get", "name:ko"],
+          ["get", "name_ko"],
+          ["get", "name"],
+          ["get", "label"]
+        ]);
       }
 
       done = true;
@@ -1322,19 +1288,9 @@ function applyKoreanLabelsToMapLibre(mlMap){
     }
   };
 
-  // 즉시 1회 시도(레이어가 준비돼 있으면 바로 적용)
-  run();
-
-  // 스타일/타일 로딩 완료 시점에 1회 보강(권장 이벤트: idle)
-  if (typeof mlMap.once === "function") {
-    mlMap.once("idle", run);
-    mlMap.once("styledata", run);
-    mlMap.once("load", run);
-  } else {
-    mlMap.on("idle", run);
-    mlMap.on("styledata", run);
-    mlMap.on("load", run);
-  }
+  // 로딩 타이밍 대응(1회만 적용)
+  mlMap.on("styledata", run);
+  mlMap.on("load", run);
 }
   function buildMap(){
     map = L.map("map", {
