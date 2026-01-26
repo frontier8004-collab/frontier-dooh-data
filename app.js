@@ -2188,12 +2188,19 @@ text-align:center;
 
  // 버튼 생성(썸네일 + 라벨)
 const thumbUrl = (styleId) => {
-  const k = getKey();
-  if (!k) return "";
-  // MapTiler static map (대표님 키 사용)
-  // 중심: 한국(대략), 줌: 4~5
-  // 스타일별로 썸네일이 달라짐
-  return `https://api.maptiler.com/maps/${styleId}/static/127.8,36.2,4.4/280x160.png?key=${k}`;
+  // 썸네일은 "무조건" 키를 잡아야 함(getKey 실패 대비)
+  const k =
+    getKey()
+    || (typeof KEY !== "undefined" ? KEY : null)
+    || (typeof MAPTILER_KEY !== "undefined" ? MAPTILER_KEY : null);
+
+  if (!k) {
+    console.warn("[THUMB] missing key; thumbnail skipped");
+    return "";
+  }
+
+  const kk = encodeURIComponent(String(k));
+  return `https://api.maptiler.com/maps/${styleId}/static/127.8,36.2,4.4/280x160.png?key=${kk}`;
 };
 
 STYLES.forEach((s) => {
