@@ -2188,22 +2188,103 @@ text-align:center;
 
  // 버튼 생성(썸네일 + 라벨)
 const thumbUrl = (styleId) => {
-  // 썸네일은 "무조건" 키를 잡아야 함(getKey 실패 대비)
-  const k =
-    getKey()
-    || (typeof KEY !== "undefined" ? KEY : null)
-    || (typeof MAPTILER_KEY !== "undefined" ? MAPTILER_KEY : null);
+  // 외부 호출(Static API) 없이, 내장 SVG 썸네일 사용(키/권한 이슈 제거)
+  const SVG = {
+    "dataviz-v4-dark": `
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="160" viewBox="0 0 280 160">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0f14"/>
+      <stop offset="1" stop-color="#161c24"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="70%" cy="35%" r="60%">
+      <stop offset="0" stop-color="#1aa7ff" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#1aa7ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="280" height="160" fill="url(#bg)"/>
+  <rect width="280" height="160" fill="url(#glow)"/>
+  <g opacity=".22" stroke="#cfe6ff" stroke-width="1">
+    <path d="M0 35H280M0 70H280M0 105H280M40 0V160M90 0V160M140 0V160M190 0V160M240 0V160"/>
+  </g>
+  <g opacity=".55" fill="#8aa6c0">
+    <path d="M40 98c18-26 56-44 88-38 22 4 36 18 46 30 8 9 18 13 34 12 16-1 24 10 12 18-18 12-64 24-104 18-44-7-86-14-76-40z"/>
+    <path d="M170 46c16-10 44-8 58 4 10 9 6 22-10 26-18 4-42-6-48-18-3-6-3-10 0-12z"/>
+  </g>
+  <g fill="#a2decc" opacity=".85">
+    <circle cx="210" cy="88" r="3"/>
+    <circle cx="92" cy="112" r="2.5"/>
+  </g>
+</svg>`,
 
- if (!k) {
-  // 키가 나중에 세팅되는 구조일 수 있으니, 경고는 1회만
-  if (!window.__FR_THUMB_WARNED__) {
-    window.__FR_THUMB_WARNED__ = true;
-    console.warn("[THUMB] missing key; thumbnail skipped");
-  }
-  return "";
-}
-  const kk = encodeURIComponent(String(k));
-  return `https://api.maptiler.com/maps/${styleId}/static/127.8,36.2,4.4/280x160.png?key=${kk}`;
+    "dataviz-v4-light": `
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="160" viewBox="0 0 280 160">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f5f7fb"/>
+      <stop offset="1" stop-color="#e7edf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="280" height="160" fill="url(#bg)"/>
+  <g opacity=".25" stroke="#8aa0b8" stroke-width="1">
+    <path d="M0 40H280M0 80H280M0 120H280M50 0V160M110 0V160M170 0V160M230 0V160"/>
+  </g>
+  <g fill="#c7d3e3" opacity=".85">
+    <path d="M38 98c18-26 56-44 88-38 22 4 36 18 46 30 8 9 18 13 34 12 16-1 24 10 12 18-18 12-64 24-104 18-44-7-86-14-76-40z"/>
+    <path d="M168 46c16-10 44-8 58 4 10 9 6 22-10 26-18 4-42-6-48-18-3-6-3-10 0-12z"/>
+  </g>
+  <g stroke="#7aa7ff" stroke-width="2" opacity=".55">
+    <path d="M25 120C70 90 120 92 150 110S230 135 260 110"/>
+    <path d="M30 55C70 35 110 40 140 60S220 85 255 60"/>
+  </g>
+</svg>`,
+
+    "streets-v4": `
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="160" viewBox="0 0 280 160">
+  <rect width="280" height="160" fill="#f1f3f6"/>
+  <g fill="#d7dde6" opacity=".9">
+    <path d="M38 98c18-26 56-44 88-38 22 4 36 18 46 30 8 9 18 13 34 12 16-1 24 10 12 18-18 12-64 24-104 18-44-7-86-14-76-40z"/>
+    <path d="M168 46c16-10 44-8 58 4 10 9 6 22-10 26-18 4-42-6-48-18-3-6-3-10 0-12z"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="6" opacity=".95" stroke-linecap="round">
+    <path d="M20 130C70 95 120 96 150 112S230 138 265 112"/>
+    <path d="M25 60C70 38 110 44 140 64S220 88 258 62"/>
+  </g>
+  <g stroke="#b4bfcd" stroke-width="2" opacity=".95" stroke-linecap="round">
+    <path d="M20 130C70 95 120 96 150 112S230 138 265 112"/>
+    <path d="M25 60C70 38 110 44 140 64S220 88 258 62"/>
+    <path d="M70 20L110 150"/>
+    <path d="M120 25L150 155"/>
+    <path d="M180 18L160 150"/>
+  </g>
+</svg>`,
+
+    "hybrid-v4": `
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="160" viewBox="0 0 280 160">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0e1216"/>
+      <stop offset="1" stop-color="#0b0f14"/>
+    </linearGradient>
+  </defs>
+  <rect width="280" height="160" fill="url(#bg)"/>
+  <g opacity=".35">
+    <circle cx="55" cy="55" r="42" fill="#1b3a2a"/>
+    <circle cx="95" cy="95" r="52" fill="#274b34"/>
+    <circle cx="175" cy="60" r="46" fill="#233a2d"/>
+    <circle cx="220" cy="105" r="56" fill="#2a4a37"/>
+  </g>
+  <g opacity=".55" fill="#8aa6c0">
+    <path d="M42 102c20-26 62-44 96-38 24 4 38 18 48 30 8 9 20 13 36 12 16-1 24 10 12 18-20 12-70 24-112 18-48-7-92-14-80-40z"/>
+  </g>
+  <g stroke="#e8f1ff" stroke-width="1" opacity=".3">
+    <path d="M0 40H280M0 80H280M0 120H280"/>
+  </g>
+</svg>`
+  };
+
+  const raw = SVG[styleId] || SVG["dataviz-v4-dark"];
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(raw.trim())}`;
 };
 
 STYLES.forEach((s) => {
