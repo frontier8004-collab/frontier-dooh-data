@@ -2032,13 +2032,52 @@ console.log("[DATA_SANITIZE]", stats);
   const toggle = document.getElementById("legendToggle");
   if (!legend || !toggle) return;
 
+  const body = legend.querySelector(".legendBody");
+
+  // 애니메이션 속도(ms) - 숫자 1개만 바꾸면 전체 속도 변경됨
+  const LEGEND_ANIM_MS = 280;
+  try { legend.style.setProperty("--legendAnimMs", `${LEGEND_ANIM_MS}ms`); } catch (e) {}
+
+  // 높이 동기화(슬라이드) - 다른 코드에서도 재사용 가능하게 전역 노출
+  const syncHeight = () => {
+    if (!body) return;
+
+    const isCollapsed = legend.classList.contains("collapsed");
+    if (isCollapsed) {
+      body.style.maxHeight = "0px";
+      return;
+    }
+
+    // 렌더 이후 측정(정확한 scrollHeight)
+    requestAnimationFrame(() => {
+      try { body.style.maxHeight = body.scrollHeight + "px"; } catch (e) {}
+    });
+  };
+
+  try { window.__fr_syncLegendHeight = syncHeight; } catch (e) {}
+
+  // 헤더 텍스트도 안전하게 보정(혹시 index 수정 누락 대비)
+  try {
+    const t = legend.querySelector(".legendHeader span");
+    if (t) t.textContent = "범례 및 지도";
+  } catch (e) {}
+
+  // 최초 1회: 현재 상태 기준 세팅
+  syncHeight();
+
   toggle.addEventListener("click", () => {
     const collapsed = legend.classList.toggle("collapsed");
-    toggle.textContent = collapsed ? "+" : "–";
+    toggle.textContent = collapsed ? "+" : "-";
     toggle.setAttribute(
       "aria-label",
-      collapsed ? "범례 펼치기" : "범례 접기"
+      collapsed ? "범례 및 지도 펼치기" : "범례 및 지도 접기"
     );
+    syncHeight();
+  });
+
+  // 리사이즈 시 열려 있으면 높이 재계산(레이아웃 바뀌어도 부드럽게 유지)
+  window.addEventListener("resize", () => {
+    if (!legend.classList.contains("collapsed")) syncHeight();
   });
 })();
 // ===== MAP STYLE PANEL (inside legend) =====
@@ -2169,7 +2208,9 @@ console.log("[DATA_SANITIZE]", stats);
   }
 
   // 범례 내부에 삽입(겹침/z-index 싸움 제거)
-  legend.appendChild(panel);
+const body = legend.querySelector(".legendBody");
+(body || legend).appendChild(panel);
+   try { if (typeof window.__fr_syncLegendHeight === "function") window.__fr_syncLegendHeight(); } catch (e) {}
 })();
 
 
