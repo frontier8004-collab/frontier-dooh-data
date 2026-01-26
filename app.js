@@ -2052,9 +2052,9 @@ console.log("[DATA_SANITIZE]", stats);
   // 스타일(세로 1열로 고정, 가로폭 확장 방지)
   const styleEl = document.createElement("style");
   styleEl.textContent = `
-    #mapStylePanel{ margin-top:10px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); width:122px; }
+ #mapStylePanel{ margin:10px auto 0; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); width:122px; text-align:center; }
     #mapStylePanel .msTitle{ font-size:11px; color:rgba(255,255,255,.85); margin-bottom:8px; }
-    #mapStylePanel .msCol{ display:flex; flex-direction:column; gap:6px; }
+  #mapStylePanel .msCol{ display:flex; flex-direction:column; gap:6px; align-items:center; }
     #mapStylePanel .msBtn{
       display:block; width:100%;
       padding:6px 8px;
@@ -2064,7 +2064,7 @@ console.log("[DATA_SANITIZE]", stats);
       color:#fff;
       cursor:pointer;
       font-size:12px;
-      text-align:left;
+text-align:center;
     }
     #mapStylePanel .msBtn.isActive{ background:rgba(255,255,255,.18); }
     #mapStylePanel .msBtn:disabled{ opacity:.55; cursor:not-allowed; }
@@ -2087,7 +2087,7 @@ console.log("[DATA_SANITIZE]", stats);
     { id: "dataviz-v4-dark",  label: "다크(기본)" },
     { id: "dataviz-v4-light", label: "화이트" },
     { id: "streets-v4",       label: "스트리트" },
-    { id: "hybrid-v4",        label: "위성(하이브리드)" },
+    { id: "hybrid-v4",     label: "위성지도" },
   ];
 
   const getKey = () => (typeof window.KEY !== "undefined" && window.KEY) ? window.KEY : null;
