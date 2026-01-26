@@ -2055,6 +2055,44 @@ console.log("[DATA_SANITIZE]", stats);
  #mapStylePanel{ margin:10px auto 0; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); width:122px; text-align:center; }
     #mapStylePanel .msTitle{ font-size:11px; color:rgba(255,255,255,.85); margin-bottom:8px; }
   #mapStylePanel .msCol{ display:flex; flex-direction:column; gap:6px; align-items:center; }
+  #mapStylePanel .msCard{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  padding:8px 8px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(0,0,0,.18);
+  color:#fff;
+  cursor:pointer;
+}
+#mapStylePanel .msCard.isActive{
+  background:rgba(255,255,255,.14);
+  border-color:rgba(255,255,255,.28);
+}
+#mapStylePanel .msThumb{
+  width:100%;
+  height:64px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  background-size:cover;
+  background-position:center;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+}
+#mapStylePanel .msLabel{
+  font-size:12px;
+  font-weight:800;
+  line-height:1.1;
+  text-align:center;
+  color:rgba(255,255,255,.92);
+}
+#mapStylePanel .msCard:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
     #mapStylePanel .msBtn{
       display:block; width:100%;
       padding:6px 8px;
@@ -2098,12 +2136,12 @@ text-align:center;
   };
 
   const setActive = (styleId) => {
-    const btns = col.querySelectorAll("button.msBtn");
+    const btns = col.querySelectorAll("button.msCard");
     btns.forEach((b) => b.classList.toggle("isActive", b.getAttribute("data-style-id") === styleId));
   };
 
   const setDisabled = (v) => {
-    const btns = col.querySelectorAll("button.msBtn");
+    const btns = col.querySelectorAll("button.msCard");
     btns.forEach((b) => (b.disabled = !!v));
   };
 
@@ -2148,16 +2186,37 @@ text-align:center;
     }
   };
 
-  // 버튼 생성
-  STYLES.forEach((s) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "msBtn";
-    btn.textContent = s.label;
-    btn.setAttribute("data-style-id", s.id);
-    btn.addEventListener("click", () => switchStyle(s.id));
-    col.appendChild(btn);
-  });
+ // 버튼 생성(썸네일 + 라벨)
+const thumbUrl = (styleId) => {
+  const k = getKey();
+  if (!k) return "";
+  // MapTiler static map (대표님 키 사용)
+  // 중심: 한국(대략), 줌: 4~5
+  // 스타일별로 썸네일이 달라짐
+  return `https://api.maptiler.com/maps/${styleId}/static/127.8,36.2,4.4/280x160.png?key=${k}`;
+};
+
+STYLES.forEach((s) => {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "msCard";
+  btn.setAttribute("data-style-id", s.id);
+
+  const th = document.createElement("div");
+  th.className = "msThumb";
+  const u = thumbUrl(s.id);
+  if (u) th.style.backgroundImage = `url("${u}")`;
+
+  const lb = document.createElement("div");
+  lb.className = "msLabel";
+  lb.textContent = s.label;
+
+  btn.appendChild(th);
+  btn.appendChild(lb);
+
+  btn.addEventListener("click", () => switchStyle(s.id));
+  col.appendChild(btn);
+});
 
   // 초기 active만 세팅(자동 setStyle은 안 함: 기준선 보존)
   try {
