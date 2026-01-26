@@ -2204,86 +2204,25 @@ console.log("[DATA_SANITIZE]", stats);
       setTimeout(() => setDisabled(false), 2500);
     }
   };
-// ===== Local SVG thumbnail (NO network, NO KEY) =====
+// ===== THUMB (local assets) =====
 const thumbUrl = (styleId) => {
-  const mk = (bg1, bg2, lines, accent, label) => `
-<svg xmlns="http://www.w3.org/2000/svg" width="280" height="160" viewBox="0 0 280 160">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="${bg1}"/>
-      <stop offset="1" stop-color="${bg2}"/>
-    </linearGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="b"/>
-      <feColorMatrix in="b" type="matrix"
-        values="1 0 0 0 0
-                0 1 0 0 0
-                0 0 1 0 0
-                0 0 0 .35 0"/>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-
-  <rect x="0" y="0" width="280" height="160" fill="url(#g)"/>
-  ${lines}
-
-  <g filter="url(#soft)" opacity="0.9">
-    <circle cx="54" cy="56" r="28" fill="${accent}"/>
-    <circle cx="210" cy="48" r="22" fill="${accent}" opacity="0.65"/>
-    <circle cx="182" cy="118" r="30" fill="${accent}" opacity="0.45"/>
-  </g>
-
-  <rect x="14" y="14" width="252" height="28" rx="10" fill="rgba(255,255,255,.07)"/>
-  <text x="28" y="34" font-size="12" font-family="system-ui, -apple-system, Segoe UI, Roboto"
-        fill="rgba(255,255,255,.85)">${label}</text>
-
-  <rect x="8" y="8" width="264" height="144" rx="16" fill="none" stroke="rgba(255,255,255,.14)"/>
-</svg>`.trim();
-
-  const roadGrid = (c1, c2) => `
-  <g opacity="0.55">
-    <path d="M-20 120 C 60 80, 120 160, 300 40" stroke="${c1}" stroke-width="6" fill="none" opacity="0.35"/>
-    <path d="M-20 126 C 60 86, 120 166, 300 46" stroke="${c2}" stroke-width="2" fill="none" opacity="0.55"/>
-    <path d="M-10 30 C 90 40, 140 10, 290 90" stroke="${c1}" stroke-width="5" fill="none" opacity="0.25"/>
-    <path d="M-10 34 C 90 44, 140 14, 290 94" stroke="${c2}" stroke-width="2" fill="none" opacity="0.45"/>
-    <path d="M0 0 L280 160" stroke="rgba(255,255,255,.10)" stroke-width="1"/>
-    <path d="M280 0 L0 160" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
-  </g>`;
-
-  const worldDots = (c) => `
-  <g opacity="0.28">
-    ${Array.from({length: 120}).map((_,i)=>{
-      const x = (i*37)%280;
-      const y = (i*53)%160;
-      return `<circle cx="${x}" cy="${y}" r="1.2" fill="${c}"/>`;
-    }).join("")}
-  </g>`;
-
-  let svg = "";
-  if (styleId === "dataviz-v4-dark") {
-    svg = mk("#0b0f13", "#151c22", worldDots("rgba(162,222,204,.9)"), "rgba(162,222,204,.55)", "다크");
-  } else if (styleId === "dataviz-v4-light") {
-    svg = mk("#dfe8f2", "#f8fbff", roadGrid("rgba(30,40,55,.22)","rgba(30,40,55,.40)"), "rgba(10,10,10,.18)", "화이트");
-  } else if (styleId === "streets-v4") {
-    svg = mk("#111418", "#1b222a", roadGrid("rgba(255,255,255,.14)","rgba(162,222,204,.55)"), "rgba(162,222,204,.45)", "스트리트");
-  } else if (styleId === "hybrid-v4") {
-    const sat = `
-    <g opacity="0.85">
-      <path d="M34 120 C 60 90, 86 98, 110 78 C 135 58, 156 72, 176 52 C 198 32, 232 42, 252 28
-               C 270 16, 276 24, 286 12 L 286 170 L 0 170 Z"
-            fill="rgba(30,90,60,.55)"/>
-      <path d="M0 0 H280 V160 H0 Z" fill="rgba(10,40,60,.35)"/>
-      <circle cx="210" cy="106" r="38" fill="rgba(40,120,80,.45)"/>
-    </g>`;
-    svg = mk("#0a0f14", "#0f1a22", sat, "rgba(255,255,255,.18)", "위성");
-  } else {
-    svg = mk("#0f141a", "#151c22", worldDots("rgba(255,255,255,.7)"), "rgba(255,255,255,.18)", "지도");
-  }
-
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+  const map = {
+    "dataviz-v4-dark":  "assets/thumbs/thumb_dark.webp",
+    "dataviz-v4-light": "assets/thumbs/thumb_light.webp",
+    "streets-v4":       "assets/thumbs/thumb_streets.webp",
+    "hybrid-v4":        "assets/thumbs/thumb_sat.webp",
+  };
+  return map[styleId] || null;
+};
+  // ===== THUMB (local assets) =====
+const thumbUrl = (styleId) => {
+  const map = {
+    "dataviz-v4-dark":  "assets/thumbs/thumb_dark.webp",
+    "dataviz-v4-light": "assets/thumbs/thumb_light.webp",
+    "streets-v4":       "assets/thumbs/thumb_streets.webp",
+    "hybrid-v4":        "assets/thumbs/thumb_sat.webp",
+  };
+  return map[styleId] || null;
 };
   // 버튼 생성
 STYLES.forEach((s) => {
