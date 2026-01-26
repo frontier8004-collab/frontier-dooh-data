@@ -2204,16 +2204,6 @@ console.log("[DATA_SANITIZE]", stats);
       setTimeout(() => setDisabled(false), 2500);
     }
   };
-// ===== THUMB (local assets) =====
-const thumbUrl = (styleId) => {
-  const map = {
-    "dataviz-v4-dark":  "assets/thumbs/thumb_dark.webp",
-    "dataviz-v4-light": "assets/thumbs/thumb_light.webp",
-    "streets-v4":       "assets/thumbs/thumb_streets.webp",
-    "hybrid-v4":        "assets/thumbs/thumb_sat.webp",
-  };
-  return map[styleId] || null;
-};
   // ===== THUMB (local assets) =====
 const thumbUrl = (styleId) => {
   const map = {
