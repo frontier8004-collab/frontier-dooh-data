@@ -2194,11 +2194,14 @@ const thumbUrl = (styleId) => {
     || (typeof KEY !== "undefined" ? KEY : null)
     || (typeof MAPTILER_KEY !== "undefined" ? MAPTILER_KEY : null);
 
-  if (!k) {
+ if (!k) {
+  // 키가 나중에 세팅되는 구조일 수 있으니, 경고는 1회만
+  if (!window.__FR_THUMB_WARNED__) {
+    window.__FR_THUMB_WARNED__ = true;
     console.warn("[THUMB] missing key; thumbnail skipped");
-    return "";
   }
-
+  return "";
+}
   const kk = encodeURIComponent(String(k));
   return `https://api.maptiler.com/maps/${styleId}/static/127.8,36.2,4.4/280x160.png?key=${kk}`;
 };
@@ -2224,7 +2227,39 @@ STYLES.forEach((s) => {
   btn.addEventListener("click", () => switchStyle(s.id));
   col.appendChild(btn);
 });
+// [THUMB] KEY가 나중에 세팅되는 케이스 대응: 썸네일 재시도(최대 약 12초)
+const refreshThumbs = () => {
+  const cards = col.querySelectorAll("button.msCard");
+  let filled = 0;
 
+  cards.forEach((btn) => {
+    const sid = btn.getAttribute("data-style-id");
+    const th = btn.querySelector(".msThumb");
+    if (!sid || !th) return;
+
+    // 이미 채워졌으면 스킵
+    if (th.style.backgroundImage && th.style.backgroundImage !== "none") return;
+
+    const u = thumbUrl(sid);
+    if (!u) return;
+
+    th.style.backgroundImage = `url("${u}")`;
+    filled += 1;
+  });
+
+  return filled;
+};
+
+(() => {
+  let tries = 0;
+  const timer = setInterval(() => {
+    tries += 1;
+    const filled = refreshThumbs();
+
+    // 1) 키가 잡혀서 채워졌거나 2) 30회(약 12초) 넘으면 종료
+    if (filled > 0 || tries >= 30) clearInterval(timer);
+  }, 400);
+})();
   // 초기 active만 세팅(자동 setStyle은 안 함: 기준선 보존)
   try {
     const last = localStorage.getItem("frontier_style_id");
