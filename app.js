@@ -2142,7 +2142,7 @@ console.log("[DATA_SANITIZE]", stats);
     { id: "dataviz-v4-light", label: "화이트" },
     { id: "streets-v4",       label: "스트리트" },
     { id: "hybrid-v4",        label: "위성(하이브리드)" },
-  ];+
+  ];
 
   const getKey = () => (typeof window.KEY !== "undefined" && window.KEY) ? window.KEY : null;
   const styleUrl = (slug) => {
