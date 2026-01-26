@@ -456,7 +456,34 @@ max-width: 230px;
   line-height:1;
 }
 .legendBody{ padding:8px 10px; }
-.mapLegend.collapsed .legendBody{ display:none; }
+/* ===== Legend slide animation (범례/지도 함께 접힘) ===== */
+/* 속도 조절: app.js의 LEGEND_ANIM_MS 값이 --legendAnimMs 로 들어오게 되어 있으면 그 값으로 자동 반영됩니다.
+   (없으면 아래 기본값 280ms 사용) */
+:root{ --legendAnimMs: 280ms; }
+
+.mapLegend .legendBody{
+  overflow: hidden;
+  /* JS에서 --legendMaxH 를 세팅하면 “내용 높이”에 딱 맞게 부드럽게 접힙니다.
+     JS가 없으면 기본값(520px) 범위 내에서 동작 */
+  max-height: var(--legendMaxH, 520px);
+
+  opacity: 1;
+  transform: translateY(0);
+
+  transition:
+    max-height var(--legendAnimMs) ease,
+    opacity var(--legendAnimMs) ease,
+    transform var(--legendAnimMs) ease;
+
+  will-change: max-height, opacity, transform;
+}
+
+.mapLegend.collapsed .legendBody{
+  max-height: 0 !important;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
 
 .legendItem{
   display:flex;
