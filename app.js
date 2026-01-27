@@ -1401,11 +1401,10 @@ applyKoreanLabelsToMapLibre(mlMap);
       if (w < 140 && h < 140) isTight = true; // 경기장/빌딩처럼 한 점에 몰린 케이스
     }
   } catch (_) {}
-  }
-
   // spiderfy 미지원이면 기존처럼 REVEAL_ZOOM 점프
-  nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
-}
+  if (isTight) {
+    nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
+  }
 
   // ✅ 항상 확대 보장
   nextZ = Math.max(curZ + MIN_STEP, nextZ);
