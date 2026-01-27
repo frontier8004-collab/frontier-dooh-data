@@ -1363,61 +1363,66 @@ applyKoreanLabelsToMapLibre(mlMap);
       clearAllCardHighlights();
       clearClusterHighlight();
 
-       // ✅ 클러스터 클릭: 단계 확대(줌아웃 금지) + "초밀집"은 자동 spiderfy
+   // ✅ 클러스터 클릭: 단계 확대(줌아웃 금지) + 초밀집(경기장/빌딩)은 1클릭(줌→spiderfy)
   const cl = e.layer;
-  if (!cl || !cl.getLatLng) return;
+  if (!cl) return;
 
   const curZ = map.getZoom();
 
-  const REVEAL_ZOOM = 12;      // 핀이 풀려 보이기 시작하는 줌(필요시 12~13)
-  const MAX_ABS_ZOOM = 14;     // 전체 상한(원하시면 13~15)
+  const REVEAL_ZOOM = 12;   // 핀이 의미 있게 펼쳐 보이기 시작하는 줌(필요시 12~13)
+  const MAX_ABS_ZOOM = 14;  // 전체 상한(원하시면 13~15)
   const MAX_STEP = (curZ <= 10 ? 3 : 2);
   const MIN_STEP = 1;
 
-  const capZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
-  let nextZ = capZ;
+  const bb = (typeof cl.getBounds === "function") ? cl.getBounds() : null;
 
-  const bb = cl.getBounds ? cl.getBounds() : null;
+  // 중심 좌표(안전): getLatLng 우선, 없으면 bounds center
+  let center = null;
+  try {
+    if (typeof cl.getLatLng === "function") center = cl.getLatLng();
+    else if (bb && typeof bb.getCenter === "function") center = bb.getCenter();
+  } catch (_) {}
+  if (!center) return;
 
-  // bounds 기반 추천줌이 있으면 capZ 이내에서만 사용(단, 줌아웃 금지)
-  if (bb && bb.isValid && bb.isValid()) {
-    try {
-      const zFit = map.getBoundsZoom(bb, false, L.point(90, 90));
-      if (typeof zFit === "number" && Number.isFinite(zFit)) {
-        nextZ = Math.min(zFit, capZ);
-      }
-    } catch (_) {}
-  }
-
-  // ✅ 초밀집 판정(조금 더 공격적으로)
+  // ✅ 초밀집 판정: "REVEAL_ZOOM 기준" 픽셀 bounds가 작으면 tight
   let isTight = false;
   try {
-    const cnt = (cl.getChildCount ? cl.getChildCount() : 0);
-    if (cnt >= 8 && bb && bb.isValid && bb.isValid()) {
-      const sw = map.project(bb.getSouthWest(), curZ);
-      const ne = map.project(bb.getNorthEast(), curZ);
+    const cnt = (typeof cl.getChildCount === "function") ? cl.getChildCount() : 0;
+
+    if (cnt >= 6 && bb && bb.isValid && bb.isValid()) {
+      const testZ = Math.min(Math.max(curZ, REVEAL_ZOOM), MAX_ABS_ZOOM);
+      const sw = map.project(bb.getSouthWest(), testZ);
+      const ne = map.project(bb.getNorthEast(), testZ);
       const w = Math.abs(ne.x - sw.x);
       const h = Math.abs(ne.y - sw.y);
-      if (w < 140 && h < 140) isTight = true; // 경기장/빌딩처럼 한 점에 몰린 케이스
+
+      // 너무 빡빡하면 발동이 안 됨 → 180px 정도로 현실적으로 완화
+      if (w < 180 && h < 180) isTight = true;
     }
   } catch (_) {}
-  // spiderfy 미지원이면 기존처럼 REVEAL_ZOOM 점프
-  if (isTight) {
-    nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
+
+  // ✅ 초밀집이면: 1클릭으로 "REVEAL_ZOOM까지 이동 후 spiderfy" (클릭 반복 제거)
+  if (isTight && typeof cl.spiderfy === "function") {
+    const targetZ = Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM);
+
+    if (curZ < targetZ) {
+      map.once("zoomend", () => {
+        try { cl.spiderfy(); } catch (_) {}
+      });
+      map.flyTo(center, targetZ, { animate: true, duration: 0.55 });
+    } else {
+      // 이미 충분히 확대돼 있으면 바로 spiderfy
+      try { cl.spiderfy(); } catch (_) {}
+      try { map.panTo(center, { animate: true, duration: 0.35 }); } catch (_) {}
+    }
+    return;
   }
 
-  // ✅ 항상 확대 보장
+  // ✅ 일반 클러스터: 단계 확대(줌아웃 금지)
+  let nextZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
   nextZ = Math.max(curZ + MIN_STEP, nextZ);
 
-  // ✅ 초밀집이면 확대가 끝난 뒤 spiderfy로 바로 펼치기(클릭 반복 제거)
-  if (isTight && typeof cl.spiderfy === "function") {
-    map.once("zoomend", () => {
-      try { cl.spiderfy(); } catch (_) {}
-    });
-  }
-
-  map.flyTo(cl.getLatLng(), nextZ, { animate: true, duration: 0.55 });
-    });
+  map.flyTo(center, nextZ, { animate: true, duration: 0.55 });
 
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
     markers.on("unspiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
