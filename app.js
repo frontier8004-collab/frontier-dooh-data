@@ -1401,14 +1401,6 @@ applyKoreanLabelsToMapLibre(mlMap);
       if (w < 140 && h < 140) isTight = true; // 경기장/빌딩처럼 한 점에 몰린 케이스
     }
   } catch (_) {}
-
-  // 초밀집이면 "핀 보이는 줌"까지 점프 (단, 줌아웃 금지)
-if (w < 80 && h < 80) {
-  // ✅ 초밀집이면 "줌으로 풀기"보다 spiderfy가 훨씬 빠름(클릭 반복 제거)
-  if (typeof cl.spiderfy === "function") {
-    try { map.panTo(cl.getLatLng(), { animate: true, duration: 0.35 }); } catch (_) {}
-    try { cl.spiderfy(); } catch (_) {}
-    return; // ✅ 여기서 끝 (아래 flyTo로 다시 줌 유도하지 않음)
   }
 
   // spiderfy 미지원이면 기존처럼 REVEAL_ZOOM 점프
