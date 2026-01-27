@@ -1365,12 +1365,19 @@ applyKoreanLabelsToMapLibre(mlMap);
 
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
-      if (bb && bb.isValid && bb.isValid()){
-        map.fitBounds(bb, { padding:[90,90], maxZoom: 18, animate:false });
-      }else if (e.layer && e.layer.getLatLng){
-        const ll = e.layer.getLatLng();
-        map.setView(ll, Math.min(map.getZoom() + 2, 18), { animate:false });
-      }
+    // ✅ 클러스터 클릭 확대 완화: "한 번 클릭 시 최대 +2" + "절대 최대 14" + 부드럽게
+const curZ = map.getZoom();
+const MAX_ABS_ZOOM = 14; // 전체 상한(원하시면 13~15)
+const MAX_STEP = 2;      // 한 번 클릭 시 최대 확대량(+2)
+
+const nextZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
+
+if (bb && bb.isValid && bb.isValid()) {
+  map.fitBounds(bb, { padding: [90, 90], maxZoom: nextZ, animate: true });
+} else if (e.layer && e.layer.getLatLng) {
+  const ll = e.layer.getLatLng();
+  map.setView(ll, nextZ, { animate: true });
+} 
     });
 
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
