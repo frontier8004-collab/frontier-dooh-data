@@ -1363,38 +1363,59 @@ applyKoreanLabelsToMapLibre(mlMap);
       clearAllCardHighlights();
       clearClusterHighlight();
 
-     // ✅ 클러스터 클릭 확대 완화(줌아웃 금지 + 단계 확대)
-  // - 현재 줌에서 최소 +1은 무조건 확대
-  // - 저줌(<=10)에서는 최대 +3, 그 외는 최대 +2
-  // - 절대 상한 14 (원하시면 13~15 조절)
+       // ✅ 클러스터 클릭: 단계 확대(줌아웃 금지) + "초밀집"은 자동 spiderfy
   const cl = e.layer;
   if (!cl || !cl.getLatLng) return;
 
   const curZ = map.getZoom();
-  const REVEAL_ZOOM = 12; // 핀이 실제로 풀려서 보이기 시작하는 줌(필요시 12~13 조절)
-  const MAX_ABS_ZOOM = 14;
+
+  const REVEAL_ZOOM = 12;      // 핀이 풀려 보이기 시작하는 줌(필요시 12~13)
+  const MAX_ABS_ZOOM = 14;     // 전체 상한(원하시면 13~15)
   const MAX_STEP = (curZ <= 10 ? 3 : 2);
   const MIN_STEP = 1;
 
   const capZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
   let nextZ = capZ;
 
-  // bounds 기반 추천줌이 있으면 capZ 이내에서만 사용(단, 절대 줌아웃 금지)
   const bb = cl.getBounds ? cl.getBounds() : null;
-// ✅ 초밀집(경기장/한 건물) 가속: childCount 많고 bounds가 화면 픽셀로 매우 작으면 REVEAL_ZOOM까지 점프
-try {
-  const cnt = (cl.getChildCount ? cl.getChildCount() : 0);
-  if (cnt >= 15 && bb && bb.isValid && bb.isValid() && curZ < REVEAL_ZOOM) {
-    const sw = map.project(bb.getSouthWest(), curZ);
-    const ne = map.project(bb.getNorthEast(), curZ);
-    const w = Math.abs(ne.x - sw.x);
-    const h = Math.abs(ne.y - sw.y);
-    if (w < 80 && h < 80) {
-      nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
-    }
+
+  // bounds 기반 추천줌이 있으면 capZ 이내에서만 사용(단, 줌아웃 금지)
+  if (bb && bb.isValid && bb.isValid()) {
+    try {
+      const zFit = map.getBoundsZoom(bb, false, L.point(90, 90));
+      if (typeof zFit === "number" && Number.isFinite(zFit)) {
+        nextZ = Math.min(zFit, capZ);
+      }
+    } catch (_) {}
   }
-} catch (_) {}
-  nextZ = Math.max(curZ + MIN_STEP, nextZ); // ✅ 항상 확대
+
+  // ✅ 초밀집 판정(조금 더 공격적으로)
+  let isTight = false;
+  try {
+    const cnt = (cl.getChildCount ? cl.getChildCount() : 0);
+    if (cnt >= 8 && bb && bb.isValid && bb.isValid()) {
+      const sw = map.project(bb.getSouthWest(), curZ);
+      const ne = map.project(bb.getNorthEast(), curZ);
+      const w = Math.abs(ne.x - sw.x);
+      const h = Math.abs(ne.y - sw.y);
+      if (w < 140 && h < 140) isTight = true; // 경기장/빌딩처럼 한 점에 몰린 케이스
+    }
+  } catch (_) {}
+
+  // 초밀집이면 "핀 보이는 줌"까지 점프 (단, 줌아웃 금지)
+  if (isTight) {
+    nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
+  }
+
+  // ✅ 항상 확대 보장
+  nextZ = Math.max(curZ + MIN_STEP, nextZ);
+
+  // ✅ 초밀집이면 확대가 끝난 뒤 spiderfy로 바로 펼치기(클릭 반복 제거)
+  if (isTight && typeof cl.spiderfy === "function") {
+    map.once("zoomend", () => {
+      try { cl.spiderfy(); } catch (_) {}
+    });
+  }
 
   map.flyTo(cl.getLatLng(), nextZ, { animate: true, duration: 0.55 });
     });
