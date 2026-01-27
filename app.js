@@ -1381,14 +1381,6 @@ applyKoreanLabelsToMapLibre(mlMap);
 
   // bounds 기반 추천줌이 있으면 capZ 이내에서만 사용(단, 절대 줌아웃 금지)
   const bb = cl.getBounds ? cl.getBounds() : null;
-  if (bb && bb.isValid && bb.isValid()) {
-    try {
-      const zFit = map.getBoundsZoom(bb, false, L.point(90, 90));
-      if (typeof zFit === "number" && Number.isFinite(zFit)) {
-        nextZ = Math.min(zFit, capZ);
-      }
-    } catch (_) {}
-  }
 // ✅ 초밀집(경기장/한 건물) 가속: childCount 많고 bounds가 화면 픽셀로 매우 작으면 REVEAL_ZOOM까지 점프
 try {
   const cnt = (cl.getChildCount ? cl.getChildCount() : 0);
