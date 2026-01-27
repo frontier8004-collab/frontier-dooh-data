@@ -1371,6 +1371,7 @@ applyKoreanLabelsToMapLibre(mlMap);
   if (!cl || !cl.getLatLng) return;
 
   const curZ = map.getZoom();
+  const REVEAL_ZOOM = 12; // 핀이 실제로 풀려서 보이기 시작하는 줌(필요시 12~13 조절)
   const MAX_ABS_ZOOM = 14;
   const MAX_STEP = (curZ <= 10 ? 3 : 2);
   const MIN_STEP = 1;
@@ -1388,7 +1389,19 @@ applyKoreanLabelsToMapLibre(mlMap);
       }
     } catch (_) {}
   }
-
+// ✅ 초밀집(경기장/한 건물) 가속: childCount 많고 bounds가 화면 픽셀로 매우 작으면 REVEAL_ZOOM까지 점프
+try {
+  const cnt = (cl.getChildCount ? cl.getChildCount() : 0);
+  if (cnt >= 15 && bb && bb.isValid && bb.isValid() && curZ < REVEAL_ZOOM) {
+    const sw = map.project(bb.getSouthWest(), curZ);
+    const ne = map.project(bb.getNorthEast(), curZ);
+    const w = Math.abs(ne.x - sw.x);
+    const h = Math.abs(ne.y - sw.y);
+    if (w < 80 && h < 80) {
+      nextZ = Math.max(nextZ, Math.min(REVEAL_ZOOM, MAX_ABS_ZOOM));
+    }
+  }
+} catch (_) {}
   nextZ = Math.max(curZ + MIN_STEP, nextZ); // ✅ 항상 확대
 
   map.flyTo(cl.getLatLng(), nextZ, { animate: true, duration: 0.55 });
