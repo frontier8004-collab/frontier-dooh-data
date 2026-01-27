@@ -1363,21 +1363,35 @@ applyKoreanLabelsToMapLibre(mlMap);
       clearAllCardHighlights();
       clearClusterHighlight();
 
-      const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
+     // ✅ 클러스터 클릭 확대 완화(줌아웃 금지 + 단계 확대)
+  // - 현재 줌에서 최소 +1은 무조건 확대
+  // - 저줌(<=10)에서는 최대 +3, 그 외는 최대 +2
+  // - 절대 상한 14 (원하시면 13~15 조절)
+  const cl = e.layer;
+  if (!cl || !cl.getLatLng) return;
 
-    // ✅ 클러스터 클릭 확대 완화: "한 번 클릭 시 최대 +2" + "절대 최대 14" + 부드럽게
-const curZ = map.getZoom();
-const MAX_ABS_ZOOM = 14; // 전체 상한(원하시면 13~15)
-const MAX_STEP = 2;      // 한 번 클릭 시 최대 확대량(+2)
+  const curZ = map.getZoom();
+  const MAX_ABS_ZOOM = 14;
+  const MAX_STEP = (curZ <= 10 ? 3 : 2);
+  const MIN_STEP = 1;
 
-const nextZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
+  const capZ = Math.min(curZ + MAX_STEP, MAX_ABS_ZOOM);
+  let nextZ = capZ;
 
-if (bb && bb.isValid && bb.isValid()) {
-  map.fitBounds(bb, { padding: [90, 90], maxZoom: nextZ, animate: true });
-} else if (e.layer && e.layer.getLatLng) {
-  const ll = e.layer.getLatLng();
-  map.setView(ll, nextZ, { animate: true });
-} 
+  // bounds 기반 추천줌이 있으면 capZ 이내에서만 사용(단, 절대 줌아웃 금지)
+  const bb = cl.getBounds ? cl.getBounds() : null;
+  if (bb && bb.isValid && bb.isValid()) {
+    try {
+      const zFit = map.getBoundsZoom(bb, false, L.point(90, 90));
+      if (typeof zFit === "number" && Number.isFinite(zFit)) {
+        nextZ = Math.min(zFit, capZ);
+      }
+    } catch (_) {}
+  }
+
+  nextZ = Math.max(curZ + MIN_STEP, nextZ); // ✅ 항상 확대
+
+  map.flyTo(cl.getLatLng(), nextZ, { animate: true, duration: 0.55 });
     });
 
     markers.on("spiderfied", () => { clearClusterHighlight(); hideClusterHint(); });
