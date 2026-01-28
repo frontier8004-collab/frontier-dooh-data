@@ -1132,7 +1132,10 @@ max-width: 230px;
   gap:12px;
   padding:8px 12px;
 }
-
+  /* v1.2.2.5 hotfix: prevent scroll chaining to Imweb page (wheel bounce to footer) */
+  .is-embed .panel{
+    overscroll-behavior-y: contain;
+  }
 /* 아임웹 헤더(로고/메뉴)와 중복되는 제목은 숨김 (초기화 버튼으로 대체) */
 .is-embed #filtersRow .titleLeft{ display:none; }
 
