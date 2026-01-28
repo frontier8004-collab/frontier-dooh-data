@@ -262,8 +262,19 @@
       background:rgba(162,222,204,.10);
       border-color:rgba(162,222,204,.25);
     }
-
     /* ===== APP LAYOUT ===== */
+    /* v1.2.2.5 hotfix: keep header rows in normal flow (prevent UI sliding under fixed bars) */
+.filtersRow{
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+}
+
+#errBanner{
+  position: relative !important;
+  top: auto !important;
+}
     .app{
       flex:1 1 auto;
       min-height:0;
