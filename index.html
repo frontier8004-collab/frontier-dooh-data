@@ -30,7 +30,7 @@
       --inputText:#ffffff;
       --inputPh:rgba(255,255,255,.45);
 
-      --topbarH:72px;
+      --topbarH:0px;
       --sideW: 161px; /* v1.1.25: 우측 빌딩 너비 40% 축소 유지 */
     }
 
@@ -1098,15 +1098,36 @@ max-width: 230px;
       font-weight:1000;
     }
     .mSum .muted{ color:rgba(255,255,255,.65); font-weight:900; font-size:12px; }
+    /* v1.2.2.5: merge title/loaded into filters row (embed-friendly) */
+#filtersRow .filtersInner{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+#filtersRow .titleLeft,
+#filtersRow .pill{
+  white-space:nowrap;
+}
+#filtersRow .qWrap{
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+#filtersRow #catHigh{
+  min-width: 180px;
+}
+
+@media (max-width: 820px){
+  #filtersRow .titleLeft{ flex:1 1 100%; }
+  #filtersRow .qWrap{ flex:1 1 100%; }
+  #filtersRow #catHigh{ flex:1 1 100%; }
+  #filtersRow #reset{ width:100%; }
+}
   </style>
 </head>
 
 <body>
-  <div class="topbar" id="topbar">
-    <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.2.2.4</span></div>
-    <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
-  </div>
-
+  
   <div class="errBanner" id="errBanner">
     <div class="errBox">
       <div style="min-width:0;">
@@ -1122,6 +1143,8 @@ max-width: 230px;
 
   <div class="filtersRow" id="filtersRow">
     <div class="filtersInner">
+      <div class="titleLeft" id="titleReset">Frontier DOOH 전국 DB <span class="ver">v1.2.2.5</span></div>
+<div class="pill">Loaded: <b id="pillLoaded">0</b></div>
       <div class="qWrap" style="position:relative;">
         <input id="q" class="q" type="text" placeholder="검색 (예: 강남구, 홍대, 전광판 …)" />
         <button class="qGo" id="qGo" aria-label="검색 실행">🔍</button>
