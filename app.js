@@ -1366,10 +1366,10 @@ applyKoreanLabelsToMapLibre(mlMap);
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
       if (bb && bb.isValid && bb.isValid()){
-     map.flyToBounds(bb, { padding:[90,90], maxZoom: 18, animate:true, duration:1.5, easeLinearity:0.25 });
+     map.flyToBounds(bb, { padding:[90,90], maxZoom: 18, animate:true, duration:1.0, easeLinearity:0.25 });
       }else if (e.layer && e.layer.getLatLng){
         const ll = e.layer.getLatLng();
-      map.flyTo(ll, Math.min(map.getZoom() + 2, 18), { animate:true, duration:1.5, easeLinearity:0.25 });
+      map.flyTo(ll, Math.min(map.getZoom() + 2, 18), { animate:true, duration:1.0, easeLinearity:0.25 });
       }
     });
 
