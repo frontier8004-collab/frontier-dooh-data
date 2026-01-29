@@ -1172,7 +1172,31 @@ max-width: 230px;
 }
 .is-embed #filtersRow .q{
   font-size:14px;
-  padding:0 14px;
+  padding:0 46px 0 14px; /* 오른쪽 46px: 아이콘 자리 */
+}
+    /* 검색 아이콘을 입력창 내부 우측으로 (imweb embed) */
+.is-embed #filtersRow .qWrap{ position:relative; }
+
+.is-embed #filtersRow .qGo{
+  position:absolute;
+  right:8px;
+  top:50%;
+  transform:translateY(-50%);
+  width:36px;
+  min-width:36px;
+  height:36px;       /* 44px 높이 안에서 아이콘만 작게 */
+  padding:0;
+  border:0;
+  background:transparent;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.is-embed #filtersRow .qGo:hover{
+  background:rgba(255,255,255,.08);
 }
 .is-embed #filtersRow .qGo{
   width:56px;
@@ -1228,7 +1252,7 @@ max-width: 230px;
 <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
       <div class="qWrap" style="position:relative;">
         <input id="q" class="q" type="text" placeholder="검색 (예: 강남구, 홍대, 전광판 …)" />
-        <button class="qGo" id="qGo" type="button" aria-label="검색 실행">검색</button>
+        <button class="qGo" id="qGo" aria-label="검색 실행" title="검색">🔍</button>
         <div id="qSuggest" role="listbox" aria-label="검색어 제안"></div>
       </div>
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
