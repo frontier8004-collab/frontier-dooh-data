@@ -1174,7 +1174,7 @@ max-width: 230px;
 }
 #filtersRow .q{
   font-size:14px;
-  padding:0 46px 0 14px;
+  padding:0 52px 0 14px;
 }
     /* 검색 아이콘을 입력창 내부 우측으로 (imweb embed) */
 #filtersRow .qWrap{ position:relative; }
@@ -1254,7 +1254,12 @@ max-width: 230px;
 <div class="pill">Loaded: <b id="pillLoaded">0</b></div>
       <div class="qWrap" style="position:relative;">
         <input id="q" class="q" type="text" placeholder="검색 (예: 강남구, 홍대, 전광판 …)" />
-        <button class="qGo" id="qGo" aria-label="검색 실행" title="검색">🔍</button>
+     <button class="qGo" id="qGo" aria-label="검색 실행" title="검색">
+  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <circle cx="11" cy="11" r="7"></circle>
+    <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+  </svg>
+</button>
         <div id="qSuggest" role="listbox" aria-label="검색어 제안"></div>
       </div>
       <select id="catHigh" class="cat" aria-label="매체 카테고리"></select>
