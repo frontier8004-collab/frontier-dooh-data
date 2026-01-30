@@ -1174,35 +1174,40 @@ max-width: 230px;
 }
 #filtersRow .q{
   font-size:14px;
-  padding:0 52px 0 14px;
+  padding:0 52px 0 14px !important;
 }
     /* 검색 아이콘을 입력창 내부 우측으로 (imweb embed) */
-#filtersRow .qWrap{ position:relative; }
+/* 검색 아이콘을 입력창 내부 우측에 고정 (Imweb CSS 덮어쓰기 방지) */
+#filtersRow .qWrap{ position:relative !important; }
+
 #filtersRow .qGo{
-  position:absolute;
+  position:absolute !important;
+  right:8px !important;
+  top:50% !important;
+  transform:translateY(-50%) !important;
+
   z-index:2;
-  right:8px;
-  top:50%;
-  transform:translateY(-50%);
-  width:36px;
-  min-width:36px;
-  height:36px;
-  padding:0;
-  border:0;
-  background:transparent;
+  width:36px !important;
+  min-width:36px !important;
+  height:36px !important;
+
+  padding:0 !important;
+  margin:0 !important;
+  border:0 !important;
+  background:transparent !important;
   border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
   cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
 }
 
-#filtersRow .qGo:hover{
-  background:rgba(255,255,255,.08);
-}
-.is-embed #filtersRow .qGo{
-  width:56px;
-}
+#filtersRow .qGo svg{ width:16px; height:16px; opacity:.85; }
+#filtersRow .qGo:hover{ background:rgba(255,255,255,.08); }
 .is-embed #filtersRow .cat{
   font-size:14px;
   padding:0 12px;
