@@ -1449,25 +1449,16 @@ max-width: 230px;
   <script src="./app.js" defer></script>
 <script>
 (function(){
-  // 부모 페이지가 없거나 자기 자신이면 좌표 전송 중단
   if (window === window.parent) return; 
-
-  function sendCoord(e){
-    try {
-      // iframe 내부 마우스 좌표를 부모(아임웹)로 전송
-      window.parent.postMessage({ 
-        type: "CUBE_CURSOR_MOVE", 
-        x: e.clientX, 
-        y: e.clientY 
-      }, "*"); 
-    } catch(err) {
-      // 보안 오류 방지용 빈 캐치
-    }
-  }
-
-  // 데스크탑과 모바일 환경 모두 대응
-  window.addEventListener("pointermove", sendCoord, {passive: true});
-  window.addEventListener("mousemove", sendCoord, {passive: true});
+  const send = (e) => {
+    window.parent.postMessage({ 
+      type: "CUBE_CURSOR_MOVE", 
+      x: e.clientX, 
+      y: e.clientY 
+    }, "*");
+  };
+  window.addEventListener("pointermove", send, {passive: true});
+  window.addEventListener("mousemove", send, {passive: true});
 })();
 </script>
 </body>
