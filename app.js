@@ -9,7 +9,7 @@
 (() => {
   "use strict";
    
- const VERSION = "v1.2.2.5";
+ const VERSION = "v1.2.2.6";
  const DATA_URL = new URL("data_public.json", window.location.origin + window.location.pathname).toString();
   const CATEGORY_TREE = [
     { high:"전광판 / 빌보드 / 외벽", lows:["전광판","빌보드","외벽"] },
