@@ -1449,6 +1449,7 @@ max-width: 230px;
   <script src="./app.js" defer></script>
   <script>
 (function(){
+  if (window === window.parent) return; // iframe 안에서만 부모로 좌표 전송
   // 부모(Imweb)로 마우스 좌표 전달
   // 보안상 * 대신 Imweb 도메인으로 좁히는 것을 권장합니다.
   // 예) const TARGET_ORIGIN = "https://대표님도메인.imweb.me";
