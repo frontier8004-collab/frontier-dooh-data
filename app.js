@@ -959,9 +959,7 @@ function updateLoadMoreUI(items){
           <div class="name">${escapeHtml(it.title || "-")}</div>
          <div class="place">${escapeHtml(guessPlace(it))}</div>
         <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
-         <div class="lockCta">${isUnlocked() ? "" : '<button type="button" class="lockBtn">로그인하고 확인하기</button>'}</div>
-
-
+       
         </div>
       `;
 
