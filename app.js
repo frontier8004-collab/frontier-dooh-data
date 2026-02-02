@@ -939,8 +939,9 @@ function updateLoadMoreUI(items){
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
           <div class="name">${escapeHtml(it.title || "-")}</div>
-          <div class="place">${escapeHtml(guessPlace(it))} · <span class="lockHint">상세 위치는 로그인 후</span></div>
-         <div class="price"><span class="lockHint">단가 정보는 로그인 후 제공</span></div>
+         <div class="place">${escapeHtml(guessPlace(it))}${isUnlocked() ? "" : ' <span class="lockHint">상세 위치는 로그인 후</span>'}</div>
+         <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : '<span class="lockHint">단가 정보는 로그인 후 제공</span>'}</div>
+
 
         </div>
       `;
