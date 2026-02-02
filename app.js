@@ -830,6 +830,20 @@ function isUnlocked(){
     saveRecentKey(it._key);
     if (sethash) setHash(it._key);
   }
+   function getLoginUrl(){
+  try { return (window.FRONTIER_LOGIN_URL || "").toString().trim(); }
+  catch(e){ return ""; }
+}
+
+function goLogin(){
+  const url = getLoginUrl();
+  if (!url) {
+    alert('로그인 페이지 URL이 아직 설정되지 않았습니다.\n(index.html에서 FRONTIER_LOGIN_URL을 설정해 주세요.)');
+    return;
+  }
+  location.href = url;
+}
+
 function isUnlocked(){
   // 임시 잠금 플래그(로그인/회원 연동 전)
   // 콘솔에서 localStorage.setItem("frontier_unlocked","1") 하면 잠금 해제(테스트용)
@@ -943,8 +957,9 @@ function updateLoadMoreUI(items){
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
           <div class="name">${escapeHtml(it.title || "-")}</div>
-         <div class="place">${escapeHtml(guessPlace(it))}${isUnlocked() ? "" : ' <span class="lockHint">상세 위치는 로그인 후</span>'}</div>
-         <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : '<span class="lockHint">단가 정보는 로그인 후 제공</span>'}</div>
+         <div class="place">${escapeHtml(guessPlace(it))}${isUnlocked() ? "" : ' <span class="lockHint">상세 주소는 로그인 후 확인하실 수 있습니다. </span>'}</div>
+         <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다. </span>'}</div>
+         <div class="lockCta">${isUnlocked() ? "" : '<button type="button" class="lockBtn">로그인하고 확인하기</button>'}</div>
 
 
         </div>
@@ -964,10 +979,18 @@ function updateLoadMoreUI(items){
         clearClusterHighlight();
         if (activeMiniKey) highlightCard(activeMiniKey, false);
       });
-      el.addEventListener("click", () => {
-        returnToCartAfterDetail = false;
-        openDetail(it, true);
-      });
+      el.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t && t.closest && t.closest(".lockBtn")) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    goLogin();
+    return;
+  }
+
+  returnToCartAfterDetail = false;
+  openDetail(it, true);
+});
 
       list.appendChild(el);
     }
