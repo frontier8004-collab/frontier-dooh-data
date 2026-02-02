@@ -924,11 +924,9 @@ function updateLoadMoreUI(items){
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
           <div class="name">${escapeHtml(it.title || "-")}</div>
-          <div class="place">${escapeHtml(guessPlace(it))}</div>
-          <div class="price">
-            <div class="p">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
-            <div class="u">${escapeHtml(it.price_unit ? it.price_unit : "")}</div>
-          </div>
+          <div class="place">${escapeHtml(guessPlace(it))} · <span class="lockHint">상세 위치는 로그인 후</span></div>
+         <div class="price"><span class="lockHint">단가 정보는 로그인 후 제공</span></div>
+
         </div>
       `;
 
