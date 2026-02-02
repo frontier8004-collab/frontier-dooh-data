@@ -797,8 +797,8 @@ function isUnlocked(){
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
   } else {
-    $("dprice").textContent = "단가 정보는 로그인 후 제공";
-    $("daddr").textContent = "상세 위치는 로그인 후";
+    $("dprice").textContent = "단가 정보는 로그인 후 확인하실 수 있습니다.";
+    $("daddr").textContent = "상세 주소는 로그인 후 확인하실 수 있습니다";
   }
   $("dop").textContent = it.operator || "문의";
 
@@ -814,7 +814,7 @@ function isUnlocked(){
       <a href="${google}" target="_blank" rel="noopener">구글맵</a>
     `;
   } else {
-    $("dlinks").innerHTML = `<span class="lockHint">지도 링크는 로그인 후 제공</span>`;
+    $("dlinks").innerHTML = `<span class="lockHint">지도 링크는 로그인 후 제공 드립니다.</span>`;
   }
     
    $("dOverlay").style.display = "block";
