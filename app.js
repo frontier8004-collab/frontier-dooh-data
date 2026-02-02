@@ -957,8 +957,8 @@ function updateLoadMoreUI(items){
             ${it._low ? `<span class="tag">${it._low}</span>` : ``}
           </div>
           <div class="name">${escapeHtml(it.title || "-")}</div>
-         <div class="place">${escapeHtml(guessPlace(it))}${isUnlocked() ? "" : ' <span class="lockHint">상세 주소는 로그인 후 확인하실 수 있습니다. </span>'}</div>
-         <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다. </span>'}</div>
+         <div class="place">${escapeHtml(guessPlace(it))}</div>
+        <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
          <div class="lockCta">${isUnlocked() ? "" : '<button type="button" class="lockBtn">로그인하고 확인하기</button>'}</div>
 
 
@@ -981,7 +981,7 @@ function updateLoadMoreUI(items){
       });
       el.addEventListener("click", (ev) => {
   const t = ev.target;
-  if (t && t.closest && t.closest(".lockBtn")) {
+  if (t && t.closest && t.closest(".lockLink")) {
     ev.preventDefault();
     ev.stopPropagation();
     goLogin();
@@ -1571,14 +1571,24 @@ m._key = it._key;
           ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
         </div>
         <div class="rName" title="${escapeHtml(it.title || "-")}">${escapeHtml(it.title || "-")}</div>
-        <div class="rPrice">${escapeHtml(fmtWon(it.price, it.price_unit))}</div>
+        <div class="rPrice">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
+
         <div class="rX" title="제거">✕</div>
       `;
 
-      el.addEventListener("click", () => {
-        returnToCartAfterDetail = false;
-        openDetail(it, true);
-      });
+      el.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t && t.closest && t.closest(".lockLink")) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    goLogin();
+    return;
+  }
+
+  returnToCartAfterDetail = false;
+  openDetail(it, true);
+});
+
 
       el.querySelector(".rX").addEventListener("click", (e) => {
         e.preventDefault(); e.stopPropagation();
