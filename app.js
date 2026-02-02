@@ -827,11 +827,15 @@ function isUnlocked(){
     const ln = (it._lngDisp ?? it.lng);
     map.setView([la, ln], Math.max(map.getZoom(), 15), { animate:false });
   }
-
     saveRecentKey(it._key);
     if (sethash) setHash(it._key);
   }
-
+function isUnlocked(){
+  // 임시 잠금 플래그(로그인/회원 연동 전)
+  // 콘솔에서 localStorage.setItem("frontier_unlocked","1") 하면 잠금 해제(테스트용)
+  try { return localStorage.getItem("frontier_unlocked") === "1"; }
+  catch(e){ return false; }
+}
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
