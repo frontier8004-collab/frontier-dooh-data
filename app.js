@@ -780,7 +780,11 @@ function _getPinIconByHigh(high, isHover){
     recentPage = 0;
     renderRecentPanel();
   }
-
+function isUnlocked(){
+  // TODO: 로그인/회원 연동이 붙기 전까지는 Guest(잠금) 기준으로 처리
+  // 로그인 연동 시, 이 함수만 "true/false 판별"로 교체하면 됩니다.
+  return false;
+}
   function openDetail(it, sethash){
     closeMiniPopup();
     currentOpenKey = it._key;
@@ -789,29 +793,40 @@ function _getPinIconByHigh(high, isHover){
     $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
 
     $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
+      if (isUnlocked()){
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
-    $("dop").textContent = it.operator || "문의";
+  } else {
+    $("dprice").textContent = "단가 정보는 로그인 후 제공";
+    $("daddr").textContent = "상세 위치는 로그인 후";
+  }
+  $("dop").textContent = it.operator || "문의";
 
     $("dimg").innerHTML = it.thumb
       ? `<img src="${it.thumb}" alt="">`
       : `<div class="fallback">NO IMAGE</div>`;
 
+      if (isUnlocked()){
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title||"DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
     $("dlinks").innerHTML = `
       <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
       <a href="${google}" target="_blank" rel="noopener">구글맵</a>
     `;
-
-    $("dOverlay").style.display = "block";
+  } else {
+    $("dlinks").innerHTML = `<span class="lockHint">지도 링크는 로그인 후 제공</span>`;
+  }
+    
+   $("dOverlay").style.display = "block";
 
     suspendViewportOnce = true;
     map.once("moveend", () => { suspendViewportOnce = false; updateZoomUI(); });
 
+      if (isUnlocked()){
     const la = (it._latDisp ?? it.lat);
     const ln = (it._lngDisp ?? it.lng);
     map.setView([la, ln], Math.max(map.getZoom(), 15), { animate:false });
+  }
 
     saveRecentKey(it._key);
     if (sethash) setHash(it._key);
