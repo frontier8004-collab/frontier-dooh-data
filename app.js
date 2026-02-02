@@ -249,20 +249,37 @@ let isClampingBounds = false;
 
   return u ? `${won} / ${u}` : won;
 }
-
-
   function parsePriceNumber(price){
     const s = (price ?? "").toString();
     const n = parseInt(s.replace(/[^\d]/g,""), 10);
     if (!n || isNaN(n)) return null;
     return n;
   }
-
   function guessPlace(item){
-    const addr = (item.address || "").trim();
+  const addr = (item.address || "").trim();
+  const unlocked = (typeof isUnlocked === "function") ? isUnlocked() : false;
+
+  // 로그인(해제) 상태: 기존처럼 4토큰까지 노출
+  if (unlocked){
     const toks = addr.split(" ").filter(Boolean);
     return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
   }
+
+  // Guest(잠금) 상태: 주소는 항상 **** 마스킹
+  if (!addr) return "****";
+
+  const toks = addr.split(" ").filter(Boolean);
+  const isRoad = (t) => t.endsWith("대로") || t.endsWith("로") || t.endsWith("길");
+  const isDong = (t) => t.endsWith("동") || t.endsWith("읍") || t.endsWith("면") || t.endsWith("리") || t.endsWith("가");
+
+  let idx = toks.findIndex(isRoad);
+  if (idx < 0) idx = toks.findIndex(isDong);
+  if (idx < 0) idx = Math.min(1, toks.length - 1); // 최소: 시/구까지만
+
+  const head = toks.slice(0, idx + 1).join(" ");
+  return head ? `${head} ****` : "****";
+}
+
 
   function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
@@ -958,7 +975,8 @@ function updateLoadMoreUI(items){
           </div>
           <div class="name">${escapeHtml(it.title || "-")}</div>
          <div class="place">${escapeHtml(guessPlace(it))}</div>
-        <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">상세 주소·단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
+        <div class="price">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">로그인 후 확인 가능합니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">로그인 후 확인 가능합니다.</span>')}</div>
+
        
         </div>
       `;
