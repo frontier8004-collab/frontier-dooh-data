@@ -860,7 +860,6 @@ function goLogin(){
 function isUnlocked(){
   return false;
 }
-}
 
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
