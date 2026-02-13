@@ -858,13 +858,8 @@ function goLogin(){
 }
 
 function isUnlocked(){
-  try{
-    const sp = new URLSearchParams(location.search);
-    const v = (sp.get("unlock") || "").toLowerCase().trim();
-    return (v === "1" || v === "true" || v === "y" || v === "yes");
-  }catch(e){
-    return false;
-  }
+  return false;
+}
 }
 
   function closeDetail(fromHashChange){
