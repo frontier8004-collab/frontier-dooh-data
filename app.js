@@ -862,11 +862,28 @@ function goLogin(){
 }
 
 function isUnlocked(){
-  // 임시 잠금 플래그(로그인/회원 연동 전)
-  // 콘솔에서 localStorage.setItem("frontier_unlocked","1") 하면 잠금 해제(테스트용)
-  try { return localStorage.getItem("frontier_unlocked") === "1"; }
-  catch(e){ return false; }
+  try{
+    // 1) 아임웹에서 넘어온 게이트 파라미터 (권장: ?imweb=1)
+    const sp = new URLSearchParams(location.search);
+    const imweb = (sp.get("imweb") || "").trim();
+
+    if(imweb === "1" || imweb.toLowerCase() === "true" || imweb.toLowerCase() === "yes"){
+      return true;
+    }
+
+    // 2) (보조) referrer가 프론티어 도메인이면 허용 (환경에 따라 referrer가 비어있을 수 있음)
+    const ref = (document.referrer || "");
+    if(ref.includes("frontiercorp.co.kr")){
+      return true;
+    }
+
+    // 3) (기존 유지) 로컬 테스트 플래그
+    return localStorage.getItem("frontier_unlocked") === "1";
+  }catch(e){
+    return false;
+  }
 }
+
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
