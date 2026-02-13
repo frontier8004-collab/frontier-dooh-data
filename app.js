@@ -858,9 +858,14 @@ function goLogin(){
 }
 
 function isUnlocked(){
-  return false;
+  try{
+    const sp = new URLSearchParams(location.search);
+    const v = (sp.get("unlock") || "").toLowerCase().trim();
+    return (v === "1" || v === "true" || v === "y" || v === "yes");
+  }catch(e){
+    return false;
+  }
 }
-
   function closeDetail(fromHashChange){
     $("dOverlay").style.display = "none";
     currentOpenKey = null;
