@@ -797,11 +797,7 @@ function _getPinIconByHigh(high, isHover){
     recentPage = 0;
     renderRecentPanel();
   }
-function isUnlocked(){
-  // TODO: 로그인/회원 연동이 붙기 전까지는 Guest(잠금) 기준으로 처리
-  // 로그인 연동 시, 이 함수만 "true/false 판별"로 교체하면 됩니다.
-  return false;
-}
+
   function openDetail(it, sethash){
     closeMiniPopup();
     currentOpenKey = it._key;
@@ -863,22 +859,9 @@ function goLogin(){
 
 function isUnlocked(){
   try{
-    // 1) 아임웹에서 넘어온 게이트 파라미터 (권장: ?imweb=1)
     const sp = new URLSearchParams(location.search);
-    const imweb = (sp.get("imweb") || "").trim();
-
-    if(imweb === "1" || imweb.toLowerCase() === "true" || imweb.toLowerCase() === "yes"){
-      return true;
-    }
-
-    // 2) (보조) referrer가 프론티어 도메인이면 허용 (환경에 따라 referrer가 비어있을 수 있음)
-    const ref = (document.referrer || "");
-    if(ref.includes("frontiercorp.co.kr")){
-      return true;
-    }
-
-    // 3) (기존 유지) 로컬 테스트 플래그
-    return localStorage.getItem("frontier_unlocked") === "1";
+    const v = (sp.get("unlock") || "").toLowerCase().trim();
+    return (v === "1" || v === "true" || v === "y" || v === "yes");
   }catch(e){
     return false;
   }
