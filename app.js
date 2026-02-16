@@ -1807,18 +1807,26 @@ m._key = it._key;
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
   }
-  // Phase B (MVP): infer tier from Imweb parent page
-  const FRONTIER_TIER = (() => {
-    const r = (document.referrer || "").toLowerCase();
-    if (r.includes("/dooh-korea-biz")) return "biz";
-    return "member";
-  })();
+const FRONTIER_TIER = (() => {
+  // 1) map URL 쿼리 우선 (?tier=biz / ?tier=member)
+  try {
+    const sp = new URLSearchParams(location.search);
+    const q = (sp.get("tier") || "").toLowerCase().trim();
+    if (q === "biz") return "biz";
+    if (q === "member") return "member";
+  } catch (e) {}
+
+  // 2) fallback: Imweb parent referrer 기반 (기존 방식 유지)
+  const r = (document.referrer || "").toLowerCase();
+  if (r.includes("/dooh-korea-biz")) return "biz";
+  return "member";
+})();
 
   async function fetchJsonRobust(url){
          // attach tier to DATA_URL (worker) for Phase B split
     try {
       const u = new URL(url, location.href); // relative safe
-      if (!u.searchParams.has("tier")) u.searchParams.set("tier", FRONTIER_TIER);
+     u.searchParams.set("tier", FRONTIER_TIER);
       url = u.toString();
     } catch (e) {}
 
