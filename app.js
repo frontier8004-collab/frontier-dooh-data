@@ -1807,8 +1807,21 @@ m._key = it._key;
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
   }
+  // Phase B (MVP): infer tier from Imweb parent page
+  const FRONTIER_TIER = (() => {
+    const r = (document.referrer || "").toLowerCase();
+    if (r.includes("/dooh-korea-biz")) return "biz";
+    return "member";
+  })();
 
   async function fetchJsonRobust(url){
+         // attach tier to DATA_URL (worker) for Phase B split
+    try {
+      const u = new URL(url, location.href); // relative safe
+      if (!u.searchParams.has("tier")) u.searchParams.set("tier", FRONTIER_TIER);
+      url = u.toString();
+    } catch (e) {}
+
     console.log("[DATA FETCH URL]", url);
     const res = await fetch(url, { cache:"no-store" });
     if (!res.ok){
