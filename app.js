@@ -1824,11 +1824,19 @@ const FRONTIER_TIER = (() => {
 
   async function fetchJsonRobust(url){
          // attach tier to DATA_URL (worker) for Phase B split
-    try {
-      const u = new URL(url, location.href); // relative safe
-     u.searchParams.set("tier", FRONTIER_TIER);
-      url = u.toString();
-    } catch (e) {}
+  try {
+  const u = new URL(url, location.href); // relative safe
+  u.searchParams.set("tier", FRONTIER_TIER);
+
+  // biz only: pass-through key from current page URL (?k=...)
+  if (FRONTIER_TIER === "biz") {
+    const pageK = new URLSearchParams(location.search).get("k") || "";
+    if (pageK && !u.searchParams.has("k")) u.searchParams.set("k", pageK);
+  }
+
+  url = u.toString();
+} catch (e) {}
+
 
     console.log("[DATA FETCH URL]", url);
     const res = await fetch(url, { cache:"no-store" });
