@@ -1920,15 +1920,26 @@ const FRONTIER_TIER = (() => {
 
     // ===== 데이터 로드 1회 =====
     let raw = [];
+
+    const ref = (document.referrer || "").toLowerCase();
+    const allowedRef =
+      ref.includes("/dooh-korea-member") ||
+      ref.includes("/dooh-korea-biz");
+
+    if (!allowedRef) {
+      showErrorBanner("직접 접속은 허용되지 않습니다.");
+      return;
+    }
+
     try{
       const json = await fetchJsonRobust(DATA_URL);
       raw = Array.isArray(json) ? json
-          : (Array.isArray(json.items)   ? json.items
-          :  Array.isArray(json.data)    ? json.data
-          :  Array.isArray(json.rows)    ? json.rows
-          :  Array.isArray(json.points)  ? json.points
-          :  Array.isArray(json.records) ? json.records
-          :  []);
+        : (Array.isArray(json.items)   ? json.items
+        :  Array.isArray(json.data)    ? json.data
+        :  Array.isArray(json.rows)    ? json.rows
+        :  Array.isArray(json.points)  ? json.points
+        :  Array.isArray(json.records) ? json.records
+        :  []);
       hideErrorBanner();
     }catch(err){
       console.error("[DATA LOAD FAIL]", err);
