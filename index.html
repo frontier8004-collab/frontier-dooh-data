@@ -5,12 +5,27 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex, nosnippet, noarchive" />
 <meta name="googlebot" content="noindex, nosnippet, noarchive" />
-  <script>
-  if (window.top === window.self) {
-    window.location.replace("https://frontiercorp.co.kr/dooh-korea");
-  }
+<script>
+  (function () {
+    const ref = (document.referrer || "").toLowerCase();
+    const allowedRef =
+      ref.includes("/dooh-korea-member") ||
+      ref.includes("/dooh-korea-biz");
+
+    if (!allowedRef) {
+      try {
+        if (window.top && window.top !== window) {
+          window.top.location.replace("https://frontiercorp.co.kr/dooh-korea");
+        } else {
+          window.location.replace("https://frontiercorp.co.kr/dooh-korea");
+        }
+      } catch (_) {
+        window.location.replace("https://frontiercorp.co.kr/dooh-korea");
+      }
+    }
+  })();
 </script>
-  <title>Frontier DOOH 전국 DB v1.2.2.6</title>
+  <title>Frontier DOOH 전국 DB v1.2.2.7</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
