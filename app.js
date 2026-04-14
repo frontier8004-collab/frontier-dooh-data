@@ -1921,16 +1921,29 @@ const FRONTIER_TIER = (() => {
     // ===== 데이터 로드 1회 =====
     let raw = [];
 
-    const ref = (document.referrer || "").toLowerCase();
-    const allowedRef =
-      ref.includes("/dooh-korea-member") ||
-      ref.includes("/dooh-korea-biz");
+ const ref = (document.referrer || "").toLowerCase();
+const allowedRef = (
+  ref.includes("/dooh-korea-member") ||
+  ref.includes("/dooh-korea-biz")
+);
 
-    if (!allowedRef) {
-      showErrorBanner("직접 접속은 허용되지 않습니다.");
-      return;
+if (!allowedRef) {
+  try {
+    document.documentElement.style.background = "#050505";
+    document.body.style.background = "#050505";
+  } catch (_) {}
+
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.replace("https://frontiercorp.co.kr/dooh-korea");
+    } else {
+      location.replace("https://frontiercorp.co.kr/dooh-korea");
     }
-
+  } catch (_) {
+    location.replace("https://frontiercorp.co.kr/dooh-korea");
+  }
+  return;
+}
     try{
       const json = await fetchJsonRobust(DATA_URL);
       raw = Array.isArray(json) ? json
