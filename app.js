@@ -1922,10 +1922,7 @@ const FRONTIER_TIER = (() => {
     let raw = [];
 
  const ref = (document.referrer || "").toLowerCase();
-const allowedRef = (
-  ref.includes("/dooh-korea-member") ||
-  ref.includes("/dooh-korea-biz")
-);
+const allowedRef = ref.startsWith("https://frontiercorp.co.kr");
 
 if (!allowedRef) {
   try {
