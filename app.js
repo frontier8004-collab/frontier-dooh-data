@@ -1362,7 +1362,27 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-   const sendCubeCursorToParentPoint = (x, y) => {
+   const mapCursorCube = document.getElementById("mapCursorCube");
+
+const relayMapCursor = (e) => {
+  const rect = c.getBoundingClientRect();
+
+  const insideMap =
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom;
+
+  if (!insideMap) {
+    if (mapCursorCube) {
+      mapCursorCube.style.display = "none";
+    }
+    return;
+  }
+
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
   try {
     window.parent.postMessage(
       {
@@ -1373,28 +1393,24 @@ c.focus();
       "*"
     );
   } catch (_) {}
+
+  if (mapCursorCube) {
+    mapCursorCube.style.display = "block";
+    mapCursorCube.style.left = `${x}px`;
+    mapCursorCube.style.top = `${y}px`;
+  }
 };
 
-const sendCubeCursorToParentDom = (e) => {
-  const rect = c.getBoundingClientRect();
-  sendCubeCursorToParentPoint(
-    e.clientX - rect.left,
-    e.clientY - rect.top
-  );
+const hideMapCursorCube = () => {
+  if (mapCursorCube) {
+    mapCursorCube.style.display = "none";
+  }
 };
 
-c.addEventListener("mousemove", sendCubeCursorToParentDom);
-c.addEventListener("mouseenter", sendCubeCursorToParentDom);
-
-map.on("mousemove", function(ev) {
-  const pt = map.latLngToContainerPoint(ev.latlng);
-  sendCubeCursorToParentPoint(pt.x, pt.y);
-});
-
-map.on("mouseover", function(ev) {
-  const pt = map.latLngToContainerPoint(ev.latlng);
-  sendCubeCursorToParentPoint(pt.x, pt.y);
-});
+document.addEventListener("mousemove", relayMapCursor);
+document.addEventListener("mouseleave", hideMapCursorCube);
+window.addEventListener("blur", hideMapCursorCube);
+c.addEventListener("mouseleave", hideMapCursorCube);
        const mapCursorCube = document.getElementById("mapCursorCube");
 
   if (mapCursorCube) {
