@@ -1378,6 +1378,7 @@ try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
   const relayCursorToParent = (e) => {
   try {
+     console.log("[CUBE SEND]", e.clientX, e.clientY);
     window.parent.postMessage(
       {
         type: "CUBE_CURSOR_MOVE",
