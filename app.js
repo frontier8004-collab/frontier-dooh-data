@@ -1362,55 +1362,6 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-   const mapCursorCube = document.getElementById("mapCursorCube");
-
-const relayMapCursor = (e) => {
-  const rect = c.getBoundingClientRect();
-
-  const insideMap =
-    e.clientX >= rect.left &&
-    e.clientX <= rect.right &&
-    e.clientY >= rect.top &&
-    e.clientY <= rect.bottom;
-
-  if (!insideMap) {
-    if (mapCursorCube) {
-      mapCursorCube.style.display = "none";
-    }
-    return;
-  }
-
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  try {
-    window.parent.postMessage(
-      {
-        type: "CUBE_CURSOR_MOVE",
-        x,
-        y
-      },
-      "*"
-    );
-  } catch (_) {}
-
-  if (mapCursorCube) {
-    mapCursorCube.style.display = "block";
-    mapCursorCube.style.left = `${x}px`;
-    mapCursorCube.style.top = `${y}px`;
-  }
-};
-
-const hideMapCursorCube = () => {
-  if (mapCursorCube) {
-    mapCursorCube.style.display = "none";
-  }
-};
-
-document.addEventListener("mousemove", relayMapCursor);
-document.addEventListener("mouseleave", hideMapCursorCube);
-window.addEventListener("blur", hideMapCursorCube);
-c.addEventListener("mouseleave", hideMapCursorCube);
        const mapCursorCube = document.getElementById("mapCursorCube");
 
   if (mapCursorCube) {
