@@ -1362,21 +1362,39 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-     const sendCubeCursorToParent = (e) => {
+   const sendCubeCursorToParentPoint = (x, y) => {
   try {
     window.parent.postMessage(
       {
         type: "CUBE_CURSOR_MOVE",
-        x: e.clientX,
-        y: e.clientY
+        x,
+        y
       },
       "*"
     );
   } catch (_) {}
 };
 
-c.addEventListener("mousemove", sendCubeCursorToParent);
-c.addEventListener("mouseenter", sendCubeCursorToParent);
+const sendCubeCursorToParentDom = (e) => {
+  const rect = c.getBoundingClientRect();
+  sendCubeCursorToParentPoint(
+    e.clientX - rect.left,
+    e.clientY - rect.top
+  );
+};
+
+c.addEventListener("mousemove", sendCubeCursorToParentDom);
+c.addEventListener("mouseenter", sendCubeCursorToParentDom);
+
+map.on("mousemove", function(ev) {
+  const pt = map.latLngToContainerPoint(ev.latlng);
+  sendCubeCursorToParentPoint(pt.x, pt.y);
+});
+
+map.on("mouseover", function(ev) {
+  const pt = map.latLngToContainerPoint(ev.latlng);
+  sendCubeCursorToParentPoint(pt.x, pt.y);
+});
        const mapCursorCube = document.getElementById("mapCursorCube");
 
   if (mapCursorCube) {
