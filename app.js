@@ -1394,6 +1394,49 @@ const mlMap =
 try { window.KEY = KEY; } catch (e) {}
 try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
+     if (mlMap && typeof mlMap.on === "function") {
+  const relayMlCursor = (ev) => {
+    const rect = c.getBoundingClientRect();
+    const point = ev && ev.point
+      ? ev.point
+      : (ev && ev.originalEvent
+          ? {
+              x: ev.originalEvent.clientX - rect.left,
+              y: ev.originalEvent.clientY - rect.top
+            }
+          : null);
+
+    if (!point) return;
+
+    try {
+      window.parent.postMessage(
+        {
+          type: "CUBE_CURSOR_MOVE",
+          x: point.x,
+          y: point.y
+        },
+        "*"
+      );
+    } catch (_) {}
+
+    if (mapCursorCube) {
+      mapCursorCube.style.display = "block";
+      mapCursorCube.style.left = `${point.x}px`;
+      mapCursorCube.style.top = `${point.y}px`;
+    }
+  };
+
+  mlMap.on("mousemove", relayMlCursor);
+
+  const mlCanvas = typeof mlMap.getCanvas === "function" ? mlMap.getCanvas() : null;
+  if (mlCanvas) {
+    mlCanvas.addEventListener("mouseleave", () => {
+      if (mapCursorCube) {
+        mapCursorCube.style.display = "none";
+      }
+    });
+  }
+}
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
