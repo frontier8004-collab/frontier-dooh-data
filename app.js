@@ -1376,48 +1376,31 @@ const mlMap =
 try { window.KEY = KEY; } catch (e) {}
 try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
-     if (mlMap && typeof mlMap.on === "function") {
-  const relayMlCursor = (ev) => {
+   if (mlMap) {
+  const relayMapCursorToParent = (e) => {
     const rect = c.getBoundingClientRect();
-    const point = ev && ev.point
-      ? ev.point
-      : (ev && ev.originalEvent
-          ? {
-              x: ev.originalEvent.clientX - rect.left,
-              y: ev.originalEvent.clientY - rect.top
-            }
-          : null);
 
-    if (!point) return;
+    const insideMap =
+      e.clientX >= rect.left &&
+      e.clientX <= rect.right &&
+      e.clientY >= rect.top &&
+      e.clientY <= rect.bottom;
+
+    if (!insideMap) return;
 
     try {
       window.parent.postMessage(
         {
           type: "CUBE_CURSOR_MOVE",
-          x: point.x,
-          y: point.y
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
         },
         "*"
       );
     } catch (_) {}
-
-    if (mapCursorCube) {
-      mapCursorCube.style.display = "block";
-      mapCursorCube.style.left = `${point.x}px`;
-      mapCursorCube.style.top = `${point.y}px`;
-    }
   };
 
-  mlMap.on("mousemove", relayMlCursor);
-
-  const mlCanvas = typeof mlMap.getCanvas === "function" ? mlMap.getCanvas() : null;
-  if (mlCanvas) {
-    mlCanvas.addEventListener("mouseleave", () => {
-      if (mapCursorCube) {
-        mapCursorCube.style.display = "none";
-      }
-    });
-  }
+  document.addEventListener("mousemove", relayMapCursorToParent, true);
 }
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
