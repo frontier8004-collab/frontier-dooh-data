@@ -1376,9 +1376,12 @@ const mlMap =
 try { window.KEY = KEY; } catch (e) {}
 try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
-  const relayCursorToParent = (e) => {
+  const relayCursorToParent = (ev) => {
+  const e = ev && ev.originalEvent ? ev.originalEvent : ev;
+  if (!e || typeof e.clientX !== "number" || typeof e.clientY !== "number") return;
+
   try {
-     console.log("[CUBE SEND]", e.clientX, e.clientY);
+    console.log("[CUBE SEND]", e.clientX, e.clientY);
     window.parent.postMessage(
       {
         type: "CUBE_CURSOR_MOVE",
@@ -1390,8 +1393,16 @@ applyKoreanLabelsToMapLibre(mlMap);
   } catch (_) {}
 };
 
-window.addEventListener("pointermove", relayCursorToParent, true);
-window.addEventListener("mousemove", relayCursorToParent, true);
+document.addEventListener("pointermove", relayCursorToParent, { capture: true, passive: true });
+document.addEventListener("mousemove", relayCursorToParent, { capture: true, passive: true });
+c.addEventListener("pointermove", relayCursorToParent, { capture: true, passive: true });
+c.addEventListener("mousemove", relayCursorToParent, { capture: true, passive: true });
+
+const mlCanvas = (mlMap && typeof mlMap.getCanvas === "function") ? mlMap.getCanvas() : null;
+if (mlCanvas) {
+  mlCanvas.addEventListener("pointermove", relayCursorToParent, { passive: true });
+  mlCanvas.addEventListener("mousemove", relayCursorToParent, { passive: true });
+}
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
