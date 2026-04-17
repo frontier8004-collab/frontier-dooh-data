@@ -1376,30 +1376,21 @@ const mlMap =
 try { window.KEY = KEY; } catch (e) {}
 try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
-  const relayMapCursorToParent = (e) => {
-    const rect = c.getBoundingClientRect();
+  const relayCursorToParent = (e) => {
+  try {
+    window.parent.postMessage(
+      {
+        type: "CUBE_CURSOR_MOVE",
+        x: e.clientX,
+        y: e.clientY
+      },
+      "*"
+    );
+  } catch (_) {}
+};
 
-    const insideMap =
-      e.clientX >= rect.left &&
-      e.clientX <= rect.right &&
-      e.clientY >= rect.top &&
-      e.clientY <= rect.bottom;
-
-    if (!insideMap) return;
-
-    try {
-      window.parent.postMessage(
-        {
-          type: "CUBE_CURSOR_MOVE",
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        },
-        "*"
-      );
-    } catch (_) {}
-  };
-
-  document.addEventListener("mousemove", relayMapCursorToParent, true);
+window.addEventListener("pointermove", relayCursorToParent, true);
+window.addEventListener("mousemove", relayCursorToParent, true);
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
