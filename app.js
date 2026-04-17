@@ -1376,7 +1376,6 @@ const mlMap =
 try { window.KEY = KEY; } catch (e) {}
 try { window.mlMap = mlMap; } catch (e) {}
 applyKoreanLabelsToMapLibre(mlMap);
-   if (mlMap) {
   const relayMapCursorToParent = (e) => {
     const rect = c.getBoundingClientRect();
 
@@ -1401,7 +1400,6 @@ applyKoreanLabelsToMapLibre(mlMap);
   };
 
   document.addEventListener("mousemove", relayMapCursorToParent, true);
-}
 // L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
 // maxZoom: 19,
 // attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
