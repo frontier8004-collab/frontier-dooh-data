@@ -1362,6 +1362,21 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
+     const sendCubeCursorToParent = (e) => {
+  try {
+    window.parent.postMessage(
+      {
+        type: "CUBE_CURSOR_MOVE",
+        x: e.clientX,
+        y: e.clientY
+      },
+      "*"
+    );
+  } catch (_) {}
+};
+
+c.addEventListener("mousemove", sendCubeCursorToParent);
+c.addEventListener("mouseenter", sendCubeCursorToParent);
        const mapCursorCube = document.getElementById("mapCursorCube");
 
   if (mapCursorCube) {
