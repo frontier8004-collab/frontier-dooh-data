@@ -1381,7 +1381,6 @@ applyKoreanLabelsToMapLibre(mlMap);
   if (!e || typeof e.clientX !== "number" || typeof e.clientY !== "number") return;
 
   try {
-    console.log("[CUBE SEND]", e.clientX, e.clientY);
     window.parent.postMessage(
       {
         type: "CUBE_CURSOR_MOVE",
