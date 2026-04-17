@@ -1362,24 +1362,6 @@ applyMovePolicy();
     const c = map.getContainer();
 c.setAttribute("tabindex", "0");
 c.focus();
-       const mapCursorCube = document.getElementById("mapCursorCube");
-
-  if (mapCursorCube) {
-    const moveMapCursorCube = (e) => {
-      const rect = c.getBoundingClientRect();
-      mapCursorCube.style.display = "block";
-      mapCursorCube.style.left = `${e.clientX - rect.left}px`;
-      mapCursorCube.style.top = `${e.clientY - rect.top}px`;
-    };
-
-    const hideMapCursorCube = () => {
-      mapCursorCube.style.display = "none";
-    };
-
-    c.addEventListener("mousemove", moveMapCursorCube);
-    c.addEventListener("mouseenter", moveMapCursorCube);
-    c.addEventListener("mouseleave", hideMapCursorCube);
-  }
     // MapLibre 벡터 바닥지도(검고/회색) + 한글라벨 준비
 const KEY = "WotAoBRFnYvSNdp5ox05";
 const ml = L.maplibreGL({
