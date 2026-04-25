@@ -2024,7 +2024,7 @@ if (!allowedRef) {
   return { pts, stats };
 }
 
-const { pts, stats } = sanitizePoints(raw || []);
+const { pts, stats } = sanitizePoints((raw && raw.items) || raw || []);
 console.log("[DATA_SANITIZE]", stats);
 
     const uniqueKeys = makeUniqueKeys(pts);
