@@ -1489,51 +1489,7 @@ renderMarkersAndListFromBase(base);
  
   }
 function getViewportItems(items) {
-  if (!map || typeof map.getBounds !== "function") return items;
-
-  const zoom = map.getZoom ? map.getZoom() : 7;
-
-  // 전국 첫 화면은 전체 클러스터 유지
-  if (zoom <= 8) return items;
-
-  const bounds = map.getBounds().pad(0.75);
-  const limit = window.innerWidth <= 768 ? 900 : 1800;
-  const visible = [];
-
-  for (const it of items) {
-    const la = Number(it._latDisp ?? it._lat ?? it.lat ?? it.lat_preview);
-    const ln = Number(it._lngDisp ?? it._lng ?? it.lng ?? it.lng_preview);
-
-    if (!Number.isFinite(la) || !Number.isFinite(ln)) continue;
-
-    if (bounds.contains([la, ln])) {
-      visible.push(it);
-      if (visible.length >= limit) break;
-    }
-  }
-
-  // 안전장치: bounds 계산이 꼬여 0건이면, 현재 중심점 근처 데이터라도 표시
-  if (visible.length === 0 && map.getCenter) {
-    const center = map.getCenter();
-
-    return items
-      .map(it => {
-        const la = Number(it._latDisp ?? it._lat ?? it.lat ?? it.lat_preview);
-        const ln = Number(it._lngDisp ?? it._lng ?? it.lng ?? it.lng_preview);
-
-        if (!Number.isFinite(la) || !Number.isFinite(ln)) return null;
-
-        const d = Math.abs(la - center.lat) + Math.abs(ln - center.lng);
-
-        return { item: it, d };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.d - b.d)
-      .slice(0, limit)
-      .map(v => v.item);
-  }
-
-  return visible;
+  return items;
 }
   function renderMarkers(items){
     closeMiniPopup();
