@@ -1517,23 +1517,7 @@ m._key = it._key;
         offset: L.point(0, -86)
       });
 
-      m.on("mouseover", () => {
-        if (isMapInteracting) return;
-        setHoverKey(it._key);
-        highlightClusterOnlyByKey(it._key);
-
-        clearAllCardHighlights();
-        ensureCardVisible(it._key);
-        highlightCard(it._key, false);
-      });
-
-      m.on("mouseout", () => {
-        if (isMapInteracting) return;
-        if (hoverKey === it._key) setHoverKey(null);
-        clearClusterHighlight();
-        clearAllCardHighlights();
-        if (activeMiniKey) highlightCard(activeMiniKey, false);
-      });
+      // perf: hover highlight disabled for large datasets
 
       m.on("click", (ev) => {
         try{
