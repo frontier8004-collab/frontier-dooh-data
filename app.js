@@ -1412,8 +1412,8 @@ if (mlCanvas) {
       animate:false,
       animateAddingMarkers:false,
       removeOutsideVisibleBounds:false,
-      disableClusteringAtZoom: 18,
-      maxClusterRadius: 52,
+      disableClusteringAtZoom: 22,
+      maxClusterRadius: 70,
       zoomToBoundsOnClick:false
     });
 
