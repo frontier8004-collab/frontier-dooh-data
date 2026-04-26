@@ -1488,16 +1488,42 @@ renderMarkersAndListFromBase(base);
     }, { passive:true });
  
   }
+function getViewportItems(items) {
+  if (!map || typeof map.getBounds !== "function") return items;
 
+  const zoom = map.getZoom ? map.getZoom() : 7;
+
+  // 전국 첫 화면은 웅장함 유지
+  if (zoom <= 8) return items;
+
+  const bounds = map.getBounds().pad(0.18);
+  const limit = window.innerWidth <= 768 ? 600 : 1200;
+  const visible = [];
+
+ for (const it of renderItems) {
+    const la = Number(it._latDisp ?? it.lat);
+    const ln = Number(it._lngDisp ?? it.lng);
+
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) continue;
+
+    if (bounds.contains([la, ln])) {
+      visible.push(it);
+      if (visible.length >= limit) break;
+    }
+  }
+
+  return visible;
+}
   function renderMarkers(items){
     closeMiniPopup();
     clearClusterHighlight();
     setHoverKey(null);
 
-    markerByKey.clear();
-    markers.clearLayers();
+markerByKey.clear();
+markers.clearLayers();
 
-    const ms = [];
+const renderItems = getViewportItems(items);
+const ms = [];
     for (const it of items){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
