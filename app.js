@@ -46,8 +46,8 @@ let isClampingBounds = false;
   const itemByKey = new Map();
 
   const BATCH = 36;
-  const LIST_INITIAL_LIMIT = 200;
-  const LIST_MORE_STEP = 200;
+  const LIST_INITIAL_LIMIT = 60;
+  const LIST_MORE_STEP = 60;
   const STEP  = 24;
   let renderLimit = BATCH;
   let curInView = [];
