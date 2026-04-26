@@ -45,10 +45,10 @@ let isClampingBounds = false;
   const cardByKey = new Map();
   const itemByKey = new Map();
 
-  const BATCH = 36;
+  const BATCH = 12;
   const LIST_INITIAL_LIMIT = 60;
   const LIST_MORE_STEP = 60;
-  const STEP  = 24;
+  const STEP = 8;
   let renderLimit = BATCH;
   let curInView = [];
   let curBase = [];
