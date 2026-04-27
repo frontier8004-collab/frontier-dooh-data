@@ -20,6 +20,10 @@
   ];
    
   const HOME_ZOOM = 8;
+  const HIGH_ZOOM_DENSITY_START_ZOOM = 12; // 표시 줌 6 이상(내부 zoom = 표시 + 6)
+const HIGH_ZOOM_DENSITY_CELL_PX = 44;
+const HIGH_ZOOM_DENSITY_MAX_MARKERS = 900;
+const CLUSTER_CLICK_SAFE_MAX_ZOOM = 11; // 클러스터 클릭으로 위험 고줌 진입 방지 
   const HOME_BOUNDS_FIXED = { north:39.5, south:33.0, west:122.8, east:131.2 };
   const HOME_CENTER_SHIFT = { upPct:-0, leftPct:-0 };
 const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FIXED.west], [HOME_BOUNDS_FIXED.north, HOME_BOUNDS_FIXED.east]]);
@@ -42,9 +46,16 @@ const HOME_MAX_BOUNDS = L.latLngBounds([[HOME_BOUNDS_FIXED.south, HOME_BOUNDS_FI
 let isClampingBounds = false;
 
   const markerByKey = new Map();
-  const cardByKey = new Map();
-  const itemByKey = new Map();
+const markerCacheByKey = new Map();
+const MARKER_CACHE_LIMIT = 4000;
 
+const cardByKey = new Map();
+
+const renderedKeys = new Set();
+const markerVisualStateByKey = new Map();
+let hasCurBase = false;
+
+const itemByKey = new Map(); 
   const BATCH = 12;
   const LIST_INITIAL_LIMIT = 60;
   const LIST_MORE_STEP = 60;
@@ -52,7 +63,8 @@ let isClampingBounds = false;
   let renderLimit = BATCH;
   let curInView = [];
   let curBase = [];
-
+let curCategoryBase = null;
+   
   let currentOpenKey = null;
   let suppressHashHandler = false;
 
@@ -90,7 +102,21 @@ let isClampingBounds = false;
   let lastInViewHash = "";
 
   const $ = (id) => document.getElementById(id);
+function touchMarkerCache(key, marker){
+  if (!key || !marker) return;
+  if (markerCacheByKey.has(key)) markerCacheByKey.delete(key);
+  markerCacheByKey.set(key, marker);
+}
 
+function pruneMarkerCache(keepKeys){
+  if (markerCacheByKey.size <= MARKER_CACHE_LIMIT) return;
+  for (const [key, marker] of markerCacheByKey){
+    if (markerCacheByKey.size <= MARKER_CACHE_LIMIT) break;
+    if (keepKeys && keepKeys.has(key)) continue;
+    try{ marker && marker.closePopup && marker.closePopup(); }catch(_){}
+    markerCacheByKey.delete(key);
+  }
+}
   function showErrorBanner(msg){
     const b = $("errBanner");
     if (!b) return;
@@ -482,21 +508,24 @@ let isClampingBounds = false;
     return false;
   }
 
-  function getFilteredBase(){
-    const catSel = $("catHigh");
-    const high = catSel ? catSel.value : "";
-    const qRaw = (activeQuery || "").trim();
+  function getCategoryBase(){
+  const catSel = $("catHigh");
+  const high = catSel ? catSel.value : "";
+  if (!high) return ALL;
+  return ALL.filter(x => x._high === high);
+}
 
-    let arr = ALL;
+function applySearchOnBase(base){
+  const qRaw = (activeQuery || "").trim();
+  if (!qRaw) return base;
+  const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
+  return base.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
+}
 
-    if (qRaw){
-      const tokens = qRaw.split(/\s+/).map(s=>s.trim()).filter(Boolean);
-      arr = arr.filter(x => tokens.every(tok => tokenMatchItem(tok, x)));
-    }
-
-    if (high) arr = arr.filter(x => x._high === high);
-    return arr;
-  }
+function getFilteredBase(){
+  const catBase = curCategoryBase || getCategoryBase();
+  return applySearchOnBase(catBase);
+}
 
   /* ===== ICONS ===== */
   function pinSvg(fill, stroke){
@@ -1201,7 +1230,8 @@ updateLoadMoreUI(items);
 
   function renderMarkersAndListFromBase(base){
     curBase = base;
-
+hasCurBase = true;
+     
     if (currentOpenKey){
       const exists = base.some(x => x._key === currentOpenKey);
       if (!exists) closeDetail(false);
@@ -1448,10 +1478,10 @@ if (mlCanvas) {
       const bb = e.layer && e.layer.getBounds ? e.layer.getBounds() : null;
 
       if (bb && bb.isValid && bb.isValid()){
-     map.flyToBounds(bb, { padding:[90,90], maxZoom: 18, animate:true, duration:1.0, easeLinearity:0.25 });
+     map.flyToBounds(bb, { padding:[90,90], maxZoom: CLUSTER_CLICK_SAFE_MAX_ZOOM, animate:true, duration:1.0, easeLinearity:0.25 });
       }else if (e.layer && e.layer.getLatLng){
         const ll = e.layer.getLatLng();
-      map.flyTo(ll, Math.min(map.getZoom() + 2, 18), { animate:true, duration:1.0, easeLinearity:0.25 });
+      map.flyTo(ll, Math.min(map.getZoom() + 2, CLUSTER_CLICK_SAFE_MAX_ZOOM), { animate:true, duration:1.0, easeLinearity:0.25 });
       }
     });
 
@@ -1463,7 +1493,7 @@ if (mlCanvas) {
     map.on("dragstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
    map.on("dragend", () => {
   isMapInteracting = false;
-  const base = getFilteredBase();
+  const base = hasCurBase ? curBase : getFilteredBase();
   renderMarkersAndListFromBase(base);
 });
     map.on("zoomstart", ()=>{ isMapInteracting = true; hideClusterHint(); closeMiniPopup(); clearAllMarkerStates(); clearAllCardHighlights(); });
@@ -1471,7 +1501,7 @@ if (mlCanvas) {
   isMapInteracting = false;
   forceIntegerZoom();
   applyMovePolicy();
-       const base = getFilteredBase();
+   const base = hasCurBase ? curBase : getFilteredBase();
 renderMarkersAndListFromBase(base);
 });
 
@@ -1489,29 +1519,106 @@ renderMarkersAndListFromBase(base);
  
   }
 function getViewportItems(items) {
-  return items;
+  if (!map) return items;
+  const zi = Math.round(map.getZoom());
+  if (zi <= HOME_ZOOM) return items;
+
+  const b = map.getBounds();
+  const visible = items.filter(it => {
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    return b.contains([la, ln]);
+  });
+
+  if (activeMiniKey && !visible.some(x => x._key === activeMiniKey)){
+    const active = items.find(x => x._key === activeMiniKey);
+    if (active) visible.push(active);
+  }
+
+  if (zi < HIGH_ZOOM_DENSITY_START_ZOOM) return visible;
+
+  const deduped = [];
+  const occupied = new Set();
+  const maxN = HIGH_ZOOM_DENSITY_MAX_MARKERS;
+
+  for (const it of visible){
+    if (deduped.length >= maxN) break;
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    let p = null;
+    try{ p = map.latLngToContainerPoint([la, ln]); }catch(_){}
+    if (!p) continue;
+
+    const gx = Math.floor(p.x / HIGH_ZOOM_DENSITY_CELL_PX);
+    const gy = Math.floor(p.y / HIGH_ZOOM_DENSITY_CELL_PX);
+    const gk = gx + "|" + gy;
+    if (occupied.has(gk)) continue;
+    occupied.add(gk);
+    deduped.push(it);
+  }
+
+  if (activeMiniKey && !deduped.some(x => x._key === activeMiniKey)){
+    const active = visible.find(x => x._key === activeMiniKey) || items.find(x => x._key === activeMiniKey);
+    if (active) deduped.push(active);
+  }
+  return deduped;
 }
-  function renderMarkers(items){
-    closeMiniPopup();
-    clearClusterHighlight();
-    setHoverKey(null);
 
-markerByKey.clear();
-markers.clearLayers();
+function renderMarkers(items){
+  clearClusterHighlight();
+  setHoverKey(null);
 
-const renderItems = getViewportItems(items);
-const ms = [];
-    for (const it of items){
-      const la = (it._latDisp ?? it.lat);
-      const ln = (it._lngDisp ?? it.lng);
+  const renderItems = getViewportItems(items);
+  const keepKeys = new Set(renderItems.map(x => x._key));
+  if (activeMiniKey) keepKeys.add(activeMiniKey);
 
-      const high = __getHighSafe(it);
-const m = L.marker([la, ln], { icon: _getPinIconByHigh(high, false) });
-m._high = high;
-m._key = it._key;
+  const nextKeys = new Set(renderItems.map(x => x._key));
 
+  function visualSigFor(it, high){
+    const isActive = (it._key === activeMiniKey) ? 1 : 0;
+    const isHover  = (it._key === hoverKey) ? 1 : 0;
+    return `${high}|${isActive}|${isHover}`;
+  }
 
-      m.bindPopup(miniPopupHtml(it), {
+  function latLngChanged(m, la, ln){
+    try{
+      const ll = m.getLatLng ? m.getLatLng() : null;
+      return !ll || ll.lat !== la || ll.lng !== ln;
+    }catch(_){ return true; }
+  }
+
+  // 제거 (diff remove)
+  for (const key of Array.from(renderedKeys)){
+    if (nextKeys.has(key)) continue;
+    const m = markerCacheByKey.get(key);
+    if (!m){
+      renderedKeys.delete(key);
+      markerVisualStateByKey.delete(key);
+      markerByKey.delete(key);
+      continue;
+    }
+    try{
+      markers.removeLayer(m);
+      renderedKeys.delete(key);
+      markerVisualStateByKey.delete(key);
+      markerByKey.delete(key);
+    }catch(_){}
+  }
+
+  markerByKey.clear();
+  const addList = [];
+
+  for (const it of renderItems){
+    const la = (it._latDisp ?? it.lat);
+    const ln = (it._lngDisp ?? it.lng);
+    const high = __getHighSafe(it);
+
+    let m = markerCacheByKey.get(it._key);
+
+    if (!m){
+      m = L.marker([la, ln], { icon: _getPinIconByHigh(high, false) });
+
+      m.bindPopup("", {
         closeButton:false,
         autoClose:true,
         closeOnClick:false,
@@ -1520,9 +1627,15 @@ m._key = it._key;
         offset: L.point(0, -86)
       });
 
-      // perf: hover highlight disabled for large datasets
+      m.on("popupopen", () => {
+        const live = itemByKey.get(m._key);
+        if (!live) return;
+        try{ m.setPopupContent(miniPopupHtml(live)); }catch(_){}
+      });
 
       m.on("click", (ev) => {
+        const live = itemByKey.get(m._key) || it;
+
         try{
           if (ev && ev.originalEvent){
             L.DomEvent.stopPropagation(ev.originalEvent);
@@ -1531,33 +1644,64 @@ m._key = it._key;
         }catch(_){}
 
         suspendViewportOnce = true;
-        map.once("moveend", () => { suspendViewportOnce = false; updateZoomUI(); });
+        map.once("moveend", () => { suspendViewportOnce = false; });
 
         try{ map.panTo(m.getLatLng(), { animate:true, duration:0.35 }); }catch(_){}
 
-        if (activeMiniKey === it._key && m.isPopupOpen && m.isPopupOpen()){
-          returnToCartAfterDetail = false;
-          openDetail(it, true);
+        if (activeMiniKey === live._key && m.isPopupOpen && m.isPopupOpen()){
           return;
         }
-        openMiniPopupFor(it, m);
+        openMiniPopupFor(live, m);
       });
 
       m.on("popupclose", () => {
-        if (activeMiniKey === it._key){
+        if (activeMiniKey === m._key){
           setActiveMiniKey(null);
-          updateMarkerVisual(it._key);
+          updateMarkerVisual(m._key);
           clearAllCardHighlights();
         }
       });
-
-      markerByKey.set(it._key, m);
-      ms.push(m);
     }
 
-    markers.addLayers(ms);
+    if (latLngChanged(m, la, ln)) m.setLatLng([la, ln]);
+
+    m._high = high;
+    m._key = it._key;
+
+    const nextSig = visualSigFor(it, high);
+    const prevSig = markerVisualStateByKey.get(it._key);
+
+    if (prevSig !== nextSig){
+      try{
+        m.setIcon(_getPinIconByHigh(high, (it._key === activeMiniKey) || (it._key === hoverKey)));
+      }catch(_){}
+      markerVisualStateByKey.set(it._key, nextSig);
+    }
+
+    markerByKey.set(it._key, m);
+    touchMarkerCache(it._key, m);
+
+    if (!renderedKeys.has(it._key)){
+      addList.push({ key: it._key, marker: m });
+    }
   }
 
+  for (const row of addList){
+    try{
+      markers.addLayer(row.marker);
+      renderedKeys.add(row.key);
+    }catch(_){}
+  }
+
+  for (const key of Array.from(renderedKeys)){
+    if (!nextKeys.has(key)){
+      renderedKeys.delete(key);
+      markerVisualStateByKey.delete(key);
+    }
+  }
+
+  pruneMarkerCache(keepKeys);
+}
   function clampRecentPage(total){
     const pages = Math.max(1, Math.ceil(total / RECENT_PAGE_SIZE));
     if (recentPage < 0) recentPage = 0;
@@ -1778,7 +1922,8 @@ m._key = it._key;
 
     pinnedTopKey = null;
 
-    const base = getFilteredBase();
+    const catBase = curCategoryBase || getCategoryBase();
+const base = applySearchOnBase(catBase);
     renderMarkersAndListFromBase(base);
 
     if (qVal && base.length){
@@ -1816,7 +1961,7 @@ m._key = it._key;
     pinnedTopKey = null;
 
     applyHomeView(true);
-
+curCategoryBase = getCategoryBase();
     const base = getFilteredBase();
     renderMarkersAndListFromBase(base);
   }
@@ -2076,7 +2221,8 @@ console.log("[DATA_SANITIZE]", stats);
 
     $("catHigh").addEventListener("change", () => {
       pinnedTopKey = null;
-      const base = getFilteredBase();
+      curCategoryBase = getCategoryBase();
+const base = applySearchOnBase(curCategoryBase);
       renderMarkersAndListFromBase(base);
     });
 
@@ -2141,7 +2287,8 @@ console.log("[DATA_SANITIZE]", stats);
       else closeDetail(true);
     });
 
-    const base = getFilteredBase();
+    curCategoryBase = getCategoryBase();
+const base = applySearchOnBase(curCategoryBase);
     renderMarkersAndListFromBase(base);
     openDetailByHash();
   }
