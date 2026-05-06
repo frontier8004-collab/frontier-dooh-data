@@ -1848,7 +1848,7 @@ const FRONTIER_TIER = (() => {
   }
       // test only: pass-through version from current page URL (?version=v0_8_0)
       const pageVersion = new URLSearchParams(location.search).get("version") || "";
-      if (["v0_8_0", "v0_8_1"].includes(pageVersion) && !u.searchParams.has("version")) {
+      if (/^v\d+_\d+_\d+$/.test(pageVersion) && !u.searchParams.has("version")) {
   u.searchParams.set("version", pageVersion);
 }
   url = u.toString();
