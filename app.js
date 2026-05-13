@@ -1680,7 +1680,7 @@ m._key = it._key;
           ${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="fallback">NO IMAGE</div>`}
         </div>
         <div class="rName" title="${escapeHtml(it.title || "-")}">${escapeHtml(it.title || "-")}</div>
-        <div class="rPrice">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
+        <div class="rPrice">${isUnlocked() ? escapeHtml(fmtWon(it.price, it.price_unit)) : (getLoginUrl() ? '<span class="lockHint">가 정보는 로그인 후 확인하실 수 있습니다. <span class="lockLink" style="color:#a2decc; text-decoration:underline; cursor:pointer; font-weight:600;">로그인</span></span>' : '<span class="lockHint">단가 정보는 로그인 후 확인하실 수 있습니다.</span>')}</div>
 
         <div class="rX" title="제거">✕</div>
       `;
