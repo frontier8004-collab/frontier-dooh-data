@@ -255,38 +255,113 @@ let isClampingBounds = false;
     if (!n || isNaN(n)) return null;
     return n;
   }
-function getMemberAddress(item){
-  const values = [
-    item.display_address,
-    item.address,
-    item.addr,
-    item.road_address,
-    item.address_road,
-    item.addr_road,
-    item.full_address,
-    item.location_address,
-    item.jibun_address,
-    item.address_jibun,
-    item.addr_jibun,
-    item.source_address,
-    item.raw_address,
-    item.submitted_address,
-    item.address_raw,
-    item.address_query
+
+  function getMemberAddress(item){
+  const bad = (value) => {
+    const s = (value ?? "").toString().trim();
+    if (!s) return true;
+    if (s.includes("****")) return true;
+    if (s.includes("상세 위치 문의")) return true;
+    if (s.includes("상세주소 문의")) return true;
+    if (s.includes("상세 위치와 조건")) return true;
+    if (s.includes("로그인 후")) return true;
+    if (s.includes("문의해 주세요")) return true;
+    if (s === "-") return true;
+    return false;
+  };
+
+  const looksLikeAddress = (value) => {
+    const s = (value ?? "").toString().trim();
+    if (bad(s)) return false;
+    if (s.length < 6) return false;
+    if (/^https?:\/\//i.test(s)) return false;
+
+    const hasRegion =
+      /(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|특별시|광역시|특별자치|도|시|군|구)/.test(s);
+
+    const hasAddressToken =
+      /(대로|로|길|동|읍|면|리|번지|산\s?\d|\d{1,5}(-\d{1,5})?)/.test(s);
+
+    return hasRegion && hasAddressToken;
+  };
+
+  const directKeys = [
+    "display_address",
+    "address",
+    "addr",
+    "road_address",
+    "address_road",
+    "addr_road",
+    "full_address",
+    "location_address",
+    "jibun_address",
+    "address_jibun",
+    "addr_jibun",
+    "source_address",
+    "raw_address",
+    "submitted_address",
+    "address_raw",
+    "address_query",
+
+    "주소",
+    "도로명주소",
+    "지번주소",
+    "소재지",
+    "소재지주소",
+    "설치주소",
+    "매체주소",
+    "위치주소",
+    "위치",
+    "장소",
+    "상세주소",
+    "기본주소"
   ];
 
-  for (const v of values){
-    const s = (v ?? "").toString().trim();
-    if (!s) continue;
-    if (s.includes("****")) continue;
-    if (s.includes("상세 위치 문의")) continue;
-    if (s.includes("상세주소 문의")) continue;
-    if (s === "-") continue;
-    return s;
+  for (const key of directKeys){
+    const s = (item?.[key] ?? "").toString().trim();
+    if (looksLikeAddress(s)) return s;
+  }
+
+  for (const [key, value] of Object.entries(item || {})){
+    const k = String(key).toLowerCase();
+
+    if (
+      k.includes("title") ||
+      k.includes("name") ||
+      k.includes("category") ||
+      k.includes("media") ||
+      k.includes("group") ||
+      k.includes("price") ||
+      k.includes("cost") ||
+      k.includes("operator") ||
+      k.includes("source") ||
+      k.includes("notice") ||
+      k.includes("desc") ||
+      k.includes("thumb") ||
+      k.includes("image") ||
+      k.includes("img") ||
+      k.includes("url") ||
+      k.includes("link") ||
+      k.includes("id") ||
+      k.includes("key") ||
+      k.includes("lat") ||
+      k.includes("lng") ||
+      k.includes("coord") ||
+      k.includes("status") ||
+      k.includes("memo") ||
+      k.includes("tag")
+    ) {
+      continue;
+    }
+
+    if (typeof value !== "string") continue;
+
+    const s = value.trim();
+    if (looksLikeAddress(s)) return s;
   }
 
   return "";
-}
+} 
 
 function guessPlace(item){
   if (isUnlocked()){
