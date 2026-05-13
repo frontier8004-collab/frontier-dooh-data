@@ -255,55 +255,46 @@ let isClampingBounds = false;
     if (!n || isNaN(n)) return null;
     return n;
   }
-function guessPlace(item){
-  const addr = [
-  item.display_address,
-  item.address,
-  item.addr,
-  item.road_address,
-  item.address_road,
-  item.addr_road,
-  item.full_address,
-  item.location_address,
-  item.jibun_address,
-  item.address_jibun,
-  item.addr_jibun,
-  item.source_address,
-  item.raw_address,
-  item.submitted_address,
-  item.address_raw,
-  item.address_query
-]
-  .map(v => (v ?? "").toString().trim())
-  .find(Boolean) || "";
+function getMemberAddress(item){
+  const values = [
+    item.display_address,
+    item.address,
+    item.addr,
+    item.road_address,
+    item.address_road,
+    item.addr_road,
+    item.full_address,
+    item.location_address,
+    item.jibun_address,
+    item.address_jibun,
+    item.addr_jibun,
+    item.source_address,
+    item.raw_address,
+    item.submitted_address,
+    item.address_raw,
+    item.address_query
+  ];
 
-  const unlocked = (typeof isUnlocked === "function") ? isUnlocked() : false;
-
-  // 회원 상태: 마스킹하지 않는다.
-  // 단, 실제 주소가 아니라 "상세 위치 문의" 계열이면 안내 문구로 정리한다.
-  if (unlocked) {
-    if (!addr) return "상세 위치와 조건은 프론티어에 문의해 주세요.";
-    if (addr.includes("상세 위치 문의") || addr.includes("상세주소 문의")) {
-      return "상세 위치와 조건은 프론티어에 문의해 주세요.";
-    }
-    return addr;
+  for (const v of values){
+    const s = (v ?? "").toString().trim();
+    if (!s) continue;
+    if (s.includes("****")) continue;
+    if (s.includes("상세 위치 문의")) continue;
+    if (s.includes("상세주소 문의")) continue;
+    if (s === "-") continue;
+    return s;
   }
 
-  // 비회원 상태: 주소는 마스킹한다.
-  if (!addr) return "****";
-
-  const toks = addr.split(" ").filter(Boolean);
-  const isRoad = (t) => t.endsWith("대로") || t.endsWith("로") || t.endsWith("길");
-  const isDong = (t) => t.endsWith("동") || t.endsWith("읍") || t.endsWith("면") || t.endsWith("리") || t.endsWith("가");
-
-  let idx = toks.findIndex(isRoad);
-  if (idx < 0) idx = toks.findIndex(isDong);
-  if (idx < 0) idx = Math.min(1, toks.length - 1);
-
-  const head = toks.slice(0, idx + 1).join(" ");
-  return head ? `${head} ****` : "****";
+  return "";
 }
 
+function guessPlace(item){
+  if (isUnlocked()){
+    return getMemberAddress(item) || "상세 위치와 조건은 프론티어에 문의해 주세요.";
+  }
+
+  return "상세 위치는 로그인 후 확인하실 수 있습니다.";
+}
 
   function norm(s){ return (s ?? "").toString().toLowerCase().replace(/\s+/g,""); }
 
