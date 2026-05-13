@@ -365,7 +365,7 @@ let isClampingBounds = false;
 
 function guessPlace(item){
   if (isUnlocked()){
-    return getMemberAddress(item) || "상세 위치와 조건은 프론티어에 문의해 주세요.";
+    return getMemberAddress(item) || "정확한 위치와 집행 조건은 프론티어 상담을 통해 확인하실 수 있습니다.";
   }
 
   return "상세 위치는 로그인 후 확인하실 수 있습니다.";
@@ -921,14 +921,20 @@ function openDetail(it, sethash){
   );
 
   const notice = badText(noticeRaw)
-    ? "상세 위치와 조건은 프론티어에 문의해 주세요."
+    ? "정확한 위치와 집행 조건은 프론티어 상담을 통해 확인하실 수 있습니다."
     : noticeRaw;
 
  const addressCandidate = getMemberAddress(it);
 
   const priceText = unlocked
-    ? pick(it.price_display, fmtWon(it.price, it.price_unit), "문의")
-    : "가격 정보는 로그인 후 확인하실 수 있습니다.";
+  ? (() => {
+      const p = pick(it.price_display, fmtWon(it.price, it.price_unit), "");
+      if (!p || p === "문의" || p === "문의 필요" || p === "문의필요") {
+        return "상담 후 안내";
+      }
+      return p;
+    })()
+  : "가격 정보는 로그인 후 확인하실 수 있습니다.";
 
   const addressText = unlocked
     ? (badText(addressCandidate) ? notice : addressCandidate)
@@ -942,8 +948,8 @@ function openDetail(it, sethash){
   $("daddr").textContent = addressText;
 
   $("dop").textContent = unlocked
-    ? "프론티어에 문의해 주세요."
-    : "로그인 후 문의하실 수 있습니다.";
+  ? "해당 매체의 집행 가능 여부와 조건은 프론티어를 통해 안내드립니다."
+  : "로그인 후 문의하실 수 있습니다.";
 
   $("dimg").innerHTML = it.thumb
     ? `<img src="${it.thumb}" alt="">`
