@@ -255,17 +255,42 @@ let isClampingBounds = false;
     if (!n || isNaN(n)) return null;
     return n;
   }
-  function guessPlace(item){
-  const addr = (item.address || "").trim();
+function guessPlace(item){
+  const pick = (...vals) => {
+    for (const v of vals) {
+      const s = (v ?? "").toString().trim();
+      if (s) return s;
+    }
+    return "";
+  };
+
+  const addr = pick(
+    item.display_address,
+    item.address,
+    item.road_address,
+    item.address_road,
+    item.full_address,
+    item.location_address,
+    item.source_address,
+    item.raw_address,
+    item.submitted_address,
+    item.address_raw,
+    item.address_query
+  );
+
   const unlocked = (typeof isUnlocked === "function") ? isUnlocked() : false;
 
-  // 로그인(해제) 상태: 기존처럼 4토큰까지 노출
-  if (unlocked){
-    const toks = addr.split(" ").filter(Boolean);
-    return toks.slice(0, Math.min(4, toks.length)).join(" ") || (item.title || "-");
+  // 회원 상태: 마스킹하지 않는다.
+  // 단, 실제 주소가 아니라 "상세 위치 문의" 계열이면 안내 문구로 정리한다.
+  if (unlocked) {
+    if (!addr) return "상세 위치와 조건은 프론티어에 문의해 주세요.";
+    if (addr.includes("상세 위치 문의") || addr.includes("상세주소 문의")) {
+      return "상세 위치와 조건은 프론티어에 문의해 주세요.";
+    }
+    return addr;
   }
 
-  // Guest(잠금) 상태: 주소는 항상 **** 마스킹
+  // 비회원 상태: 주소는 마스킹한다.
   if (!addr) return "****";
 
   const toks = addr.split(" ").filter(Boolean);
@@ -274,7 +299,7 @@ let isClampingBounds = false;
 
   let idx = toks.findIndex(isRoad);
   if (idx < 0) idx = toks.findIndex(isDong);
-  if (idx < 0) idx = Math.min(1, toks.length - 1); // 최소: 시/구까지만
+  if (idx < 0) idx = Math.min(1, toks.length - 1);
 
   const head = toks.slice(0, idx + 1).join(" ");
   return head ? `${head} ****` : "****";
@@ -810,7 +835,7 @@ function _getPinIconByHigh(high, isHover){
     $("dprice").textContent = fmtWon(it.price, it.price_unit);
     $("daddr").textContent = it.address || "-";
   } else {
-    $("dprice").textContent = "단가 정보는 로그인 후 확인하실 수 있습니다.";
+    $("dprice").textContent = "가 정보는 로그인 후 확인하실 수 있습니다.";
     $("daddr").textContent = "상세 주소는 로그인 후 확인하실 수 있습니다";
   }
   $("dop").textContent = it.operator || "문의";
