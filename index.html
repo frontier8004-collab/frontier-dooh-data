@@ -9,7 +9,7 @@
   (function () {
     const ref = (document.referrer || "").toLowerCase();
     const allowedRef = ref.startsWith("https://frontiercorp.co.kr");
-
+    
     if (!allowedRef) {
       try {
         if (window.top && window.top !== window) {
