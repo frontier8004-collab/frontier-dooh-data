@@ -256,27 +256,24 @@ let isClampingBounds = false;
     return n;
   }
 function guessPlace(item){
-  const pick = (...vals) => {
-    for (const v of vals) {
-      const s = (v ?? "").toString().trim();
-      if (s) return s;
-    }
-    return "";
-  };
-
   const addr = pick(
-    item.display_address,
-    item.address,
-    item.road_address,
-    item.address_road,
-    item.full_address,
-    item.location_address,
-    item.source_address,
-    item.raw_address,
-    item.submitted_address,
-    item.address_raw,
-    item.address_query
-  );
+  item.display_address,
+  item.address,
+  item.addr,
+  item.road_address,
+  item.address_road,
+  item.addr_road,
+  item.full_address,
+  item.location_address,
+  item.jibun_address,
+  item.address_jibun,
+  item.addr_jibun,
+  item.source_address,
+  item.raw_address,
+  item.submitted_address,
+  item.address_raw,
+  item.address_query
+);
 
   const unlocked = (typeof isUnlocked === "function") ? isUnlocked() : false;
 
@@ -860,18 +857,23 @@ function openDetail(it, sethash){
     : noticeRaw;
 
   const addressCandidate = pick(
-    it.full_address,
-    it.road_address,
-    it.address_road,
-    it.location_address,
-    it.source_address,
-    it.raw_address,
-    it.submitted_address,
-    it.address_raw,
-    it.address_query,
-    it.display_address,
-    it.address
-  );
+  it.display_address,
+  it.address,
+  it.addr,
+  it.road_address,
+  it.address_road,
+  it.addr_road,
+  it.full_address,
+  it.location_address,
+  it.jibun_address,
+  it.address_jibun,
+  it.addr_jibun,
+  it.source_address,
+  it.raw_address,
+  it.submitted_address,
+  it.address_raw,
+  it.address_query
+);
 
   const priceText = unlocked
     ? pick(it.price_display, fmtWon(it.price, it.price_unit), "문의")
