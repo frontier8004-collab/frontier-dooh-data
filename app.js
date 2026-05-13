@@ -837,7 +837,7 @@ function openDetail(it, sethash){
     return "";
   };
 
-  const isMaskedOrPlaceholder = (value) => {
+  const badText = (value) => {
     const s = (value ?? "").toString().trim();
     if (!s) return true;
     return (
@@ -848,11 +848,16 @@ function openDetail(it, sethash){
     );
   };
 
-  const serviceNotice = pick(
+  const noticeRaw = pick(
     it.service_notice,
-    it.description_short,
-    "상세 위치와 조건은 프론티어에 문의해 주세요."
+    it.modal_notice,
+    it.public_notice,
+    it.description_short
   );
+
+  const notice = badText(noticeRaw)
+    ? "상세 위치와 조건은 프론티어에 문의해 주세요."
+    : noticeRaw;
 
   const addressCandidate = pick(
     it.full_address,
@@ -873,36 +878,36 @@ function openDetail(it, sethash){
     : "가격 정보는 로그인 후 확인하실 수 있습니다.";
 
   const addressText = unlocked
-    ? (isMaskedOrPlaceholder(addressCandidate) ? serviceNotice : addressCandidate)
+    ? (badText(addressCandidate) ? notice : addressCandidate)
     : "상세 주소는 로그인 후 확인하실 수 있습니다.";
 
-  $("#dt").textContent = it.title || "-";
-  $("#ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
-  $("#dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
+  $("dt").textContent = it.title || "-";
+  $("ds").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
+  $("dcat").textContent = `${it._high || "-"}${it._low ? " > " + it._low : ""}`;
 
-  $("#dprice").textContent = priceText;
-  $("#daddr").textContent = addressText;
+  $("dprice").textContent = priceText;
+  $("daddr").textContent = addressText;
 
-  $("#dop").textContent = unlocked
+  $("dop").textContent = unlocked
     ? "프론티어에 문의해 주세요."
     : "로그인 후 문의하실 수 있습니다.";
 
-  $("#dimg").innerHTML = it.thumb
+  $("dimg").innerHTML = it.thumb
     ? `<img src="${it.thumb}" alt="">`
     : `<div class="fallback">NO IMAGE</div>`;
 
   if (unlocked){
     const kakao = `https://map.kakao.com/link/map/${encodeURIComponent(it.title || "DOOH")},${it.lat},${it.lng}`;
     const google = `https://www.google.com/maps?q=${it.lat},${it.lng}`;
-    $("#dlinks").innerHTML = `
+    $("dlinks").innerHTML = `
       <a href="${kakao}" target="_blank" rel="noopener">카카오맵</a>
       <a href="${google}" target="_blank" rel="noopener">구글맵</a>
     `;
   } else {
-    $("#dlinks").innerHTML = `<span class="lockHint">지도 링크는 로그인 후 제공됩니다.</span>`;
+    $("dlinks").innerHTML = `<span class="lockHint">지도 링크는 로그인 후 제공됩니다.</span>`;
   }
 
-  $("#doverlay").style.display = "block";
+  $("dOverlay").style.display = "block";
 
   suspendViewportOnce = true;
   map.once("moveend", () => {
