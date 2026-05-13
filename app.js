@@ -256,7 +256,7 @@ let isClampingBounds = false;
     return n;
   }
 function guessPlace(item){
-  const addr = pick(
+  const addr = [
   item.display_address,
   item.address,
   item.addr,
@@ -273,7 +273,9 @@ function guessPlace(item){
   item.submitted_address,
   item.address_raw,
   item.address_query
-);
+]
+  .map(v => (v ?? "").toString().trim())
+  .find(Boolean) || "";
 
   const unlocked = (typeof isUnlocked === "function") ? isUnlocked() : false;
 
