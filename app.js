@@ -1641,7 +1641,7 @@ markers.clearLayers();
 
 const renderItems = getViewportItems(items);
 const ms = [];
-    for (const it of items){
+    for (const it of renderItems){
       const la = (it._latDisp ?? it.lat);
       const ln = (it._lngDisp ?? it.lng);
 
