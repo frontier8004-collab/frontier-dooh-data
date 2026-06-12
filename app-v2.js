@@ -803,9 +803,10 @@
         items_by_node: itemsByNode,
         item_to_leaf_node: itemToLeafNode,
         item_to_node_ids: itemToNodeIds,
-        node_ids_by_item_id: nodeIdsByItemId,
+        node_ids_by_item_id: leafNodeIdsByItemId,
+        node_path_ids_by_item_id: nodeIdsByItemId,
         leaf_node_ids_by_item_id: leafNodeIdsByItemId,
-        _node_ids_by_item_id: nodeIdsByItemId,
+        _node_ids_by_item_id: leafNodeIdsByItemId,
         levels: {
           root: 1,
           sido: nodes.filter(n => n.type === "sido").length,
@@ -814,8 +815,9 @@
         }
       });
 
-      this._node_ids_by_item_id = new Map(Object.entries(nodeIdsByItemId));
+      this._node_ids_by_item_id = new Map(Object.entries(leafNodeIdsByItemId));
       this.__node_ids_by_item_id = this._node_ids_by_item_id;
+      this._node_path_ids_by_item_id = new Map(Object.entries(nodeIdsByItemId));
       this._item_to_leaf_node = new Map(Object.entries(itemToLeafNode));
       this.__phase634RuntimeHierarchy = compat;
 
@@ -827,10 +829,12 @@
       window.__FRONTIER_PHASE62_GUEST_LOADER__.reverseIndexSize = Object.keys(nodeIdsByItemId).length;
       window.__FRONTIER_PHASE62_GUEST_LOADER__.countContract = "node.count === unique item_ids.length";
       window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyVersion = compat.version;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.adapterReverseIndexContract = "public_id -> leaf_node_id";
 
       window.__FRONTIER_PHASE634_RUNTIME_SYNC__ = {
         pass: true,
         version: compat.version,
+        adapterReverseIndexContract: "public_id -> leaf_node_id",
         items: items.length,
         leafIndexedItems: leafItemIds.size,
         reverseIndexSize: Object.keys(nodeIdsByItemId).length,
@@ -5759,6 +5763,7 @@
 
   boot();
 })();
+
 
 
 
