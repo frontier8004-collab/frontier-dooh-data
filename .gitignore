@@ -12,3 +12,11 @@ phase3-search-core/output/frontier-card-engine-contract.json
 phase6-security-core/private/
 phase6-security-core/backups/
 phase6-security-core/**/*.local.txt
+# FRONTIER SECURITY - local backup folders must never be committed
+_frontier_large_file_backup*/
+.frontier_large_file_backup*/
+_frontier-large-file-backup*/
+.frontier-large-file-backup*/
+**/app-v2.before-*.js
+**/*.before-phase*.js
+**/frontier-search-index.json

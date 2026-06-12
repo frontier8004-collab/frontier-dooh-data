@@ -410,6 +410,7 @@
       }
     }
     /* FRONTIER_PHASE6_2_GUEST_LOADER_SWITCH_START */
+    /* FRONTIER_PHASE6_3_4_RUNTIME_SYNC_PATCH */
     getDataTier() {
       return "guest";
     }
@@ -456,15 +457,15 @@
     }
 
     async ensureGuestIndexLoaded() {
-      if (this.__phase621GuestIndex && Array.isArray(this.__phase621GuestIndex.items)) {
-        return this.__phase621GuestIndex;
+      if (this.__phase634GuestIndex && Array.isArray(this.__phase634GuestIndex.items)) {
+        return this.__phase634GuestIndex;
       }
 
       const paths = this.getGuestDataPaths();
       const index = await this.fetchJsonDirect(paths.index);
       const normalized = this.normalizeGuestIndex(index);
 
-      this.__phase621GuestIndex = normalized;
+      this.__phase634GuestIndex = normalized;
 
       window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {
         enabled: true,
@@ -515,7 +516,7 @@
           }
 
           const normalized = this.normalizeGuestIndex(json);
-          this.__phase621GuestIndex = normalized;
+          this.__phase634GuestIndex = normalized;
 
           window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
           window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
@@ -565,37 +566,7 @@
         throw new Error("FRONTIER SECURITY BLOCK: loadSplitSearchIndex is disabled in Guest mode.");
       }
 
-      if (!manifest || manifest.__frontier_split_index !== true) {
-        throw new Error("Invalid split index manifest");
-      }
-
-      if (!Array.isArray(manifest.parts) || !manifest.parts.length) {
-        throw new Error("Split index manifest has no parts");
-      }
-
-      const chunks = [];
-
-      for (const part of manifest.parts) {
-        const partUrl = new URL(part, new URL(url, window.location.href));
-        const res = await fetch(partUrl.toString(), { cache: "no-store" });
-
-        if (!res.ok) {
-          throw new Error(`Frontier split index part load failed: ${res.status} ${part}`);
-        }
-
-        chunks.push(await res.text());
-      }
-
-      const parsed = JSON.parse(chunks.join(""));
-
-      window.__FRONTIER_SPLIT_INDEX_LOADED__ = {
-        loaded: true,
-        partCount: manifest.parts.length,
-        minifiedSizeBytes: manifest.minified_size_bytes || null,
-        loadedAt: new Date().toISOString()
-      };
-
-      return parsed;
+      throw new Error("FRONTIER SECURITY BLOCK: split index loader is disabled in production Guest runtime.");
     }
 
     normalizeGuestIndex(index) {
@@ -616,6 +587,10 @@
         item.public_id = publicId;
         item.canonical_id = publicId;
         item.id = publicId;
+
+        if (!item.sido) item.sido = "미분류";
+        if (!item.sigungu) item.sigungu = "미분류";
+        if (!item.eupmyeondong) item.eupmyeondong = "생활권";
 
         itemsById[publicId] = item;
       }
@@ -641,11 +616,14 @@
       const nodesById = Object.create(null);
       const itemsByNode = Object.create(null);
       const itemToLeafNode = Object.create(null);
+      const itemToNodeIds = Object.create(null);
+      const nodeIdsByItemId = Object.create(null);
+      const leafNodeIdsByItemId = Object.create(null);
       const nodeItemSets = new Map();
 
       const safe = value => String(value || "미분류").replace(/\s+/g, " ").trim() || "미분류";
 
-      const ensureNode = (id, type, name, parentId, path) => {
+      const ensureNode = (id, type, name, parentId, path, depth, isLeaf) => {
         if (!nodesById[id]) {
           nodesById[id] = {
             id,
@@ -657,11 +635,19 @@
             parent_id: parentId || null,
             parentId: parentId || null,
             path,
+            depth,
+            is_leaf: !!isLeaf,
+            leaf: !!isLeaf,
             count: 0,
+            item_count: 0,
+            total_count: 0,
+            visible_count: 0,
             item_ids: [],
+            itemIds: [],
             children: [],
             child_ids: [],
-            children_ids: []
+            children_ids: [],
+            childrenIds: []
           };
 
           nodes.push(nodesById[id]);
@@ -673,6 +659,7 @@
               nodesById[parentId].children.push(id);
               nodesById[parentId].child_ids.push(id);
               nodesById[parentId].children_ids.push(id);
+              nodesById[parentId].childrenIds.push(id);
             }
           }
         }
@@ -685,19 +672,23 @@
         if (!node || !itemId) return;
 
         if (!itemsById[itemId]) {
-          throw new Error("Guest hierarchy leaf references unknown public_id: " + itemId);
+          throw new Error("Guest hierarchy references unknown public_id: " + itemId);
         }
 
         const set = nodeItemSets.get(nodeId);
         if (!set.has(itemId)) {
           set.add(itemId);
           node.item_ids.push(itemId);
+          node.itemIds = node.item_ids;
           node.count = node.item_ids.length;
+          node.item_count = node.count;
+          node.total_count = node.count;
+          node.visible_count = node.count;
           itemsByNode[nodeId] = node.item_ids;
         }
       };
 
-      ensureNode("guest:root", "root", "전국", null, ["전국"]);
+      ensureNode("guest:root", "root", "전국", null, ["전국"], 0, false);
 
       for (const item of items) {
         const publicId = item.public_id || item.canonical_id || item.id;
@@ -710,28 +701,45 @@
         const sigungu = safe(item.sigungu || "미분류");
         const emd = safe(item.eupmyeondong || "생활권");
 
+        const rootId = "guest:root";
         const sidoId = "guest:sido:" + sido;
         const sigunguId = "guest:sigungu:" + sido + ":" + sigungu;
         const emdId = "guest:emd:" + sido + ":" + sigungu + ":" + emd;
 
-        ensureNode(sidoId, "sido", sido, "guest:root", [sido]);
-        ensureNode(sigunguId, "sigungu", sigungu, sidoId, [sido, sigungu]);
-        ensureNode(emdId, "eupmyeondong", emd, sigunguId, [sido, sigungu, emd]);
+        ensureNode(sidoId, "sido", sido, rootId, [sido], 1, false);
+        ensureNode(sigunguId, "sigungu", sigungu, sidoId, [sido, sigungu], 2, false);
+        ensureNode(emdId, "eupmyeondong", emd, sigunguId, [sido, sigungu, emd], 3, true);
 
-        attachItem("guest:root", publicId);
-        attachItem(sidoId, publicId);
-        attachItem(sigunguId, publicId);
-        attachItem(emdId, publicId);
+        const pathNodeIds = [rootId, sidoId, sigunguId, emdId];
+
+        for (const nodeId of pathNodeIds) {
+          attachItem(nodeId, publicId);
+        }
+
+        item.node_ids = pathNodeIds;
+        item.nodeIds = pathNodeIds;
+        item._node_ids = pathNodeIds;
+        item.leaf_node_id = emdId;
+        item.leafNodeId = emdId;
+        item.node_id = emdId;
 
         itemToLeafNode[publicId] = emdId;
+        leafNodeIdsByItemId[publicId] = emdId;
+        itemToNodeIds[publicId] = pathNodeIds;
+        nodeIdsByItemId[publicId] = pathNodeIds;
       }
 
       for (const node of nodes) {
         node.item_ids = Array.from(new Set(node.item_ids));
+        node.itemIds = node.item_ids;
         node.children = Array.from(new Set(node.children));
         node.child_ids = Array.from(new Set(node.child_ids));
         node.children_ids = Array.from(new Set(node.children_ids));
+        node.childrenIds = node.children_ids;
         node.count = node.item_ids.length;
+        node.item_count = node.count;
+        node.total_count = node.count;
+        node.visible_count = node.count;
         itemsByNode[node.id] = node.item_ids;
 
         if (typeof node.count !== "number" || !Number.isFinite(node.count)) {
@@ -739,7 +747,7 @@
         }
       }
 
-      const leafNodes = nodes.filter(node => node.type === "eupmyeondong");
+      const leafNodes = nodes.filter(node => node.is_leaf === true || node.type === "eupmyeondong");
       const leafItemIds = new Set();
 
       for (const node of leafNodes) {
@@ -759,12 +767,19 @@
         }
       }
 
+      for (const item of items) {
+        const publicId = item.public_id || item.canonical_id || item.id;
+        if (!leafItemIds.has(publicId)) {
+          throw new Error("FRONTIER GUEST LEAF CONNECTIVITY BROKEN: " + publicId);
+        }
+      }
+
       if (leafItemIds.size !== items.length) {
         throw new Error(`FRONTIER GUEST LEAF INDEXED ITEMS MISMATCH: ${leafItemIds.size} !== ${items.length}`);
       }
 
       const compat = Object.assign({}, rawHierarchy || {}, {
-        version: "frontier-search-hierarchy.guest.runtime-final.v3",
+        version: "frontier-search-hierarchy.guest.runtime-final.v4",
         tier: "guest",
         indexed_items: items.length,
         hierarchy_node_count: nodes.length,
@@ -778,6 +793,7 @@
           item_ids_are_public_ids: true,
           original_ids_exposed: false,
           count_contract: "node.count === unique item_ids.length",
+          reverse_index_contract: "_node_ids_by_item_id built before adapter invariant",
           max_public_depth: "eupmyeondong",
           detail_locked: true
         },
@@ -786,6 +802,10 @@
         node_index: nodesById,
         items_by_node: itemsByNode,
         item_to_leaf_node: itemToLeafNode,
+        item_to_node_ids: itemToNodeIds,
+        node_ids_by_item_id: nodeIdsByItemId,
+        leaf_node_ids_by_item_id: leafNodeIdsByItemId,
+        _node_ids_by_item_id: nodeIdsByItemId,
         levels: {
           root: 1,
           sido: nodes.filter(n => n.type === "sido").length,
@@ -794,12 +814,28 @@
         }
       });
 
+      this._node_ids_by_item_id = new Map(Object.entries(nodeIdsByItemId));
+      this.__node_ids_by_item_id = this._node_ids_by_item_id;
+      this._item_to_leaf_node = new Map(Object.entries(itemToLeafNode));
+      this.__phase634RuntimeHierarchy = compat;
+
       window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
       window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyCompatNodes = nodes.length;
       window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyIndexedItems = items.length;
       window.__FRONTIER_PHASE62_GUEST_LOADER__.leafIndexedItems = leafItemIds.size;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.reverseIndexBuilt = true;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.reverseIndexSize = Object.keys(nodeIdsByItemId).length;
       window.__FRONTIER_PHASE62_GUEST_LOADER__.countContract = "node.count === unique item_ids.length";
       window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyVersion = compat.version;
+
+      window.__FRONTIER_PHASE634_RUNTIME_SYNC__ = {
+        pass: true,
+        version: compat.version,
+        items: items.length,
+        leafIndexedItems: leafItemIds.size,
+        reverseIndexSize: Object.keys(nodeIdsByItemId).length,
+        builtAt: new Date().toISOString()
+      };
 
       return compat;
     }
@@ -5723,6 +5759,7 @@
 
   boot();
 })();
+
 
 
 
