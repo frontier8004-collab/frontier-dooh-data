@@ -1,0 +1,45 @@
+{
+  "__frontier_split_index": true,
+  "version": "frontier-search-index-split-v1",
+  "generated_at": "2026-06-12T00:11:28.116Z",
+  "encoding": "raw-json-text-parts",
+  "reason": "github-single-file-100mb-limit",
+  "original_size_bytes": 272990454,
+  "minified_size_bytes": 229428608,
+  "minified_sha256": "b14a95812163d83ecc548c358f3f0834c0c55f2532f94e44ef35282d9ef9b231",
+  "part_count": 5,
+  "parts": [
+    "frontier-search-index.parts/part-000.txt",
+    "frontier-search-index.parts/part-001.txt",
+    "frontier-search-index.parts/part-002.txt",
+    "frontier-search-index.parts/part-003.txt",
+    "frontier-search-index.parts/part-004.txt"
+  ],
+  "part_meta": [
+    {
+      "file": "frontier-search-index.parts/part-000.txt",
+      "bytes": 47185919,
+      "sha256": "50d907c118c3ed388a66e2446b74f5f2380092673206f3a8620da841ba99e23a"
+    },
+    {
+      "file": "frontier-search-index.parts/part-001.txt",
+      "bytes": 47185920,
+      "sha256": "dc0c216c39662e5b859b13a64ceeeb6aa11fadcaa221b3d783fcfbab4ddf14e0"
+    },
+    {
+      "file": "frontier-search-index.parts/part-002.txt",
+      "bytes": 47185920,
+      "sha256": "af392e43b0b4e64b9cd28df17716386e8866c12e2a0ebb1033a193a9b0f76cd3"
+    },
+    {
+      "file": "frontier-search-index.parts/part-003.txt",
+      "bytes": 47185920,
+      "sha256": "ed15518c0e4a5a270ceafb27df340b651266853c04717512f3a7ef7f5e1b9fcb"
+    },
+    {
+      "file": "frontier-search-index.parts/part-004.txt",
+      "bytes": 40684929,
+      "sha256": "ebc82d4352a142cc139fa53df9bb4cdeb58e88357b92a1d00692f8f84b03eb95"
+    }
+  ]
+}

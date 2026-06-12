@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FRONTIER MAP v2 Prototype</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
+
+  <style>
+    :root {
+      --bg: #070b0d;
+      --panel: rgba(12, 18, 20, 0.94);
+      --panel2: rgba(18, 25, 28, 0.96);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #f3f7f6;
+      --muted: rgba(243, 247, 246, 0.68);
+      --mint: #a2decc;
+      --mint2: rgba(162, 222, 204, 0.18);
+      --danger: #ff8a8a;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+      --radius: 18px;
+      --font: "NanumSquare", "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 390px 1fr;
+      background:
+        radial-gradient(circle at top left, rgba(162, 222, 204, 0.18), transparent 32%),
+        linear-gradient(135deg, #06090b, #0d1315 48%, #050708);
+    }
+
+    .sidebar {
+      position: relative;
+      z-index: 20;
+      height: 100vh;
+      padding: 18px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(9, 14, 16, 0.98), rgba(7, 10, 12, 0.98));
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand {
+      padding: 4px 2px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      color: var(--mint);
+      font-size: 12px;
+      letter-spacing: 0.18em;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.16;
+      letter-spacing: -0.04em;
+    }
+
+    .desc {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .status-card {
+      padding: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.045);
+      border-radius: var(--radius);
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      border-radius: 14px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 17px;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .stat span {
+      display: block;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    select,
+    input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      padding: 0 12px;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.22);
+      outline: none;
+      font-family: inherit;
+      font-size: 13px;
+    }
+
+    select:focus,
+    input:focus {
+      border-color: rgba(162, 222, 204, 0.82);
+      box-shadow: 0 0 0 3px rgba(162, 222, 204, 0.13);
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 14px;
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .primary {
+      color: #06110e;
+      background: var(--mint);
+    }
+
+    .ghost {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+    }
+
+    .notice {
+      display: none;
+      padding: 12px 13px;
+      border-radius: 14px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+      border: 1px solid rgba(162, 222, 204, 0.22);
+      background: rgba(162, 222, 204, 0.08);
+    }
+
+    .notice.show {
+      display: block;
+    }
+.network-panel {
+  display: none;
+  padding: 13px;
+  border: 1px solid rgba(162, 222, 204, 0.18);
+  background: rgba(162, 222, 204, 0.055);
+  border-radius: var(--radius);
+}
+
+.network-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.network-title strong {
+  font-size: 13px;
+}
+
+.network-title span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.network-list {
+  display: grid;
+  gap: 7px;
+  max-height: 160px;
+  overflow: auto;
+  padding-right: 3px;
+}
+
+.network-card {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 10px;
+  border-radius: 13px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.network-card:hover {
+  background: rgba(162, 222, 204, 0.10);
+  border-color: rgba(162, 222, 204, 0.36);
+}
+
+.network-card b {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.network-card small {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+    .list-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .list-head strong {
+      font-size: 13px;
+    }
+
+    .list-head span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result-list {
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+      padding-right: 4px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .result-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .result-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+    }
+
+    .card {
+      padding: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      background: rgba(255, 255, 255, 0.052);
+      border-radius: 16px;
+      cursor: pointer;
+    }
+
+    .card:hover {
+      border-color: rgba(162, 222, 204, 0.45);
+      background: rgba(162, 222, 204, 0.08);
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.35;
+      letter-spacing: -0.02em;
+    }
+
+    .card-meta {
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .map-wrap {
+      position: relative;
+      min-width: 0;
+      height: 100vh;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
+
+    .map-search-floating {
+      position: absolute;
+      z-index: 1000;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 999px;
+      background: rgba(8, 13, 15, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .map-search-floating button {
+      min-height: 38px;
+      padding: 0 16px;
+      border-radius: 999px;
+    }
+
+    .map-search-floating .hint {
+      padding: 0 8px 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .modal-backdrop {
+      position: absolute;
+      z-index: 1300;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.26);
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal {
+      width: min(520px, calc(100vw - 40px));
+      max-height: min(76vh, 680px);
+      overflow: auto;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background: rgba(11, 16, 18, 0.96);
+      box-shadow: var(--shadow);
+    }
+
+    .modal-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 18px 0;
+    }
+
+    .modal h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.04em;
+      line-height: 1.28;
+    }
+
+    .close {
+      width: 36px;
+      height: 36px;
+      min-height: 36px;
+      border-radius: 50%;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+
+    .modal-body {
+      padding: 16px 18px 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .info-row {
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.045);
+      border-radius: 16px;
+    }
+
+    .info-label {
+      color: var(--mint);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .info-value {
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.45;
+      word-break: keep-all;
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .modal-actions a,
+    .modal-actions button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      border-radius: 13px;
+      text-decoration: none;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--line);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .leaflet-container {
+      font-family: var(--font);
+    }
+
+    .frontier-pin {
+      width: 24px;
+      height: 24px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: var(--mint);
+      border: 2px solid rgba(0, 0, 0, 0.42);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.34);
+    }
+
+    .frontier-pin::after {
+      content: "";
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      left: 6px;
+      top: 6px;
+      border-radius: 50%;
+      background: #07100e;
+    }
+
+    .marker-cluster-small,
+    .marker-cluster-medium,
+    .marker-cluster-large {
+      background: rgba(162, 222, 204, 0.24);
+    }
+
+    .marker-cluster-small div,
+    .marker-cluster-medium div,
+    .marker-cluster-large div {
+      color: #06110e;
+      background: var(--mint);
+      font-weight: 900;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: 44vh 56vh;
+      }
+
+      .sidebar {
+        order: 2;
+        height: 56vh;
+        border-right: 0;
+        border-top: 1px solid var(--line);
+      }
+
+      .map-wrap {
+        order: 1;
+        height: 44vh;
+      }
+
+      .map-search-floating {
+        top: 10px;
+        max-width: calc(100vw - 20px);
+      }
+
+      .map-search-floating .hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <section class="brand">
+        <div class="eyebrow">FRONTIER MAP v2</div>
+        <h1>지도형 매체<br />프로토타입 1.26</h1>
+        <div class="desc">
+          전체 핀을 먼저 띄우지 않고, 현재 지도 화면 안의 매체만 검색해 표시합니다.
+        </div>
+      </section>
+
+      <section class="status-card">
+        <div class="status-grid">
+          <div class="stat">
+            <strong id="statTotal">-</strong>
+            <span>대상</span>
+          </div>
+          <div class="stat">
+            <strong id="statShown">0</strong>
+            <span>표시</span>
+          </div>
+          <div class="stat">
+            <strong id="statMode">v2</strong>
+            <span>엔진</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="control">
+  <label for="groupSelect">대분류</label>
+  <select id="groupSelect">
+    <option value="">전체 지도형 매체</option>
+  </select>
+</section>
+
+<section class="control">
+<label for="subgroupSelect">중분류</label>
+  <select id="subgroupSelect">
+    <option value="">전체 세부유형</option>
+  </select>
+</section>
+
+<section class="control">
+  <label for="familySelect">매체 형식</label>
+  <select id="familySelect">
+    <option value="">전체 매체 형식</option>
+  </select>
+</section>
+
+      <section class="control">
+        <label for="keywordInput">검색어</label>
+        <input id="keywordInput" type="search" placeholder="예: 강남, 코엑스, 전광판, 공항" />
+      </section>
+
+      <section class="button-row">
+        <button class="primary" id="searchHereBtn">현재 화면에서 검색</button>
+        <button class="ghost" id="resetBtn">초기화</button>
+      </section>
+
+      <div class="notice" id="noticeBox"></div>
+<section class="network-panel">
+  <div class="network-title">
+    <strong>대량 네트워크형 매체</strong>
+    <span id="networkTotal">준비 중</span>
+  </div>
+  <div class="network-list" id="networkEntryList"></div>
+</section>
+      <section class="list-head">
+        <strong>현재 결과</strong>
+        <span id="resultCount">0개</span>
+      </section>
+
+      <section class="result-list" id="resultList"></section>
+    </aside>
+
+    <main class="map-wrap">
+      <div id="map"></div>
+
+      <div class="map-search-floating" id="floatingSearch">
+        <span class="hint">지도를 이동했다면</span>
+        <button class="primary" id="floatingSearchBtn">현재 화면에서 다시 검색</button>
+      </div>
+
+      <div class="modal-backdrop" id="modalBackdrop">
+        <article class="modal">
+          <div class="modal-top">
+            <h2 id="modalTitle">매체명</h2>
+            <button class="close" id="modalClose" type="button">×</button>
+          </div>
+
+          <div class="modal-body">
+            <div class="info-row">
+              <div class="info-label">Category</div>
+              <div class="info-value" id="modalCategory">-</div>
+            </div>
+
+            <div class="info-row">
+              <div class="info-label">Location</div>
+              <div class="info-value" id="modalAddress">-</div>
+            </div>
+
+            <div class="info-row">
+              <div class="info-label">Price</div>
+              <div class="info-value" id="modalPrice">문의</div>
+            </div>
+
+            <div class="modal-actions">
+              <a id="kakaoLink" href="#" target="_blank" rel="noopener">카카오</a>
+              <a id="googleLink" href="#" target="_blank" rel="noopener">구글</a>
+              <button id="cartBtn" type="button">담아두기</button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="./app-v2.js"></script>
+</body>
+</html>

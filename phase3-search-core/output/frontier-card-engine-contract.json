@@ -1,0 +1,59 @@
+{
+  "version": "frontier-card-engine-contract-v2",
+  "generated_at": "2026-06-11T09:51:40.769Z",
+  "id_policy": {
+    "only_valid_id": "canonical_id",
+    "stable_id_runtime_alias": "stable_id_v2",
+    "original_stable_id_preserved_for_trace": true,
+    "forbidden": [
+      "legacy hierarchy item_ids",
+      "original duplicated stable_id as runtime id",
+      "row index based implicit id",
+      "label-only card"
+    ]
+  },
+  "runtime_files": {
+    "search_index": "phase3-search-core/output/frontier-search-index.json",
+    "search_hierarchy": "phase3-search-core/output/frontier-search-hierarchy.json"
+  },
+  "node_contract": {
+    "required_fields": [
+      "node_id",
+      "level",
+      "label",
+      "parent_node_id",
+      "child_node_ids",
+      "item_ids",
+      "count",
+      "centroid_lat",
+      "centroid_lng",
+      "bounds",
+      "path"
+    ],
+    "invariant": [
+      "node.count === node.item_ids.length",
+      "node.item_ids contains canonical_id only",
+      "child.item_ids is subset of parent.item_ids",
+      "leaf eupmyeondong union equals all public eligible canonical_id values",
+      "search_index.items.length === Object.keys(search_index.items_by_id).length",
+      "label-only card is forbidden"
+    ]
+  },
+  "search_flow": {
+    "query": "normalize query -> token lookup -> canonical_id[]",
+    "card_build": "base canonical_id[] -> hierarchy rollup nodes",
+    "detail_pin": "leaf node.item_ids -> items_by_id canonical lookup",
+    "viewport_search": "viewport canonical_id[] intersect current query canonical_id[] -> same hierarchy rollup"
+  },
+  "levels": [
+    "region_group",
+    "area_group",
+    "sido",
+    "sigungu",
+    "eupmyeondong"
+  ],
+  "public_search_scope": {
+    "total_items": 21894,
+    "excluded": "manual_review and isolated ids from Phase 2"
+  }
+}
