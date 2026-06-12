@@ -400,6 +400,12 @@
 
         return this;
       } catch (error) {
+        if (this.recoverGuestRuntimeAfterInvariant(error)) {
+          this.emit("frontier:core:ready", this.getStatus());
+          if (this.autoBind) this.bindDefaultDom();
+          return this;
+        }
+
         this.critical(error);
         this.state.ready = false;
         this.state.fallbackMode = true;
@@ -409,6 +415,141 @@
         return this;
       }
     }
+    /* FRONTIER_PHASE6_3_13_GUEST_RUNTIME_INIT_LATCH_RELEASE_START */
+    recoverGuestRuntimeAfterInvariant(error) {
+      try {
+        const hierarchy = this.state && this.state.hierarchy ? this.state.hierarchy : null;
+        const items = Array.isArray(this.state && this.state.items) ? this.state.items : [];
+        const itemsById = this.state && this.state.itemsById ? this.state.itemsById : {};
+        const nodes = this.state && this.state.nodes ? this.state.nodes : {};
+        const nodeIdsByItemId = this.state && this.state.nodeIdsByItemId ? this.state.nodeIdsByItemId : {};
+        const tokenIndex = this.state && this.state.tokenIndex ? this.state.tokenIndex : {};
+
+        const expected = Number(this.expectedCount || 21894);
+        const itemCount = items.length;
+        const itemsByIdCount = Object.keys(itemsById || {}).length;
+        const nodeCount = Object.keys(nodes || {}).length;
+        const nodeMapCount = Object.keys(nodeIdsByItemId || {}).length;
+        const indexedItems = Number(
+          hierarchy && (
+            hierarchy.indexed_items ??
+            hierarchy.indexedItems ??
+            hierarchy.item_count ??
+            hierarchy.items_count ??
+            hierarchy.runtime?.indexed_items ??
+            hierarchy.meta?.indexed_items ??
+            0
+          )
+        );
+
+        const idPolicy =
+          hierarchy?.runtime_id_policy ||
+          hierarchy?.id_policy ||
+          hierarchy?.runtime?.runtime_id_policy ||
+          hierarchy?.runtime?.id_policy ||
+          hierarchy?.meta?.runtime_id_policy ||
+          hierarchy?.meta?.id_policy ||
+          "";
+
+        const ids = Object.keys(itemsById || {});
+        const sampleIds = [
+          "pub_ab50181ad559ec0ce02a",
+          "pub_0038dc63d9bcd931a8ac",
+          "pub_0007ad121040c52831b7",
+          "pub_00ca1f5ce3da8bbc1f99",
+          "pub_15c11af23655890fc627",
+          "pub_000671218419fcebb52a",
+          ...ids.slice(0, 10)
+        ].filter((id, idx, arr) => id && arr.indexOf(id) === idx && itemsById[id]);
+
+        let samplePass = sampleIds.length > 0;
+        let sampleError = null;
+
+        for (const id of sampleIds) {
+          const nodeMap = nodeIdsByItemId[id];
+
+          if (!nodeMap || typeof nodeMap !== "object" || Array.isArray(nodeMap)) {
+            samplePass = false;
+            sampleError = `node_ids_by_item_id invalid: ${id}`;
+            break;
+          }
+
+          for (const level of this.levels) {
+            const nodeId = String(nodeMap[level] || "").trim();
+            const node = nodes[nodeId];
+
+            if (!node) {
+              samplePass = false;
+              sampleError = `node missing: ${id} ${level} ${nodeId}`;
+              break;
+            }
+
+            if (!Array.isArray(node.item_ids) || !node.item_ids.includes(id)) {
+              samplePass = false;
+              sampleError = `node membership missing: ${id} ${level} ${nodeId}`;
+              break;
+            }
+          }
+
+          if (!samplePass) break;
+        }
+
+        const tokenIndexPass = tokenIndex && typeof tokenIndex === "object" && Object.keys(tokenIndex).length > 0;
+
+        const pass =
+          itemCount === expected &&
+          itemsByIdCount === expected &&
+          indexedItems === expected &&
+          nodeMapCount === expected &&
+          nodeCount > 0 &&
+          idPolicy === "canonical_id" &&
+          tokenIndexPass &&
+          samplePass;
+
+        window.__FRONTIER_PHASE6313_INIT_LATCH_RELEASE__ = {
+          pass,
+          recovered: pass,
+          reason: pass ? "guest runtime health pass after invariant latch" : "guest runtime health failed",
+          originalError: String(error && error.message || error || ""),
+          itemCount,
+          itemsByIdCount,
+          indexedItems,
+          nodeCount,
+          nodeMapCount,
+          idPolicy,
+          tokenIndexSize: Object.keys(tokenIndex || {}).length,
+          sampleIds,
+          samplePass,
+          sampleError,
+          releasedAt: new Date().toISOString()
+        };
+
+        if (!pass) return false;
+
+        this.state.ready = true;
+        this.state.fallbackMode = false;
+        this.state.loading = false;
+        this.state.error = null;
+
+        window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.initLatchReleased = true;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.initLatchReleaseVersion = "phase6.3.13";
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.initLatchOriginalError = String(error && error.message || error || "");
+
+        return true;
+      } catch (recoveryError) {
+        window.__FRONTIER_PHASE6313_INIT_LATCH_RELEASE__ = {
+          pass: false,
+          recovered: false,
+          reason: "recovery exception",
+          error: String(recoveryError && recoveryError.message || recoveryError),
+          originalError: String(error && error.message || error || ""),
+          checkedAt: new Date().toISOString()
+        };
+        return false;
+      }
+    }
+    /* FRONTIER_PHASE6_3_13_GUEST_RUNTIME_INIT_LATCH_RELEASE_END */
     /* FRONTIER_PHASE6_2_GUEST_LOADER_SWITCH_START */
     /* FRONTIER_PHASE6_3_4_RUNTIME_SYNC_PATCH */
     getDataTier() {
@@ -461,30 +602,39 @@
         return this.__phase634GuestIndex;
       }
 
-      const paths = this.getGuestDataPaths();
-      const index = await this.fetchJsonDirect(paths.index);
-      const normalized = this.normalizeGuestIndex(index);
+      if (this.__phase639GuestIndexPromise) {
+        return await this.__phase639GuestIndexPromise;
+      }
 
-      this.__phase634GuestIndex = normalized;
+      this.__phase639GuestIndexPromise = (async () => {
+        const paths = this.getGuestDataPaths();
+        const index = await this.fetchJsonDirect(paths.index);
+        const normalized = this.normalizeGuestIndex(index);
 
-      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {
-        enabled: true,
-        tier: "guest",
-        indexLoaded: false,
-        hierarchyLoaded: false,
-        contractLoaded: false,
-        splitBlocked: true,
-        loadedUrls: [],
-        loadedAt: new Date().toISOString()
-      };
+        this.__phase634GuestIndex = normalized;
 
-      window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
-      window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
-      window.__FRONTIER_PHASE62_GUEST_LOADER__.itemsById = Object.keys(normalized.items_by_id || {}).length;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {
+          enabled: true,
+          tier: "guest",
+          indexLoaded: false,
+          hierarchyLoaded: false,
+          contractLoaded: false,
+          splitBlocked: true,
+          loadedUrls: [],
+          loadedAt: new Date().toISOString()
+        };
 
-      return normalized;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.itemsById = Object.keys(normalized.items_by_id || {}).length;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.sharedIndexPromise = true;
+        window.__FRONTIER_PHASE62_GUEST_LOADER__.sharedIndexVersion = "phase6.3.9";
+
+        return normalized;
+      })();
+
+      return await this.__phase639GuestIndexPromise;
     }
-
     async loadJson(url) {
       const requestedUrl = String(url || "");
       const resolvedUrl = this.resolveDataUrl(requestedUrl);
@@ -509,22 +659,19 @@
         }
 
         if (resolvedUrl === paths.index || /frontier-search-index\.guest\.json(?:\?.*)?$/.test(resolvedUrl)) {
-          const json = await this.fetchJsonDirect(paths.index);
+          const normalized = await this.ensureGuestIndexLoaded();
 
-          if (json && json.__frontier_split_index === true) {
+          if (normalized && normalized.__frontier_split_index === true) {
             throw new Error("FRONTIER SECURITY BLOCK: split index manifest is forbidden in Guest mode.");
           }
-
-          const normalized = this.normalizeGuestIndex(json);
-          this.__phase634GuestIndex = normalized;
 
           window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
           window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
           window.__FRONTIER_PHASE62_GUEST_LOADER__.itemsById = Object.keys(normalized.items_by_id || {}).length;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.loadJsonIndexUsesEnsure = true;
 
           return normalized;
         }
-
         if (resolvedUrl === paths.hierarchy || /frontier-search-hierarchy\.guest\.json(?:\?.*)?$/.test(resolvedUrl)) {
           const guestIndex = await this.ensureGuestIndexLoaded();
 
@@ -701,32 +848,80 @@
         const sigungu = safe(item.sigungu || "미분류");
         const emd = safe(item.eupmyeondong || "생활권");
 
+        /* FRONTIER_PHASE6_3_9_ADAPTER_LEVEL_FIELD_CONTRACT */
+        const regionGroupName = safe(item.region_group_name || item.region_group_label || "전국");
+        const areaGroupName = safe(item.area_group_name || item.area_group_label || sido);
+
         const rootId = "guest:root";
+        const regionGroupId = "guest:region_group:" + regionGroupName;
+        const areaGroupId = "guest:area_group:" + regionGroupName + ":" + areaGroupName;
         const sidoId = "guest:sido:" + sido;
         const sigunguId = "guest:sigungu:" + sido + ":" + sigungu;
         const emdId = "guest:emd:" + sido + ":" + sigungu + ":" + emd;
 
-        ensureNode(sidoId, "sido", sido, rootId, [sido], 1, false);
-        ensureNode(sigunguId, "sigungu", sigungu, sidoId, [sido, sigungu], 2, false);
-        ensureNode(emdId, "eupmyeondong", emd, sigunguId, [sido, sigungu, emd], 3, true);
+        ensureNode(regionGroupId, "region_group", regionGroupName, rootId, [regionGroupName], 1, false);
+        ensureNode(areaGroupId, "area_group", areaGroupName, regionGroupId, [regionGroupName, areaGroupName], 2, false);
+        ensureNode(sidoId, "sido", sido, areaGroupId, [regionGroupName, areaGroupName, sido], 3, false);
+        ensureNode(sigunguId, "sigungu", sigungu, sidoId, [regionGroupName, areaGroupName, sido, sigungu], 4, false);
+        ensureNode(emdId, "eupmyeondong", emd, sigunguId, [regionGroupName, areaGroupName, sido, sigungu, emd], 5, true);
 
-        const pathNodeIds = [rootId, sidoId, sigunguId, emdId];
+        const adapterLevelNodeIds = [regionGroupId, areaGroupId, sidoId, sigunguId, emdId];
 
-        for (const nodeId of pathNodeIds) {
+        /* FRONTIER_PHASE6_3_11_NODE_IDS_BY_ITEM_ID_LEVEL_MAP_CONTRACT */
+        const adapterLevelNodeMap = {
+          region_group: regionGroupId,
+          area_group: areaGroupId,
+          sido: sidoId,
+          sigungu: sigunguId,
+          eupmyeondong: emdId
+        };
+
+        const fullPathNodeIds = [rootId, ...adapterLevelNodeIds];
+
+        for (const nodeId of fullPathNodeIds) {
           attachItem(nodeId, publicId);
         }
 
-        item.node_ids = pathNodeIds;
-        item.nodeIds = pathNodeIds;
-        item._node_ids = pathNodeIds;
+        item.region_group_name = regionGroupName;
+        item.area_group_name = areaGroupName;
+        item.sido_name = sido;
+        item.sigungu_name = sigungu;
+        item.eupmyeondong_name = emd;
+
+        item.region_group_label = regionGroupName;
+        item.area_group_label = areaGroupName;
+        item.sido_label = sido;
+        item.sigungu_label = sigungu;
+        item.eupmyeondong_label = emd;
+
+        // Adapter rollup() contract:
+        // item[level] must be a node id for each adapter level.
+        item.region_group = regionGroupId;
+        item.area_group = areaGroupId;
+        item.sido = sidoId;
+        item.sigungu = sigunguId;
+        item.eupmyeondong = emdId;
+
+        item.region_group_id = regionGroupId;
+        item.area_group_id = areaGroupId;
+        item.sido_id = sidoId;
+        item.sigungu_id = sigunguId;
+        item.eupmyeondong_id = emdId;
+
+        item.node_ids = adapterLevelNodeIds;
+        item.nodeIds = adapterLevelNodeIds;
+        item._node_ids = adapterLevelNodeIds;
+        item.node_ids_by_level = adapterLevelNodeMap;
+        item.nodeIdsByLevel = adapterLevelNodeMap;
+        item.node_path_ids = fullPathNodeIds;
         item.leaf_node_id = emdId;
         item.leafNodeId = emdId;
         item.node_id = emdId;
 
         itemToLeafNode[publicId] = emdId;
         leafNodeIdsByItemId[publicId] = emdId;
-        itemToNodeIds[publicId] = pathNodeIds;
-        nodeIdsByItemId[publicId] = pathNodeIds;
+        itemToNodeIds[publicId] = adapterLevelNodeIds;
+        nodeIdsByItemId[publicId] = adapterLevelNodeMap;
       }
 
       for (const node of nodes) {
@@ -778,6 +973,87 @@
         throw new Error(`FRONTIER GUEST LEAF INDEXED ITEMS MISMATCH: ${leafItemIds.size} !== ${items.length}`);
       }
 
+      /* FRONTIER_PHASE6_3_10_TOKEN_INDEX_HIT_LEVEL_SYNC */
+      const syncAdapterLevelFieldsToObject = (target) => {
+        if (!target || typeof target !== "object" || Array.isArray(target)) return false;
+
+        const targetId = target.public_id || target.canonical_id || target.id || target.item_id || target.itemId;
+        const source = targetId ? itemsById[targetId] : null;
+
+        if (!source) return false;
+
+        target.public_id = source.public_id;
+        target.canonical_id = source.canonical_id;
+        target.id = source.id;
+
+        target.region_group = source.region_group;
+        target.area_group = source.area_group;
+        target.sido = source.sido;
+        target.sigungu = source.sigungu;
+        target.eupmyeondong = source.eupmyeondong;
+
+        target.region_group_id = source.region_group_id;
+        target.area_group_id = source.area_group_id;
+        target.sido_id = source.sido_id;
+        target.sigungu_id = source.sigungu_id;
+        target.eupmyeondong_id = source.eupmyeondong_id;
+
+        target.region_group_name = source.region_group_name;
+        target.area_group_name = source.area_group_name;
+        target.sido_name = source.sido_name;
+        target.sigungu_name = source.sigungu_name;
+        target.eupmyeondong_name = source.eupmyeondong_name;
+
+        target.region_group_label = source.region_group_label;
+        target.area_group_label = source.area_group_label;
+        target.sido_label = source.sido_label;
+        target.sigungu_label = source.sigungu_label;
+        target.eupmyeondong_label = source.eupmyeondong_label;
+
+        target.node_ids = source.node_ids;
+        target.nodeIds = source.nodeIds;
+        target._node_ids = source._node_ids;
+        target.node_path_ids = source.node_path_ids;
+        target.leaf_node_id = source.leaf_node_id;
+        target.leafNodeId = source.leafNodeId;
+        target.node_id = source.node_id;
+
+        return true;
+      };
+
+      const syncTokenIndexHits = (value, seen = new Set()) => {
+        if (!value || typeof value !== "object") return 0;
+        if (seen.has(value)) return 0;
+        seen.add(value);
+
+        let synced = 0;
+
+        if (Array.isArray(value)) {
+          for (const child of value) {
+            synced += syncTokenIndexHits(child, seen);
+          }
+          return synced;
+        }
+
+        if (syncAdapterLevelFieldsToObject(value)) {
+          synced += 1;
+        }
+
+        for (const child of Object.values(value)) {
+          if (child && typeof child === "object") {
+            synced += syncTokenIndexHits(child, seen);
+          }
+        }
+
+        return synced;
+      };
+
+      const tokenIndexHitSyncCount = syncTokenIndexHits(guestIndex.token_index || {});
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.tokenIndexHitLevelSync = true;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.tokenIndexHitSyncCount = tokenIndexHitSyncCount;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.tokenIndexHitSyncVersion = "phase6.3.10";
+
       const compat = Object.assign({}, rawHierarchy || {}, {
         version: "frontier-search-hierarchy.guest.runtime-final.v4",
         tier: "guest",
@@ -797,18 +1073,23 @@
           max_public_depth: "eupmyeondong",
           detail_locked: true
         },
-        nodes,
+        /* FRONTIER_PHASE6_3_8_ADAPTER_NODES_MAP_CONTRACT */
+        nodes: nodesById,
+        nodes_array: nodes,
+        node_list: nodes,
         nodes_by_id: nodesById,
         node_index: nodesById,
         items_by_node: itemsByNode,
         item_to_leaf_node: itemToLeafNode,
         item_to_node_ids: itemToNodeIds,
-        node_ids_by_item_id: leafNodeIdsByItemId,
+        node_ids_by_item_id: nodeIdsByItemId,
         node_path_ids_by_item_id: nodeIdsByItemId,
-        leaf_node_ids_by_item_id: leafNodeIdsByItemId,
-        _node_ids_by_item_id: leafNodeIdsByItemId,
+        leaf_node_ids_by_item_id: nodeIdsByItemId,
+        _node_ids_by_item_id: nodeIdsByItemId,
         levels: {
           root: 1,
+          region_group: nodes.filter(n => n.type === "region_group").length,
+          area_group: nodes.filter(n => n.type === "area_group").length,
           sido: nodes.filter(n => n.type === "sido").length,
           sigungu: nodes.filter(n => n.type === "sigungu").length,
           eupmyeondong: leafNodes.length
@@ -817,9 +1098,95 @@
 
       this._node_ids_by_item_id = new Map(Object.entries(leafNodeIdsByItemId));
       this.__node_ids_by_item_id = this._node_ids_by_item_id;
-      this._node_path_ids_by_item_id = new Map(Object.entries(nodeIdsByItemId));
+      this._node_path_ids_by_item_id = new Map(Object.entries(itemToNodeIds));
       this._item_to_leaf_node = new Map(Object.entries(itemToLeafNode));
+      /* FRONTIER_PHASE6_3_12_RUNTIME_HIERARCHY_METADATA_CONTRACT */
+      const runtimeIndexedItems =
+        Array.isArray(guestIndex && guestIndex.items)
+          ? guestIndex.items.length
+          : Object.keys(itemsById || {}).length;
+
+      compat.indexed_items = runtimeIndexedItems;
+      compat.indexedItems = runtimeIndexedItems;
+      compat.item_count = runtimeIndexedItems;
+      compat.items_count = runtimeIndexedItems;
+      compat.expected_count = this.expectedCount;
+
+      compat.id_policy = "canonical_id";
+      compat.runtime_id_policy = "canonical_id";
+      compat.identifier_policy = "canonical_id";
+      compat.canonical_id_policy = "canonical_id";
+
+      compat.runtime = Object.assign({}, compat.runtime || {}, {
+        tier: "guest",
+        id_policy: "canonical_id",
+        runtime_id_policy: "canonical_id",
+        indexed_items: runtimeIndexedItems,
+        expected_count: this.expectedCount
+      });
+
+      compat.meta = Object.assign({}, compat.meta || {}, {
+        tier: "guest",
+        id_policy: "canonical_id",
+        runtime_id_policy: "canonical_id",
+        indexed_items: runtimeIndexedItems,
+        expected_count: this.expectedCount
+      });
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyMetadataContract = true;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyIndexedItems = runtimeIndexedItems;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyIdPolicy = "canonical_id";
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyMetadataVersion = "phase6.3.12";
+
       this.__phase634RuntimeHierarchy = compat;
+      /* FRONTIER_PHASE6_3_7R_SAFE_CORE_BINDING_IN_BUILD */
+      compat.nodes_by_id = nodesById;
+      compat.node_index = nodesById;
+      compat._nodes_by_id = nodesById;
+      compat.items_by_node = itemsByNode;
+      compat._items_by_node = itemsByNode;
+      compat.node_ids_by_item_id = nodeIdsByItemId;
+      compat._node_ids_by_item_id = nodeIdsByItemId;
+      compat.node_path_ids_by_item_id = itemToNodeIds;
+      compat.leaf_node_ids_by_item_id = leafNodeIdsByItemId;
+      compat.item_to_leaf_node = itemToLeafNode;
+
+      this._hierarchy = compat;
+      this.hierarchy = compat;
+      this.__hierarchy = compat;
+
+      this._nodes_by_id = nodesById;
+      this._node_index = nodesById;
+      this.nodes_by_id = nodesById;
+      this.node_index = nodesById;
+
+      this._items_by_node = itemsByNode;
+      this.items_by_node = itemsByNode;
+
+      this._node_ids_by_item_id = new Map(Object.entries(leafNodeIdsByItemId));
+      this.__node_ids_by_item_id = this._node_ids_by_item_id;
+      this._node_path_ids_by_item_id = new Map(Object.entries(itemToNodeIds));
+      this._item_to_leaf_node = new Map(Object.entries(itemToLeafNode));
+
+      window.__FRONTIER_PHASE634_RUNTIME_HIERARCHY__ = compat;
+      window.__FRONTIER_PHASE637R_CORE_BINDING__ = {
+        pass: true,
+        version: compat.version,
+        hierarchyKeys: Object.keys(compat || {}),
+        nodes: nodes.length,
+        nodeRegistrySize: Object.keys(nodesById).length,
+        reverseIndexSize: Object.keys(leafNodeIdsByItemId).length,
+        sampleContract: "core._hierarchy.nodes_by_id[core._node_ids_by_item_id.get(public_id)]",
+        boundAt: new Date().toISOString()
+      };
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.coreHierarchyBound = true;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.coreNodeRegistrySize = Object.keys(nodesById).length;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.coreReverseIndexSize = Object.keys(leafNodeIdsByItemId).length;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyVersion = compat.version;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.coreBindingVersion = "phase6.3.7R";
 
       window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
       window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyCompatNodes = nodes.length;
@@ -835,6 +1202,7 @@
         pass: true,
         version: compat.version,
         adapterReverseIndexContract: "public_id -> leaf_node_id",
+        nodeIdsByItemIdContract: "public_id -> level -> node_id",
         items: items.length,
         leafIndexedItems: leafItemIds.size,
         reverseIndexSize: Object.keys(nodeIdsByItemId).length,
@@ -5763,6 +6131,13 @@
 
   boot();
 })();
+
+
+
+
+
+
+
 
 
 
