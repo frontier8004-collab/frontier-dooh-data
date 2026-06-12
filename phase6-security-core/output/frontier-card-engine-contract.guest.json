@@ -1,0 +1,28 @@
+{
+  "version": "frontier-card-engine-contract.guest.v1",
+  "generated_at": "2026-06-12T01:43:48.434Z",
+  "tier": "guest",
+  "source_contract_version": "frontier-card-engine-contract-v2",
+  "counts": {
+    "items": 21894
+  },
+  "id_policy": {
+    "public_id": "sha256 salted hash",
+    "original_canonical_id_exposed": false,
+    "compatibility_canonical_id_value": "public_id only"
+  },
+  "field_policy": {
+    "media_name": "masked",
+    "address": "sido/sigungu/eupmyeondong only",
+    "coordinates": "admin centroid quantized with deterministic jitter",
+    "price": "removed",
+    "source": "removed",
+    "contact": "removed",
+    "token_index": "rebuilt from masked fields only"
+  },
+  "ui_policy": {
+    "detail_locked": true,
+    "login_required": true,
+    "cta": "상세 위치 및 매체명은 로그인 후 확인 가능합니다."
+  }
+}

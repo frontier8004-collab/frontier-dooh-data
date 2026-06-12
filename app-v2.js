@@ -409,22 +409,162 @@
         return this;
       }
     }
+    /* FRONTIER_PHASE6_2_GUEST_LOADER_SWITCH_START */
+    getDataTier() {
+      return "guest";
+    }
 
-    /* FRONTIER_PHASE5_3_1_SPLIT_INDEX_LOADER_PATCH_START */
-    async loadJson(url) {
+    getGuestDataPaths() {
+      return {
+        index: "phase6-security-core/output/frontier-search-index.guest.json",
+        hierarchy: "phase6-security-core/output/frontier-search-hierarchy.guest.json",
+        contract: "phase6-security-core/output/frontier-card-engine-contract.guest.json"
+      };
+    }
+
+    resolveDataUrl(url) {
+      const raw = String(url || "").replace(/\\/g, "/");
+      const paths = this.getGuestDataPaths();
+
+      if (this.getDataTier() === "guest") {
+        if (/frontier-search-index\.parts\//.test(raw)) {
+          throw new Error("FRONTIER SECURITY BLOCK: Guest mode cannot load split index parts.");
+        }
+
+        if (/frontier-search-index\.json(?:\?.*)?$/.test(raw)) {
+          return paths.index;
+        }
+
+        if (/frontier-search-hierarchy\.json(?:\?.*)?$/.test(raw)) {
+          return paths.hierarchy;
+        }
+
+        if (/frontier-card-engine-contract\.json(?:\?.*)?$/.test(raw)) {
+          return paths.contract;
+        }
+      }
+
+      return url;
+    }
+
+    async fetchJsonDirect(url) {
       const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error(`FrontierCoreAdapter JSON load failed: ${res.status} ${url}`);
+      if (!res.ok) {
+        throw new Error(`FrontierCoreAdapter JSON load failed: ${res.status} ${url}`);
+      }
+      return await res.json();
+    }
 
-      const json = await res.json();
+    async ensureGuestIndexLoaded() {
+      if (this.__phase621GuestIndex && Array.isArray(this.__phase621GuestIndex.items)) {
+        return this.__phase621GuestIndex;
+      }
+
+      const paths = this.getGuestDataPaths();
+      const index = await this.fetchJsonDirect(paths.index);
+      const normalized = this.normalizeGuestIndex(index);
+
+      this.__phase621GuestIndex = normalized;
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {
+        enabled: true,
+        tier: "guest",
+        indexLoaded: false,
+        hierarchyLoaded: false,
+        contractLoaded: false,
+        splitBlocked: true,
+        loadedUrls: [],
+        loadedAt: new Date().toISOString()
+      };
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.itemsById = Object.keys(normalized.items_by_id || {}).length;
+
+      return normalized;
+    }
+
+    async loadJson(url) {
+      const requestedUrl = String(url || "");
+      const resolvedUrl = this.resolveDataUrl(requestedUrl);
+      const paths = this.getGuestDataPaths();
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {
+        enabled: true,
+        tier: "guest",
+        indexLoaded: false,
+        hierarchyLoaded: false,
+        contractLoaded: false,
+        splitBlocked: true,
+        loadedUrls: [],
+        loadedAt: new Date().toISOString()
+      };
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.loadedUrls.push(resolvedUrl);
+
+      if (this.getDataTier() === "guest") {
+        if (/frontier-search-index\.parts\//.test(resolvedUrl)) {
+          throw new Error("FRONTIER SECURITY BLOCK: Guest mode cannot load split index parts.");
+        }
+
+        if (resolvedUrl === paths.index || /frontier-search-index\.guest\.json(?:\?.*)?$/.test(resolvedUrl)) {
+          const json = await this.fetchJsonDirect(paths.index);
+
+          if (json && json.__frontier_split_index === true) {
+            throw new Error("FRONTIER SECURITY BLOCK: split index manifest is forbidden in Guest mode.");
+          }
+
+          const normalized = this.normalizeGuestIndex(json);
+          this.__phase621GuestIndex = normalized;
+
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.indexLoaded = true;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.items = normalized.items.length;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.itemsById = Object.keys(normalized.items_by_id || {}).length;
+
+          return normalized;
+        }
+
+        if (resolvedUrl === paths.hierarchy || /frontier-search-hierarchy\.guest\.json(?:\?.*)?$/.test(resolvedUrl)) {
+          const guestIndex = await this.ensureGuestIndexLoaded();
+
+          let rawHierarchy = null;
+          try {
+            rawHierarchy = await this.fetchJsonDirect(paths.hierarchy);
+          } catch (error) {
+            rawHierarchy = null;
+          }
+
+          const runtimeHierarchy = this.buildGuestHierarchyCompat(guestIndex, rawHierarchy);
+
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyLoaded = true;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyIndexedItems = runtimeHierarchy.indexed_items;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.leafIndexedItems = runtimeHierarchy.leaf_indexed_items;
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyCompatNodes = runtimeHierarchy.nodes.length;
+
+          return runtimeHierarchy;
+        }
+
+        if (resolvedUrl === paths.contract || /frontier-card-engine-contract\.guest\.json(?:\?.*)?$/.test(resolvedUrl)) {
+          const json = await this.fetchJsonDirect(paths.contract);
+          window.__FRONTIER_PHASE62_GUEST_LOADER__.contractLoaded = true;
+          return json;
+        }
+      }
+
+      const json = await this.fetchJsonDirect(resolvedUrl);
 
       if (json && json.__frontier_split_index === true) {
-        return await this.loadSplitSearchIndex(url, json);
+        return await this.loadSplitSearchIndex(resolvedUrl, json);
       }
 
       return json;
     }
 
     async loadSplitSearchIndex(url, manifest) {
+      if (this.getDataTier() === "guest") {
+        throw new Error("FRONTIER SECURITY BLOCK: loadSplitSearchIndex is disabled in Guest mode.");
+      }
+
       if (!manifest || manifest.__frontier_split_index !== true) {
         throw new Error("Invalid split index manifest");
       }
@@ -446,8 +586,7 @@
         chunks.push(await res.text());
       }
 
-      const text = chunks.join("");
-      const parsed = JSON.parse(text);
+      const parsed = JSON.parse(chunks.join(""));
 
       window.__FRONTIER_SPLIT_INDEX_LOADED__ = {
         loaded: true,
@@ -458,7 +597,213 @@
 
       return parsed;
     }
-    /* FRONTIER_PHASE5_3_1_SPLIT_INDEX_LOADER_PATCH_END */
+
+    normalizeGuestIndex(index) {
+      if (!index || typeof index !== "object") {
+        throw new Error("Invalid guest index");
+      }
+
+      const items = Array.isArray(index.items) ? index.items : [];
+      const itemsById = Object.create(null);
+
+      for (const item of items) {
+        const publicId = item.public_id || item.canonical_id || item.id;
+
+        if (!publicId) {
+          throw new Error("Guest item missing public_id");
+        }
+
+        item.public_id = publicId;
+        item.canonical_id = publicId;
+        item.id = publicId;
+
+        itemsById[publicId] = item;
+      }
+
+      if (items.length !== Object.keys(itemsById).length) {
+        throw new Error("Guest index public_id collision or items_by_id mismatch");
+      }
+
+      index.items = items;
+      index.items_by_id = itemsById;
+      index.indexed_items = items.length;
+      index.tier = "guest";
+      index.runtime_id_policy = "public_id";
+
+      return index;
+    }
+
+    buildGuestHierarchyCompat(guestIndex, rawHierarchy) {
+      const items = Array.isArray(guestIndex.items) ? guestIndex.items : [];
+      const itemsById = guestIndex.items_by_id || Object.create(null);
+
+      const nodes = [];
+      const nodesById = Object.create(null);
+      const itemsByNode = Object.create(null);
+      const itemToLeafNode = Object.create(null);
+      const nodeItemSets = new Map();
+
+      const safe = value => String(value || "미분류").replace(/\s+/g, " ").trim() || "미분류";
+
+      const ensureNode = (id, type, name, parentId, path) => {
+        if (!nodesById[id]) {
+          nodesById[id] = {
+            id,
+            canonical_id: id,
+            type,
+            level: type,
+            name,
+            label: name,
+            parent_id: parentId || null,
+            parentId: parentId || null,
+            path,
+            count: 0,
+            item_ids: [],
+            children: [],
+            child_ids: [],
+            children_ids: []
+          };
+
+          nodes.push(nodesById[id]);
+          itemsByNode[id] = nodesById[id].item_ids;
+          nodeItemSets.set(id, new Set());
+
+          if (parentId && nodesById[parentId]) {
+            if (!nodesById[parentId].children.includes(id)) {
+              nodesById[parentId].children.push(id);
+              nodesById[parentId].child_ids.push(id);
+              nodesById[parentId].children_ids.push(id);
+            }
+          }
+        }
+
+        return nodesById[id];
+      };
+
+      const attachItem = (nodeId, itemId) => {
+        const node = nodesById[nodeId];
+        if (!node || !itemId) return;
+
+        if (!itemsById[itemId]) {
+          throw new Error("Guest hierarchy leaf references unknown public_id: " + itemId);
+        }
+
+        const set = nodeItemSets.get(nodeId);
+        if (!set.has(itemId)) {
+          set.add(itemId);
+          node.item_ids.push(itemId);
+          node.count = node.item_ids.length;
+          itemsByNode[nodeId] = node.item_ids;
+        }
+      };
+
+      ensureNode("guest:root", "root", "전국", null, ["전국"]);
+
+      for (const item of items) {
+        const publicId = item.public_id || item.canonical_id || item.id;
+
+        if (!publicId) {
+          throw new Error("Guest hierarchy build failed: item missing public_id");
+        }
+
+        const sido = safe(item.sido || "미분류");
+        const sigungu = safe(item.sigungu || "미분류");
+        const emd = safe(item.eupmyeondong || "생활권");
+
+        const sidoId = "guest:sido:" + sido;
+        const sigunguId = "guest:sigungu:" + sido + ":" + sigungu;
+        const emdId = "guest:emd:" + sido + ":" + sigungu + ":" + emd;
+
+        ensureNode(sidoId, "sido", sido, "guest:root", [sido]);
+        ensureNode(sigunguId, "sigungu", sigungu, sidoId, [sido, sigungu]);
+        ensureNode(emdId, "eupmyeondong", emd, sigunguId, [sido, sigungu, emd]);
+
+        attachItem("guest:root", publicId);
+        attachItem(sidoId, publicId);
+        attachItem(sigunguId, publicId);
+        attachItem(emdId, publicId);
+
+        itemToLeafNode[publicId] = emdId;
+      }
+
+      for (const node of nodes) {
+        node.item_ids = Array.from(new Set(node.item_ids));
+        node.children = Array.from(new Set(node.children));
+        node.child_ids = Array.from(new Set(node.child_ids));
+        node.children_ids = Array.from(new Set(node.children_ids));
+        node.count = node.item_ids.length;
+        itemsByNode[node.id] = node.item_ids;
+
+        if (typeof node.count !== "number" || !Number.isFinite(node.count)) {
+          throw new Error("FRONTIER GUEST HIERARCHY COUNT CONTRACT FAILED: " + node.id);
+        }
+      }
+
+      const leafNodes = nodes.filter(node => node.type === "eupmyeondong");
+      const leafItemIds = new Set();
+
+      for (const node of leafNodes) {
+        if (typeof node.count !== "number") {
+          throw new Error("FRONTIER GUEST LEAF COUNT UNDEFINED: " + node.id);
+        }
+
+        if (node.count !== node.item_ids.length) {
+          throw new Error("FRONTIER GUEST LEAF COUNT MISMATCH: " + node.id);
+        }
+
+        for (const id of node.item_ids || []) {
+          if (!itemsById[id]) {
+            throw new Error("FRONTIER GUEST LEAF CONNECTIVITY BROKEN: " + id);
+          }
+          leafItemIds.add(id);
+        }
+      }
+
+      if (leafItemIds.size !== items.length) {
+        throw new Error(`FRONTIER GUEST LEAF INDEXED ITEMS MISMATCH: ${leafItemIds.size} !== ${items.length}`);
+      }
+
+      const compat = Object.assign({}, rawHierarchy || {}, {
+        version: "frontier-search-hierarchy.guest.runtime-final.v3",
+        tier: "guest",
+        indexed_items: items.length,
+        hierarchy_node_count: nodes.length,
+        node_count: nodes.length,
+        leaf_node_count: leafNodes.length,
+        leaf_indexed_items: leafItemIds.size,
+        root_id: "guest:root",
+        id_policy: "public_id_only_original_ids_removed",
+        policy: {
+          item_ids_exposed: true,
+          item_ids_are_public_ids: true,
+          original_ids_exposed: false,
+          count_contract: "node.count === unique item_ids.length",
+          max_public_depth: "eupmyeondong",
+          detail_locked: true
+        },
+        nodes,
+        nodes_by_id: nodesById,
+        node_index: nodesById,
+        items_by_node: itemsByNode,
+        item_to_leaf_node: itemToLeafNode,
+        levels: {
+          root: 1,
+          sido: nodes.filter(n => n.type === "sido").length,
+          sigungu: nodes.filter(n => n.type === "sigungu").length,
+          eupmyeondong: leafNodes.length
+        }
+      });
+
+      window.__FRONTIER_PHASE62_GUEST_LOADER__ = window.__FRONTIER_PHASE62_GUEST_LOADER__ || {};
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyCompatNodes = nodes.length;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.hierarchyIndexedItems = items.length;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.leafIndexedItems = leafItemIds.size;
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.countContract = "node.count === unique item_ids.length";
+      window.__FRONTIER_PHASE62_GUEST_LOADER__.runtimeHierarchyVersion = compat.version;
+
+      return compat;
+    }
+    /* FRONTIER_PHASE6_2_GUEST_LOADER_SWITCH_END */
 
     assertCoreInvariants() {
       const items = this.state.items;
@@ -5378,6 +5723,9 @@
 
   boot();
 })();
+
+
+
 
 
 

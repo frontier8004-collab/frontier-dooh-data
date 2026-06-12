@@ -1,0 +1,36 @@
+﻿FRONTIER MAP v2 - Phase 6.3 Guest Runtime Deployment
+GeneratedAt: 2026-06-12 11:18:23
+Package: C:\Users\윤교상\Desktop\frontier-map-rescue-baseline-20260514\07_v2_deploy\frontier-map-v2-service-package-20260612-072428
+Repo: C:\Users\윤교상\Desktop\frontier-dooh-data
+
+DEPLOYED / UPDATED:
+- app-v2.js
+- map-v2.html
+- phase6-security-core/output/frontier-search-index.guest.json
+- phase6-security-core/output/frontier-search-hierarchy.guest.json
+- phase6-security-core/output/frontier-card-engine-contract.guest.json
+- .gitignore
+
+REMOVED FROM CURRENT PUBLIC BRANCH:
+- phase3-search-core/output/frontier-search-index.json
+- phase3-search-core/output/frontier-search-index.parts/
+- phase3-search-core/output/frontier-search-hierarchy.json
+- phase3-search-core/output/frontier-card-engine-contract.json
+
+RUNTIME BASELINE:
+- Phase 6.2.1 Runtime Guest Loader
+- ready true / fallbackMode false expected
+- items 21894
+- public_id based runtime hierarchy
+- full split loading blocked in Guest mode
+
+PRODUCTION VERIFY:
+- 인천 1888
+- 편의점 5001
+- 병원 732
+- 약국 3
+- 강남 872
+
+IMPORTANT:
+- Phase 6.3 removes current public branch exposure.
+- Git commit history purge/repo rotation is Phase 6.4 if past public commits contained full data.

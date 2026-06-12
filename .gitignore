@@ -1,0 +1,14 @@
+﻿# FRONTIER PHASE 6 SECURITY - never publish full runtime data
+phase3-search-core/output/frontier-search-index.json
+phase3-search-core/output/frontier-search-index.parts/
+phase3-search-core/output/frontier-search-hierarchy.json
+phase3-search-core/output/frontier-card-engine-contract.json
+**/frontier-search-index.parts/
+**/frontier-search-index.full*.json
+**/*full-index*.json
+**/*raw-index*.json
+**/*private*.json
+**/*source*.json
+phase6-security-core/private/
+phase6-security-core/backups/
+phase6-security-core/**/*.local.txt
